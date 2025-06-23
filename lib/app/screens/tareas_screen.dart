@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../supabase_manager.dart';
 import 'package:intl/intl.dart';
-import 'pasos_tarea_screen.dart'; // Asegúrate de importar correctamente si está en otra carpeta
+import 'pasos_tarea_screen.dart';
+import 'bienvenida_screen.dart'; // Asegúrate de importar tu pantalla de bienvenida
 
 class TareasScreen extends StatefulWidget {
   final String idOperador;
@@ -152,6 +153,16 @@ class _TareasScreenState extends State<TareasScreen> {
       backgroundColor: background,
       appBar: AppBar(
         backgroundColor: accentGreen,
+        leading: IconButton(
+          icon: Icon(Icons.home, size: 28),
+          tooltip: 'Volver a Inicio',
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => BienvenidaScreen()),
+            );
+          },
+        ),
         title: Text(
           'Tareas de ${operador?['nombreoperador'] ?? 'Operador'}',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
@@ -203,6 +214,7 @@ class _TareasScreenState extends State<TareasScreen> {
                         child: tareasAsignadas.isEmpty
                             ? _sinTareasWidget()
                             : ListView.builder(
+                                physics: AlwaysScrollableScrollPhysics(),
                                 itemCount: tareasAsignadas.length,
                                 itemBuilder: (context, index) {
                                   final registro = tareasAsignadas[index];
