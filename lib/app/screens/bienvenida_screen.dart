@@ -1,0 +1,296 @@
+import 'package:flutter/material.dart';
+import '../../supabase_manager.dart'; // Ajusta la ruta si es necesario
+import 'tareas_screen.dart'; // Asegúrate de que esta ruta sea correcta
+class BienvenidaScreen extends StatefulWidget {
+  const BienvenidaScreen({super.key});
+
+  @override
+  _BienvenidaScreenState createState() => _BienvenidaScreenState();
+}
+
+class _BienvenidaScreenState extends State<BienvenidaScreen>
+    with SingleTickerProviderStateMixin {
+  final TextEditingController _controller = TextEditingController();
+  late FocusNode _focusNode;
+
+  String? _error;
+  String _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
+  bool _esperandoTarjeta = true;
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _focusNode = FocusNode();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) _focusNode.requestFocus();
+        });
+      }
+    });
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+
+    _fadeAnimation =
+        Tween<double>(begin: 0.6, end: 1.0).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _animationController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+void _validarOperador(String id) async {
+  final trimmedId = id.trim();
+
+  if (trimmedId.isEmpty) {
+    setState(() {
+      _error = 'ID inválido, intenta de nuevo';
+      _mensajeEstado = '';
+      _esperandoTarjeta = false;
+    });
+    return;
+  }
+
+  setState(() {
+    _error = null;
+    _mensajeEstado = 'Validando operador...';
+    _esperandoTarjeta = false;
+  });
+
+  try {
+    final response = await SupabaseManager.client
+        .from('operadores')
+        .select()
+        .eq('id_operador', trimmedId)
+        .maybeSingle();
+
+    if (response == null) {
+      setState(() {
+        _error = 'Operador no válido, intenta de nuevo';
+        _mensajeEstado = '';
+      });
+    } else {
+      // Operador válido: navegar a pantalla de tareas
+      setState(() {
+        _mensajeEstado = 'Bienvenido, ${response['nombreoperador']}';
+        _error = null;
+      });
+
+      // Esperar 1 segundo para que el usuario vea el mensaje
+      await Future.delayed(Duration(seconds: 1));
+
+      // Navegar y reemplazar la pantalla actual
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TareasScreen(idOperador: trimmedId),
+        ),
+      );
+    }
+  } catch (e) {
+    setState(() {
+      _error = 'Error inesperado: $e';
+      _mensajeEstado = '';
+    });
+  }
+}
+
+  @override
+  Widget build(BuildContext context) {
+    final Color backgroundColor = const Color(0xFFF5F5F7); // gris muy claro
+    final Color accentGreen = const Color(0xFF007A3D); // verde Heineken minimalista
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          if (!_focusNode.hasFocus) {
+            _focusNode.requestFocus();
+          }
+        },
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 50),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentGreen.withOpacity(0.25),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Image.asset(
+                      'assets/logo_heineken.png',
+                      height: 100,
+                      fit: BoxFit.contain,
+                      color: accentGreen.withOpacity(0.85),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 30, vertical: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 12,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: const [
+                        Text(
+                          'Registro diario de tareas CILT',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                            letterSpacing: 1.1,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Cleaning, Inspection, Lubrication, Tightening',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black54,
+                            fontStyle: FontStyle.italic,
+                            letterSpacing: 1.0,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_error == null)
+                          Icon(Icons.qr_code_scanner,
+                              color: accentGreen, size: 28)
+                        else
+                          const Icon(Icons.error,
+                              color: Colors.redAccent, size: 28),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
+                          decoration: BoxDecoration(
+                            border:
+                                Border.all(color: accentGreen, width: 1.8),
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.white,
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _mensajeEstado,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: _error == null
+                                      ? accentGreen
+                                      : Colors.redAccent,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              if (_mensajeEstado == 'Validando operador...')
+                                const SizedBox(width: 12),
+                              if (_mensajeEstado == 'Validando operador...')
+                                SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: accentGreen,
+                                    strokeWidth: 3,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (_mensajeEstado.contains('exitoso'))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Icon(
+                        Icons.check_circle,
+                        color: accentGreen,
+                        size: 80,
+                      ),
+                    ),
+
+                  Opacity(
+                    opacity: 0,
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      autofocus: true,
+                      onSubmitted: _validarOperador,
+                      keyboardType: TextInputType.text,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
