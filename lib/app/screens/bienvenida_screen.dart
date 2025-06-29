@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../supabase_manager.dart'; // Ajusta la ruta si es necesario
-import 'tareas_screen.dart'; // Asegúrate de que esta ruta sea correcta
+import '../../supabase_manager.dart';
+import 'tareas_screen.dart';
+
 class BienvenidaScreen extends StatefulWidget {
   const BienvenidaScreen({super.key});
 
@@ -15,7 +16,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   String? _error;
   String _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
-  bool _esperandoTarjeta = true;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -60,67 +60,75 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     super.dispose();
   }
 
-void _validarOperador(String id) async {
-  final trimmedId = id.trim();
+  void _validarOperador(String id) async {
+    final trimmedId = id.trim();
 
-  if (trimmedId.isEmpty) {
-    setState(() {
-      _error = 'ID inválido, intenta de nuevo';
-      _mensajeEstado = '';
-      _esperandoTarjeta = false;
-    });
-    return;
-  }
-
-  setState(() {
-    _error = null;
-    _mensajeEstado = 'Validando operador...';
-    _esperandoTarjeta = false;
-  });
-
-  try {
-    final response = await SupabaseManager.client
-        .from('operadores')
-        .select()
-        .eq('id_operador', trimmedId)
-        .maybeSingle();
-
-    if (response == null) {
+    if (trimmedId.isEmpty) {
       setState(() {
-        _error = 'Operador no válido, intenta de nuevo';
+        _error = 'ID inválido, intenta de nuevo';
         _mensajeEstado = '';
       });
-    } else {
-      // Operador válido: navegar a pantalla de tareas
-      setState(() {
-        _mensajeEstado = 'Bienvenido, ${response['nombreoperador']}';
-        _error = null;
-      });
-
-      // Esperar 1 segundo para que el usuario vea el mensaje
-      await Future.delayed(Duration(seconds: 1));
-
-      // Navegar y reemplazar la pantalla actual
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TareasScreen(idOperador: trimmedId),
-        ),
-      );
+      return;
     }
-  } catch (e) {
+
     setState(() {
-      _error = 'Error inesperado: $e';
-      _mensajeEstado = '';
+      _error = null;
+      _mensajeEstado = 'Validando operador...';
     });
+
+    try {
+      final response = await SupabaseManager.client
+          .from('operadores')
+          .select()
+          .eq('id_operador', trimmedId)
+          .maybeSingle();
+
+      if (response == null) {
+        setState(() {
+          _error = '';
+          _mensajeEstado = 'Operador no válido, intenta de nuevo';
+        });
+
+        // Volver al estado inicial luego de 3 segundos
+        Future.delayed(const Duration(seconds: 3), () {
+          if (!mounted) return;
+          setState(() {
+            _error = null;
+            _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
+          });
+        });
+
+        return;
+      }
+
+      else {
+        setState(() {
+          _mensajeEstado = 'Bienvenido, ${response['nombreoperador']}';
+          _error = null;
+        });
+
+        await Future.delayed(const Duration(seconds: 1));
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TareasScreen(idOperador: trimmedId),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Error inesperado: $e';
+        _mensajeEstado = '';
+      });
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
-    final Color backgroundColor = const Color(0xFFF5F5F7); // gris muy claro
-    final Color accentGreen = const Color(0xFF007A3D); // verde Heineken minimalista
+    final Color backgroundColor = const Color(0xFFF5F5F7);
+    final Color accentGreen = const Color(0xFF007A3D);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -186,7 +194,7 @@ void _validarOperador(String id) async {
                         ),
                         SizedBox(height: 8),
                         Text(
-                          'Cleaning, Inspection, Lubrication, Tightening',
+                          'Limpieza, Inspección, Lubricación, Apriete',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
@@ -219,8 +227,7 @@ void _validarOperador(String id) async {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 12),
                           decoration: BoxDecoration(
-                            border:
-                                Border.all(color: accentGreen, width: 1.8),
+                            border: Border.all(color: accentGreen, width: 1.8),
                             borderRadius: BorderRadius.circular(12),
                             color: Colors.white,
                             boxShadow: const [
@@ -262,6 +269,20 @@ void _validarOperador(String id) async {
                       ],
                     ),
                   ),
+
+                  // 🔴 Mostrar mensaje de error claro
+                  if (_error != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
 
                   if (_mensajeEstado.contains('exitoso'))
                     Padding(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart'; // Import necesario para PointerDeviceKind
+import 'package:flutter/gestures.dart';
 import '../../supabase_manager.dart';
 import 'package:intl/intl.dart';
 import 'pasos_tarea_screen.dart';
-import 'bienvenida_screen.dart'; // Importa tu pantalla de bienvenida
+import 'bienvenida_screen.dart';
 
 class TareasScreen extends StatefulWidget {
   final String idOperador;
@@ -215,73 +215,76 @@ class _TareasScreenState extends State<TareasScreen> {
                       ),
                       SizedBox(height: 16),
                       Expanded(
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(
-                            dragDevices: {
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.trackpad,
-                            },
-                          ),
-                          child: ListView.builder(
-                            physics: ClampingScrollPhysics(),
-                            itemCount: tareasAsignadas.length,
-                            itemBuilder: (context, index) {
-                              final registro = tareasAsignadas[index];
-                              final tarea = registro['tareas'];
-                              final estado = registro['estado'] ?? 'Pendiente';
-                              final fechaLimiteRaw =
-                                  registro['fecha_limite']?.toString() ?? '-';
-                              final fechaLimite = _formatearFechaLimite(fechaLimiteRaw);
-
-                              return Card(
-                                color: _colorEstado(estado),
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16)),
-                                margin: EdgeInsets.symmetric(vertical: 8),
-                                child: ListTile(
-                                  leading: _iconoEstado(estado),
-                                  title: Text(
-                                    tarea['nombre_tarea'] ?? 'Sin nombre',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold, fontSize: 18),
-                                  ),
-                                  subtitle: Text(
-                                    'Frecuencia: ${tarea['frecuencia'] ?? '-'}',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade700,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  trailing: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        'Fecha límite',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        fechaLimite,
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: estado.toLowerCase() == 'atrasado'
-                                                ? Colors.redAccent
-                                                : Colors.black87),
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () => _verPasosTarea(registro, tarea),
+                        child: tareasAsignadas.isEmpty
+                            ? _sinTareasWidget()
+                            : ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(
+                                  dragDevices: {
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.trackpad,
+                                  },
                                 ),
-                              );
-                            },
-                          ),
-                        ),
+                                child: ListView.builder(
+                                  physics: ClampingScrollPhysics(),
+                                  itemCount: tareasAsignadas.length,
+                                  itemBuilder: (context, index) {
+                                    final registro = tareasAsignadas[index];
+                                    final tarea = registro['tareas'];
+                                    final estado = registro['estado'] ?? 'Pendiente';
+                                    final fechaLimiteRaw =
+                                        registro['fecha_limite']?.toString() ?? '-';
+                                    final fechaLimite =
+                                        _formatearFechaLimite(fechaLimiteRaw);
+
+                                    return Card(
+                                      color: _colorEstado(estado),
+                                      elevation: 4,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16)),
+                                      margin: EdgeInsets.symmetric(vertical: 8),
+                                      child: ListTile(
+                                        leading: _iconoEstado(estado),
+                                        title: Text(
+                                          tarea['nombre_tarea'] ?? 'Sin nombre',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold, fontSize: 18),
+                                        ),
+                                        subtitle: Text(
+                                          'Frecuencia: ${tarea['frecuencia'] ?? '-'}',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        trailing: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              'Fecha límite',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey.shade600,
+                                                  fontWeight: FontWeight.w600),
+                                            ),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              fechaLimite,
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: estado.toLowerCase() == 'atrasado'
+                                                      ? Colors.redAccent
+                                                      : Colors.black87),
+                                            ),
+                                          ],
+                                        ),
+                                        onTap: () => _verPasosTarea(registro, tarea),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                       )
                     ],
                   ),

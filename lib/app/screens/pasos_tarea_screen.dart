@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart'; // Import necesario para PointerDeviceKind
+import 'package:flutter/gestures.dart';
+import 'package:cached_network_image/cached_network_image.dart';  // Importar cached_network_image
 import '../../supabase_manager.dart';
 
 class PasosTareaScreen extends StatefulWidget {
@@ -83,12 +84,12 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(pasos.length, (index) {
         return AnimatedContainer(
-          duration: Duration(milliseconds: 300),
-          margin: EdgeInsets.symmetric(horizontal: 6),
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 6),
           width: paginaActual == index ? 16 : 10,
           height: 10,
           decoration: BoxDecoration(
-            color: paginaActual == index ? Color(0xFF007A3D) : Colors.grey.shade400,
+            color: paginaActual == index ? const Color(0xFF007A3D) : Colors.grey.shade400,
             borderRadius: BorderRadius.circular(5),
           ),
         );
@@ -98,7 +99,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final verdeHeineken = Color(0xFF007A3D);
+    final verdeHeineken = const Color(0xFF007A3D);
 
     return Scaffold(
       appBar: AppBar(
@@ -107,90 +108,118 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
       ),
       body: cargando
           ? Center(child: CircularProgressIndicator(color: verdeHeineken))
-          : pasos.isEmpty
-              ? Center(child: Text('No hay pasos para mostrar.'))
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.trackpad,
-                          },
+          : Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 12,
+                          offset: Offset(0, 5),
                         ),
-                        child: PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: _onPageChanged,
-                          itemCount: pasos.length,
-                          itemBuilder: (context, index) {
-                            final paso = pasos[index];
-                            return Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  paso['imagenurl'] ?? '',
-                                  fit: BoxFit.contain,
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(child: CircularProgressIndicator());
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.broken_image,
-                                              size: 80, color: Colors.redAccent),
-                                          SizedBox(height: 8),
-                                          Text('Error al cargar imagen',
-                                              style: TextStyle(color: Colors.redAccent)),
-                                          Text(paso['imagenurl'] ?? '',
-                                              style: TextStyle(
-                                                  fontSize: 10, color: Colors.grey)),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                      ],
                     ),
-                    SizedBox(height: 10),
-                    _buildDots(),
-                    SizedBox(height: 16),
-                    Container(
-                      color: Colors.grey.shade100,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text('No'),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: verdeHeineken,
-                              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    child: pasos.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 80,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'No hay pasos para mostrar.',
+                                  style: TextStyle(fontSize: 20, color: Colors.grey),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
-                            onPressed: _confirmarTarea,
-                            child: Text(
-                              'Sí, Confirmar',
-                              style: TextStyle(color: Colors.white),
+                          )
+                        : ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(context).copyWith(
+                              dragDevices: {
+                                PointerDeviceKind.touch,
+                                PointerDeviceKind.mouse,
+                                PointerDeviceKind.trackpad,
+                              },
+                            ),
+                            child: PageView.builder(
+                              controller: _pageController,
+                              onPageChanged: _onPageChanged,
+                              itemCount: pasos.length,
+                              itemBuilder: (context, index) {
+                                final paso = pasos[index];
+                                return Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: CachedNetworkImage(
+                                      imageUrl: paso['imagenurl'] ?? '',
+                                      fit: BoxFit.contain,
+                                      placeholder: (context, url) => const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                      errorWidget: (context, url, error) => Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: const [
+                                            Icon(Icons.broken_image,
+                                                size: 80, color: Colors.redAccent),
+                                            SizedBox(height: 8),
+                                            Text('Error al cargar imagen',
+                                                style: TextStyle(color: Colors.redAccent)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                        ],
-                      ),
-                    )
-                  ],
+                  ),
                 ),
+                if (pasos.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _buildDots(),
+                ],
+                const SizedBox(height: 16),
+                Container(
+                  color: Colors.grey.shade100,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('No'),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: verdeHeineken,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        onPressed: _confirmarTarea,
+                        child: const Text(
+                          'Sí, Confirmar',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
