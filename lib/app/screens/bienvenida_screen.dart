@@ -10,7 +10,7 @@ class BienvenidaScreen extends StatefulWidget {
 }
 
 class _BienvenidaScreenState extends State<BienvenidaScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   late FocusNode _focusNode;
 
@@ -19,6 +19,13 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
+  bool _operadorValido = false;
+  String? _fotoOperador;
+  String? _nombreOperador;
 
   @override
   void initState() {
@@ -43,18 +50,27 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       duration: const Duration(seconds: 3),
     );
 
-    _fadeAnimation =
-        Tween<double>(begin: 0.6, end: 1.0).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
 
     _animationController.repeat(reverse: true);
+
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    // Cambié la curva para que sea suave sin rebote
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _scaleController.dispose();
     _focusNode.dispose();
     _controller.dispose();
     super.dispose();
@@ -89,7 +105,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           _mensajeEstado = 'Operador no válido, intenta de nuevo';
         });
 
-        // Volver al estado inicial luego de 3 segundos
         Future.delayed(const Duration(seconds: 3), () {
           if (!mounted) return;
           setState(() {
@@ -99,15 +114,18 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
         });
 
         return;
-      }
-
-      else {
+      } else {
         setState(() {
           _mensajeEstado = 'Bienvenido, ${response['nombreoperador']}';
           _error = null;
+          _operadorValido = true;
+          _fotoOperador = response['foto_operador'];
+          _nombreOperador = response['nombreoperador'];
         });
 
-        await Future.delayed(const Duration(seconds: 1));
+        _scaleController.forward(from: 0.0);
+
+        await Future.delayed(const Duration(seconds: 5));
 
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -129,6 +147,96 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   Widget build(BuildContext context) {
     final Color backgroundColor = const Color(0xFFF5F5F7);
     final Color accentGreen = const Color(0xFF007A3D);
+
+    if (_operadorValido && _fotoOperador != null) {
+      return Scaffold(
+        backgroundColor: backgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ScaleTransition(
+                scale: _scaleAnimation,
+                child: Container(
+                  height: 250,
+                  width: 250,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentGreen.withOpacity(0.25),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: accentGreen,
+                      width: 4,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: Image.network(
+                      _fotoOperador!,
+                      fit: BoxFit.cover,
+                      frameBuilder:
+                          (context, child, frame, wasSynchronouslyLoaded) {
+                        if (wasSynchronouslyLoaded || frame != null) {
+                          return AnimatedOpacity(
+                            opacity: 1,
+                            duration: const Duration(milliseconds: 500),
+                            child: child,
+                          );
+                        } else {
+                          return AnimatedOpacity(
+                            opacity: 0,
+                            duration: const Duration(milliseconds: 500),
+                            child: child,
+                          );
+                        }
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            color: accentGreen,
+                            strokeWidth: 4,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.person_off,
+                          size: 120,
+                          color: Colors.grey,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Bienvenido, $_nombreOperador',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 20),
+              CircularProgressIndicator(
+                color: accentGreen,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Cargando tareas...',
+                style: TextStyle(fontSize: 18, color: Colors.black54),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -165,7 +273,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                     ),
                   ),
                   const SizedBox(height: 40),
-
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 30, vertical: 15),
@@ -207,14 +314,11 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
                   FadeTransition(
                     opacity: _fadeAnimation,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         if (_error == null)
                           Icon(Icons.qr_code_scanner,
@@ -269,8 +373,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                       ],
                     ),
                   ),
-
-                  // 🔴 Mostrar mensaje de error claro
                   if (_error != null) ...[
                     const SizedBox(height: 16),
                     Text(
@@ -283,17 +385,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                       textAlign: TextAlign.center,
                     ),
                   ],
-
-                  if (_mensajeEstado.contains('exitoso'))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 40),
-                      child: Icon(
-                        Icons.check_circle,
-                        color: accentGreen,
-                        size: 80,
-                      ),
-                    ),
-
                   Opacity(
                     opacity: 0,
                     child: TextField(
