@@ -71,7 +71,6 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         .from('registro_tareas')
         .update({
           'estado': 'Completado',
-          'fecha_completado': DateTime.now().toIso8601String(),
         })
         .eq('id', widget.idRegistro)
         .execute();
