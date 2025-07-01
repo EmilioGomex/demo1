@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:cached_network_image/cached_network_image.dart';  // Importar cached_network_image
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../supabase_manager.dart';
 
 class PasosTareaScreen extends StatefulWidget {
@@ -76,7 +76,17 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         .eq('id', widget.idRegistro)
         .execute();
 
-    if (mounted) Navigator.pop(context, true);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Tarea completada correctamente'),
+          backgroundColor: Colors.green.shade600,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      await Future.delayed(const Duration(seconds: 1));
+      Navigator.pop(context, true);
+    }
   }
 
   Widget _buildDots() {
@@ -103,8 +113,12 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.nombreTarea),
+        title: Text(
+          widget.nombreTarea,
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: verdeHeineken,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: cargando
           ? Center(child: CircularProgressIndicator(color: verdeHeineken))
@@ -158,29 +172,40 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                               itemCount: pasos.length,
                               itemBuilder: (context, index) {
                                 final paso = pasos[index];
+                                final url = paso['imagenurl'] ?? '';
+
+                                Widget imagenWidget;
+
+                                if (url.toLowerCase().endsWith('.gif')) {
+                                  // Mostrar GIF animado con Image.network
+                                  imagenWidget = Image.network(
+                                    url,
+                                    fit: BoxFit.contain,
+                                  );
+                                } else {
+                                  // Imagen estática con CachedNetworkImage
+                                  imagenWidget = CachedNetworkImage(
+                                    imageUrl: url,
+                                    fit: BoxFit.contain,
+                                    placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                                    errorWidget: (context, url, error) => Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.broken_image, size: 80, color: Colors.redAccent),
+                                          SizedBox(height: 8),
+                                          Text('Error al cargar imagen', style: TextStyle(color: Colors.redAccent)),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+
                                 return Padding(
                                   padding: const EdgeInsets.all(12),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: CachedNetworkImage(
-                                      imageUrl: paso['imagenurl'] ?? '',
-                                      fit: BoxFit.contain,
-                                      placeholder: (context, url) => const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                      errorWidget: (context, url, error) => Center(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: const [
-                                            Icon(Icons.broken_image,
-                                                size: 80, color: Colors.redAccent),
-                                            SizedBox(height: 8),
-                                            Text('Error al cargar imagen',
-                                                style: TextStyle(color: Colors.redAccent)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                                    child: imagenWidget,
                                   ),
                                 );
                               },
@@ -206,8 +231,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: verdeHeineken,
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         ),
                         onPressed: _confirmarTarea,
                         child: const Text(
