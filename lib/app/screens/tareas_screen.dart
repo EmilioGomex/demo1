@@ -53,11 +53,10 @@ class _TareasScreenState extends State<TareasScreen> {
       final tareasResponse = await SupabaseManager.client
           .from('registro_tareas')
           .select('''
-            id, id_tarea, fecha_periodo, fecha_limite, estado,
-            tareas!inner(nombre_tarea, frecuencia, es_compartida)
+            id, id_tarea, fecha_periodo, fecha_limite, estado, fecha_completado,
+            tareas!inner(nombre_tarea, frecuencia, tipo, es_compartida)
           ''')
           .or('id_operador.eq.${widget.idOperador},and(id_operador.is.null,id_maquina.eq.$idMaquina)')
-          .in_('estado', ['Pendiente', 'Atrasado'])
           .order('fecha_limite', ascending: true)
           .execute();
 
@@ -69,9 +68,31 @@ class _TareasScreenState extends State<TareasScreen> {
         return;
       }
 
-      tareasAsignadas = tareasResponse.data as List;
+      List<dynamic> todasTareas = tareasResponse.data as List;
+
+      final hoy = DateTime.now();
+      final hoySinHora = DateTime(hoy.year, hoy.month, hoy.day);
+
+      // Filtrar para mostrar:
+      // - Pendientes o atrasadas (siempre)
+      // - Completadas solo si fecha_completado es hoy
+      List<dynamic> tareasFiltradas = todasTareas.where((tarea) {
+        final estado = (tarea['estado'] ?? '').toString().toLowerCase();
+        if (estado == 'pendiente' || estado == 'atrasado') {
+          return true;
+        }
+        if (estado == 'completado') {
+          final fechaCompletadoRaw = tarea['fecha_completado'];
+          if (fechaCompletadoRaw == null) return false;
+          final fechaCompletado = DateTime.parse(fechaCompletadoRaw).toLocal();
+          final fechaCompletadoSinHora = DateTime(fechaCompletado.year, fechaCompletado.month, fechaCompletado.day);
+          return fechaCompletadoSinHora == hoySinHora;
+        }
+        return false;
+      }).toList();
 
       setState(() {
+        tareasAsignadas = tareasFiltradas;
         cargando = false;
       });
     } catch (e) {
@@ -98,64 +119,105 @@ class _TareasScreenState extends State<TareasScreen> {
     }
   }
 
-  Color _colorEstado(String estado) {
-    switch (estado.toLowerCase()) {
-      case 'atrasado':
-        return Colors.redAccent.shade100;
-      case 'pendiente':
-        return Colors.grey.shade200;
-      case 'completado':
-        return Colors.green.shade100;
+  Color _colorFrecuencia(String? frecuencia) {
+    switch (frecuencia?.toLowerCase()) {
+      case 'diario':
+        return Colors.red.shade200;
+      case 'semanal':
+        return const Color.fromARGB(255, 255, 222, 89);
+      case 'quincenal':
+        return Colors.lightBlue.shade200;
+      case 'mensual':
+        return Colors.green.shade200;
+      case 'semestral':
+        return const Color.fromARGB(255, 185, 165, 214);  
       default:
-        return Colors.grey.shade200;
+        return Colors.grey.shade300;
     }
   }
+
+Icon _iconoTipoTarea(String? tipo) {
+  switch (tipo?.toLowerCase()) {
+    case 'limpieza':
+      return Icon(Icons.cleaning_services, color: Colors.white, size: 28);
+    case 'inspección':
+    case 'inspeccion':
+      return Icon(Icons.visibility, color: Colors.white, size: 28);
+    case 'lubricación':
+    case 'lubricacion':
+      return Icon(Icons.oil_barrel, color: Colors.white, size: 28);
+    case 'ajuste':
+      return Icon(Icons.construction, color: Colors.white, size: 28);
+    default:
+      return Icon(Icons.visibility, color: Colors.white, size: 28);
+  }
+}
+
 
   Icon _iconoEstado(String estado) {
     switch (estado.toLowerCase()) {
       case 'atrasado':
-        return Icon(Icons.error_outline, color: Colors.redAccent, size: 30);
+        return Icon(Icons.error_outline, color: Colors.redAccent, size: 28);
       case 'pendiente':
-        return Icon(Icons.schedule_outlined, color: Colors.grey.shade700, size: 28);
+        return Icon(Icons.hourglass_top, color: Colors.grey.shade700, size: 28);
       case 'completado':
-        return Icon(Icons.check_circle_outline, color: Colors.green, size: 30);
+        return Icon(Icons.check_circle_outline, color: Colors.green, size: 28);
       default:
         return Icon(Icons.help_outline, color: Colors.grey.shade700, size: 28);
     }
   }
 
-  String _formatearFechaLimite(String fechaLimiteRaw) {
-    try {
-      final fechaLimite = DateTime.parse(fechaLimiteRaw).toLocal();
-      final ahora = DateTime.now();
-      final diferencia = fechaLimite.difference(DateTime(ahora.year, ahora.month, ahora.day)).inDays;
+String _formatearFechaLimite(String? fechaLimiteRaw) {
+  if (fechaLimiteRaw == null) return '-';
+  try {
+    final fechaLimite = DateTime.parse(fechaLimiteRaw).toLocal();
+    final ahora = DateTime.now();
 
-      if (diferencia < 0) {
-        final diasAtraso = diferencia.abs();
-        return 'Venció hace $diasAtraso día${diasAtraso > 1 ? 's' : ''}';
-      } else if (diferencia == 0) {
-        return 'Vence hoy';
-      } else if (diferencia == 1) {
-        return 'Vence mañana';
-      } else {
-        return 'Vence en $diferencia días';
-      }
-    } catch (e) {
-      return fechaLimiteRaw.split('T')[0];
+    final fechaLimiteSinHora = DateTime(fechaLimite.year, fechaLimite.month, fechaLimite.day);
+    final ahoraSinHora = DateTime(ahora.year, ahora.month, ahora.day);
+
+    final diferencia = fechaLimiteSinHora.difference(ahoraSinHora).inDays;
+
+    if (diferencia < 0) {
+      final diasAtraso = diferencia.abs();
+      return 'Venció hace $diasAtraso día${diasAtraso > 1 ? 's' : ''}';
+    } else if (diferencia == 0) {
+      return 'Vence hoy';
+    } else if (diferencia == 1) {
+      return 'Vence mañana';
+    } else {
+      return 'Vence en $diferencia días';
     }
+  } catch (e) {
+    return fechaLimiteRaw.split('T')[0];
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
     final Color accentGreen = Color(0xFF007A3D);
     final background = Color(0xFFF8FAFB);
 
+    List<dynamic> tareasOrdenadas = List.from(tareasAsignadas);
+    tareasOrdenadas.sort((a, b) {
+      String estadoA = (a['estado'] ?? '').toString().toLowerCase();
+      String estadoB = (b['estado'] ?? '').toString().toLowerCase();
+
+      if ((estadoA == 'pendiente' || estadoA == 'atrasado') && estadoB == 'completado') return -1;
+      if ((estadoB == 'pendiente' || estadoB == 'atrasado') && estadoA == 'completado') return 1;
+
+      DateTime fechaA = DateTime.tryParse(a['fecha_limite'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      DateTime fechaB = DateTime.tryParse(b['fecha_limite'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return fechaA.compareTo(fechaB);
+    });
+
     return Scaffold(
       backgroundColor: background,
       appBar: AppBar(
         backgroundColor: accentGreen,
         leading: IconButton(
-          icon: Icon(Icons.home, size: 28),
+          icon: Icon(Icons.home,color: Colors.white, size: 28),
           tooltip: 'Volver a Inicio',
           onPressed: () {
             Navigator.pushReplacement(
@@ -166,7 +228,7 @@ class _TareasScreenState extends State<TareasScreen> {
         ),
         title: Text(
           'Tareas de ${operador?['nombreoperador'] ?? 'Operador'}',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white),
         ),
         centerTitle: true,
         elevation: 4,
@@ -174,10 +236,7 @@ class _TareasScreenState extends State<TareasScreen> {
       body: cargando
           ? Center(child: CircularProgressIndicator(color: accentGreen))
           : error != null
-              ? Center(
-                  child: Text(error!,
-                      style: TextStyle(color: Colors.redAccent, fontSize: 16)),
-                )
+              ? Center(child: Text(error!, style: TextStyle(color: Colors.redAccent, fontSize: 16)))
               : Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -186,38 +245,28 @@ class _TareasScreenState extends State<TareasScreen> {
                       Card(
                         color: Colors.green.shade50,
                         elevation: 3,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 20, horizontal: 24),
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _infoItem(Icons.person, 'Operador',
-                                  operador?['nombreoperador'] ?? '-'),
-                              _infoItem(Icons.factory, 'Máquina',
-                                  operador?['maquinas']?['nombre'] ?? '-'),
-                              _infoItem(Icons.line_weight, 'Línea',
-                                  operador?['linea'] ?? '-'),
+                              _infoItem(Icons.person, 'Operador', operador?['nombreoperador'] ?? '-'),
+                              _infoItem(Icons.factory, 'Máquina', operador?['maquinas']?['nombre'] ?? '-'),
+                              _infoItem(Icons.line_weight, 'Línea', operador?['linea'] ?? '-'),
                               _infoItem(Icons.work, 'Rol', 'Operador'),
                             ],
                           ),
                         ),
                       ),
                       SizedBox(height: 30),
-                      Text(
-                        'Tareas pendientes',
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87),
-                      ),
+                      Text('Tareas asignadas',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
                       SizedBox(height: 16),
-                      Expanded(
-                        child: tareasAsignadas.isEmpty
-                            ? _sinTareasWidget()
-                            : ScrollConfiguration(
+                      tareasOrdenadas.isEmpty
+                          ? _sinTareasWidget()
+                          : Expanded(
+                              child: ScrollConfiguration(
                                 behavior: ScrollConfiguration.of(context).copyWith(
                                   dragDevices: {
                                     PointerDeviceKind.touch,
@@ -227,65 +276,71 @@ class _TareasScreenState extends State<TareasScreen> {
                                 ),
                                 child: ListView.builder(
                                   physics: ClampingScrollPhysics(),
-                                  itemCount: tareasAsignadas.length,
+                                  itemCount: tareasOrdenadas.length,
                                   itemBuilder: (context, index) {
-                                    final registro = tareasAsignadas[index];
+                                    final registro = tareasOrdenadas[index];
                                     final tarea = registro['tareas'];
                                     final estado = registro['estado'] ?? 'Pendiente';
-                                    final fechaLimiteRaw =
-                                        registro['fecha_limite']?.toString() ?? '-';
-                                    final fechaLimite =
-                                        _formatearFechaLimite(fechaLimiteRaw);
+                                    final frecuencia = tarea['frecuencia'] ?? 'Otro';
+                                    final tipo = tarea['tipo'] ?? 'Otro';
+                                    final fechaLimiteRaw = registro['fecha_limite']?.toString();
+                                    final fechaLimite = _formatearFechaLimite(fechaLimiteRaw);
+
+                                    final bool completado = estado.toLowerCase() == 'completado';
 
                                     return Card(
-                                      color: _colorEstado(estado),
+                                      color: Colors.white,
                                       elevation: 4,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                       margin: EdgeInsets.symmetric(vertical: 8),
                                       child: ListTile(
-                                        leading: _iconoEstado(estado),
+                                        leading: CircleAvatar(
+                                          radius: 26,
+                                          backgroundColor: _colorFrecuencia(frecuencia),
+                                          child: _iconoTipoTarea(tipo),
+                                        ),
                                         title: Text(
                                           tarea['nombre_tarea'] ?? 'Sin nombre',
                                           style: TextStyle(
-                                              fontWeight: FontWeight.bold, fontSize: 18),
-                                        ),
-                                        subtitle: Text(
-                                          'Frecuencia: ${tarea['frecuencia'] ?? '-'}',
-                                          style: TextStyle(
-                                            color: Colors.grey.shade700,
-                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                            decoration:
+                                                completado ? TextDecoration.lineThrough : null,
+                                            color: completado ? Colors.grey.shade600 : Colors.black87,
                                           ),
                                         ),
-                                        trailing: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'Fecha límite',
+                                              'Frecuencia: $frecuencia',
                                               style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey.shade600,
-                                                  fontWeight: FontWeight.w600),
+                                                color: completado ? Colors.grey.shade600 : Colors.grey.shade700,
+                                                fontSize: 14,
+                                                decoration:
+                                                    completado ? TextDecoration.lineThrough : null,
+                                              ),
                                             ),
                                             SizedBox(height: 4),
                                             Text(
-                                              fechaLimite,
+                                              'Fecha límite: $fechaLimite',
                                               style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: estado.toLowerCase() == 'atrasado'
-                                                      ? Colors.redAccent
-                                                      : Colors.black87),
+                                                color: completado ? Colors.grey.shade600 : Colors.grey.shade700,
+                                                fontSize: 14,
+                                                decoration:
+                                                    completado ? TextDecoration.lineThrough : null,
+                                              ),
                                             ),
                                           ],
                                         ),
+                                        trailing: _iconoEstado(estado),
                                         onTap: () => _verPasosTarea(registro, tarea),
                                       ),
                                     );
                                   },
                                 ),
                               ),
-                      )
+                            )
                     ],
                   ),
                 ),
@@ -319,16 +374,10 @@ class _TareasScreenState extends State<TareasScreen> {
         children: [
           Icon(Icons.check_circle_outline, size: 80, color: Colors.green.shade300),
           SizedBox(height: 20),
-          Text(
-            '¡No hay tareas pendientes!',
-            style: TextStyle(
-                fontSize: 20, color: Colors.grey.shade700, fontWeight: FontWeight.bold),
-          ),
+          Text('¡No hay tareas pendientes!',
+              style: TextStyle(fontSize: 20, color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
           SizedBox(height: 8),
-          Text(
-            'Disfruta tu día',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
-          ),
+          Text('Disfruta tu día', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
         ],
       ),
     );
