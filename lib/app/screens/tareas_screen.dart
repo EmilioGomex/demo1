@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import '../../supabase_manager.dart';
-import 'package:intl/intl.dart';
 import 'pasos_tarea_screen.dart';
 import 'bienvenida_screen.dart';
 
