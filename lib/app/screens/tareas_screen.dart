@@ -119,16 +119,20 @@ class _TareasScreenState extends State<TareasScreen> {
     }
   }
 
-  Color _colorEstado(String estado) {
-    switch (estado.toLowerCase()) {
-      case 'atrasado':
-        return Colors.redAccent.shade100;
-      case 'pendiente':
-        return Colors.grey.shade200;
-      case 'completado':
-        return Colors.green.shade100;
+  Color _colorFrecuencia(String? frecuencia) {
+    switch (frecuencia?.toLowerCase()) {
+      case 'diario':
+        return Colors.red.shade200;
+      case 'semanal':
+        return const Color.fromARGB(255, 255, 222, 89);
+      case 'quincenal':
+        return Colors.lightBlue.shade200;
+      case 'mensual':
+        return Colors.green.shade200;
+      case 'semestral':
+        return const Color.fromARGB(255, 185, 165, 214);  
       default:
-        return Colors.grey.shade200;
+        return Colors.grey.shade300;
     }
   }
 
@@ -163,26 +167,32 @@ Icon _iconoTipoTarea(String? tipo) {
     }
   }
 
-  String _formatearFechaLimite(String fechaLimiteRaw) {
-    try {
-      final fechaLimite = DateTime.parse(fechaLimiteRaw).toLocal();
-      final ahora = DateTime.now();
-      final diferencia = fechaLimite.difference(DateTime(ahora.year, ahora.month, ahora.day)).inDays;
+String _formatearFechaLimite(String? fechaLimiteRaw) {
+  if (fechaLimiteRaw == null) return '-';
+  try {
+    final fechaLimite = DateTime.parse(fechaLimiteRaw).toLocal();
+    final ahora = DateTime.now();
 
-      if (diferencia < 0) {
-        final diasAtraso = diferencia.abs();
-        return 'Venció hace $diasAtraso día${diasAtraso > 1 ? 's' : ''}';
-      } else if (diferencia == 0) {
-        return 'Vence hoy';
-      } else if (diferencia == 1) {
-        return 'Vence mañana';
-      } else {
-        return 'Vence en $diferencia días';
-      }
-    } catch (e) {
-      return fechaLimiteRaw.split('T')[0];
+    final fechaLimiteSinHora = DateTime(fechaLimite.year, fechaLimite.month, fechaLimite.day);
+    final ahoraSinHora = DateTime(ahora.year, ahora.month, ahora.day);
+
+    final diferencia = fechaLimiteSinHora.difference(ahoraSinHora).inDays;
+
+    if (diferencia < 0) {
+      final diasAtraso = diferencia.abs();
+      return 'Venció hace $diasAtraso día${diasAtraso > 1 ? 's' : ''}';
+    } else if (diferencia == 0) {
+      return 'Vence hoy';
+    } else if (diferencia == 1) {
+      return 'Vence mañana';
+    } else {
+      return 'Vence en $diferencia días';
     }
+  } catch (e) {
+    return fechaLimiteRaw.split('T')[0];
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
