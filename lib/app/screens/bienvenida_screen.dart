@@ -81,7 +81,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     final trimmedId = id.trim();
 
     // IDs especiales para supervisor
-    if (trimmedId == '100100' || trimmedId == '100200') {
+    if (trimmedId == '0005103686' || trimmedId == '100200') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
