@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../supabase_manager.dart';
 import 'tareas_screen.dart';
+import 'bienvenida_screen.dart';
 
 class SupervisorScreen extends StatefulWidget {
   @override
@@ -54,6 +55,16 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
         title: const Text('Supervisor', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 2,
+        leading: IconButton(
+          icon: const Icon(Icons.home, color: Colors.white),
+          onPressed: () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const BienvenidaScreen()),
+              (route) => false,
+            );
+          },
+        ),
       ),
       body: cargando
           ? const Center(child: CircularProgressIndicator())
@@ -78,22 +89,61 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: accentGreen,
-                                borderRadius: BorderRadius.circular(10),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: accentGreen.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                          margin: const EdgeInsets.only(bottom: 28),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 28,
+                                backgroundColor: accentGreen,
+                                child: const Icon(Icons.person, color: Colors.white, size: 32),
                               ),
-                              padding: const EdgeInsets.all(10),
-                              child: const Icon(Icons.supervisor_account, color: Colors.white, size: 32),
-                            ),
-                            const SizedBox(width: 18),
-                            const Text(
-                              'Rol: Supervisor',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF222222)),
-                            ),
-                          ],
+                              const SizedBox(width: 18),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Andrea Mena',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF222222),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: accentGreen.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const [
+                                          Icon(Icons.verified_user, color: Color(0xFF007A3D), size: 16),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Rol: Supervisor',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Color(0xFF007A3D),
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 32),
                         Text('Selecciona máquina', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: accentGreen)),
