@@ -71,6 +71,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         .from('registro_tareas')
         .update({
           'estado': 'Completado',
+          'fecha_completado': DateTime.now().toIso8601String(), // <-- Agrega la fecha actual
         })
         .eq('id', widget.idRegistro)
         .execute();
@@ -80,6 +81,29 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         SnackBar(
           content: const Text('Tarea completada correctamente'),
           backgroundColor: Colors.green.shade600,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      await Future.delayed(const Duration(seconds: 1));
+      Navigator.pop(context, true);
+    }
+  }
+
+  Future<void> _marcarPendiente() async {
+    await SupabaseManager.client
+        .from('registro_tareas')
+        .update({
+          'estado': 'Pendiente',
+          'fecha_completado': null,
+        })
+        .eq('id', widget.idRegistro)
+        .execute();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Tarea marcada como pendiente'),
+          backgroundColor: Colors.orange.shade600,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -224,8 +248,10 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
                         child: const Text('No'),
+                        onPressed: () {
+                          _marcarPendiente();
+                        },
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../supabase_manager.dart';
 import 'tareas_screen.dart';
+import 'supervisor_screen.dart';
 
 class BienvenidaScreen extends StatefulWidget {
   const BienvenidaScreen({super.key});
@@ -78,6 +79,17 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   void _validarOperador(String id) async {
     final trimmedId = id.trim();
+
+    // IDs especiales para supervisor
+    if (trimmedId == '100100' || trimmedId == '100200') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SupervisorScreen(),
+        ),
+      );
+      return;
+    }
 
     if (trimmedId.isEmpty) {
       setState(() {

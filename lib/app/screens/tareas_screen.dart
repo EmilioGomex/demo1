@@ -69,12 +69,9 @@ class _TareasScreenState extends State<TareasScreen> {
 
       List<dynamic> todasTareas = tareasResponse.data as List;
 
-      final hoy = DateTime.now();
+      final hoy = DateTime.now().toUtc();
       final hoySinHora = DateTime(hoy.year, hoy.month, hoy.day);
 
-      // Filtrar para mostrar:
-      // - Pendientes o atrasadas (siempre)
-      // - Completadas solo si fecha_completado es hoy
       List<dynamic> tareasFiltradas = todasTareas.where((tarea) {
         final estado = (tarea['estado'] ?? '').toString().toLowerCase();
         if (estado == 'pendiente' || estado == 'atrasado') {
@@ -83,9 +80,11 @@ class _TareasScreenState extends State<TareasScreen> {
         if (estado == 'completado') {
           final fechaCompletadoRaw = tarea['fecha_completado'];
           if (fechaCompletadoRaw == null) return false;
-          final fechaCompletado = DateTime.parse(fechaCompletadoRaw).toLocal();
+          final fechaCompletado = DateTime.parse(fechaCompletadoRaw).toUtc();
           final fechaCompletadoSinHora = DateTime(fechaCompletado.year, fechaCompletado.month, fechaCompletado.day);
-          return fechaCompletadoSinHora == hoySinHora;
+          return fechaCompletadoSinHora.year == hoySinHora.year &&
+                 fechaCompletadoSinHora.month == hoySinHora.month &&
+                 fechaCompletadoSinHora.day == hoySinHora.day;
         }
         return false;
       }).toList();
