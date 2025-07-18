@@ -4,6 +4,15 @@ import 'tareas_screen.dart';
 import 'bienvenida_screen.dart';
 
 class SupervisorScreen extends StatefulWidget {
+  final String nombreSupervisor;
+  final String tipo;
+
+  const SupervisorScreen({
+    Key? key,
+    required this.nombreSupervisor,
+    required this.tipo,
+  }) : super(key: key);
+
   @override
   State<SupervisorScreen> createState() => _SupervisorScreenState();
 }
@@ -108,9 +117,9 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Andrea Mena',
-                                      style: TextStyle(
+                                    Text(
+                                      widget.nombreSupervisor,
+                                      style: const TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
                                         color: Color(0xFF222222),

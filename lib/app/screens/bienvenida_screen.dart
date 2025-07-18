@@ -80,17 +80,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   void _validarOperador(String id) async {
     final trimmedId = id.trim();
 
-    // IDs especiales para supervisor
-    if (trimmedId == '0005103686' || trimmedId == '100200') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SupervisorScreen(),
-        ),
-      );
-      return;
-    }
-
     if (trimmedId.isEmpty) {
       setState(() {
         _error = 'ID inválido, intenta de nuevo';
@@ -127,6 +116,42 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
         return;
       } else {
+        final tipo = (response['tipo'] ?? '').toString().toLowerCase();
+        final nombre = response['nombreoperador'] ?? 'Supervisor';
+        setState(() {
+          _mensajeEstado = 'Bienvenido, $nombre';
+          _error = null;
+          _operadorValido = true;
+          _fotoOperador = response['foto_operador'];
+          _nombreOperador = nombre;
+        });
+
+        _scaleController.forward(from: 0.0);
+
+        await Future.delayed(const Duration(seconds: 3));
+
+        if (!mounted) return;
+
+        if (tipo == 'supervisor') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SupervisorScreen(
+                nombreSupervisor: nombre,
+                tipo: tipo,
+              ),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TareasScreen(idOperador: trimmedId),
+            ),
+          );
+        }
+
+
         setState(() {
           _mensajeEstado = 'Bienvenido, ${response['nombreoperador']}';
           _error = null;
