@@ -79,7 +79,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   void _validarOperador(String id) async {
     final trimmedId = id.trim();
-
     if (trimmedId.isEmpty) {
       setState(() {
         _error = 'ID inválido, intenta de nuevo';
