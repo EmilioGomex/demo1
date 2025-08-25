@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../supabase_manager.dart';
 import 'tareas_screen.dart';
 import 'supervisor_screen.dart';
@@ -27,6 +28,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   bool _operadorValido = false;
   String? _fotoOperador;
   String? _nombreOperador;
+
+  late RealtimeChannel _rfidChannel;
 
   @override
   void initState() {
@@ -62,10 +65,29 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       duration: const Duration(milliseconds: 800),
     );
 
-    // Cambié la curva para que sea suave sin rebote
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
       CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
+
+    // --- SUSCRIPCIÓN REALTIME RFID ---
+    _rfidChannel = Supabase.instance.client
+        .channel('public:lecturas_rfid')
+        .on(
+          RealtimeListenTypes.postgresChanges,
+          ChannelFilter(
+            event: 'INSERT',
+            schema: 'public',
+            table: 'lecturas_rfid',
+          ),
+          (payload, [ref]) {
+            final data = payload['new'] ?? payload['record'] ?? payload;
+            final idOperador = data['id_operador']?.toString();
+            if (idOperador != null && idOperador.isNotEmpty) {
+              _validarOperador(idOperador);
+            }
+          },
+        );
+    _rfidChannel.subscribe();
   }
 
   @override
@@ -74,6 +96,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     _scaleController.dispose();
     _focusNode.dispose();
     _controller.dispose();
+    _rfidChannel.unsubscribe();
     super.dispose();
   }
 
@@ -149,27 +172,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
             ),
           );
         }
-
-
-        setState(() {
-          _mensajeEstado = 'Bienvenido, ${response['nombreoperador']}';
-          _error = null;
-          _operadorValido = true;
-          _fotoOperador = response['foto_operador'];
-          _nombreOperador = response['nombreoperador'];
-        });
-
-        _scaleController.forward(from: 0.0);
-
-        await Future.delayed(const Duration(seconds: 5));
-
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TareasScreen(idOperador: trimmedId),
-          ),
-        );
       }
     } catch (e) {
       setState(() {
@@ -276,22 +278,15 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () {
-          if (!_focusNode.hasFocus) {
-            _focusNode.requestFocus();
-          }
-        },
-        child: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 50),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 50),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -438,7 +433,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
