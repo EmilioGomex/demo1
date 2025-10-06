@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../supabase_manager.dart';
-
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 class PasosTareaScreen extends StatefulWidget {
   final String idRegistro;
   final String idTarea;
   final String nombreTarea;
 
   const PasosTareaScreen({
-    Key? key,
+    super.key,
     required this.idRegistro,
     required this.idTarea,
     required this.nombreTarea,
-  }) : super(key: key);
+  });
 
   @override
   State<PasosTareaScreen> createState() => _PasosTareaScreenState();
@@ -66,6 +67,39 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     });
   }
 
+Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) async {
+  final url = Uri.parse(
+    "https://prod-34.westeurope.logic.azure.com:443/workflows/78b16d627488439a9bd7f0d54129e613/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PqLeUOugoiB9i6nbSJoqZVu_PQ5HzsseO8Bx49YE5oc"
+  );
+
+  // Convertir a segundos desde epoch
+  final timestamp = (fecha.millisecondsSinceEpoch / 1000).round();
+
+  final body = {
+    "fecha": timestamp,  // <-- en segundos
+    "estado": estado,
+    "operador": operadorNombre,
+  };
+
+  try {
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 202) {
+      print("✅ Webhook enviado correctamente");
+    } else {
+      print("⚠️ Error al enviar webhook: ${response.statusCode}");
+      print("Respuesta: ${response.body}");
+    }
+  } catch (e) {
+    print("❌ Excepción al enviar webhook: $e");
+  }
+}
   Future<void> _confirmarTarea() async {
     await SupabaseManager.client
         .from('registro_tareas')
@@ -75,7 +109,8 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         })
         .eq('id', widget.idRegistro)
         .execute();
-
+// Enviar webhook con estado = 0
+  await enviarWebhook(DateTime.now(), 0, "Nombre del Operador"); // reemplaza con el nombre real
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

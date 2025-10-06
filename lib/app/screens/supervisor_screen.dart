@@ -8,10 +8,10 @@ class SupervisorScreen extends StatefulWidget {
   final String tipo;
 
   const SupervisorScreen({
-    Key? key,
+    super.key,
     required this.nombreSupervisor,
     required this.tipo,
-  }) : super(key: key);
+  });
 
   @override
   State<SupervisorScreen> createState() => _SupervisorScreenState();

@@ -35,6 +35,8 @@ dependencies:
   supabase_flutter: ^1.10.0
   intl: ^0.20.2
   cached_network_image: ^3.2.3
+  http: ^1.2.1
+
 
 
 

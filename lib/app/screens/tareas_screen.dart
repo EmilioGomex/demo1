@@ -3,11 +3,13 @@ import 'package:flutter/gestures.dart';
 import '../../supabase_manager.dart';
 import 'pasos_tarea_screen.dart';
 import 'bienvenida_screen.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class TareasScreen extends StatefulWidget {
   final String idOperador;
 
-  const TareasScreen({Key? key, required this.idOperador}) : super(key: key);
+  const TareasScreen({super.key, required this.idOperador});
 
   @override
   _TareasScreenState createState() => _TareasScreenState();
@@ -24,6 +26,41 @@ class _TareasScreenState extends State<TareasScreen> {
     super.initState();
     _cargarDatos();
   }
+
+Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) async {
+  final url = Uri.parse(
+    "https://prod-34.westeurope.logic.azure.com:443/workflows/78b16d627488439a9bd7f0d54129e613/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PqLeUOugoiB9i6nbSJoqZVu_PQ5HzsseO8Bx49YE5oc"
+  );
+
+  // Convertir a segundos desde epoch
+  final timestamp = (fecha.millisecondsSinceEpoch / 1000).round();
+
+  final body = {
+    "fecha": timestamp,  // <-- en segundos
+    "estado": estado,
+    "operador": operadorNombre,
+  };
+
+  try {
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 202) {
+      print("✅ Webhook enviado correctamente");
+    } else {
+      print("⚠️ Error al enviar webhook: ${response.statusCode}");
+      print("Respuesta: ${response.body}");
+    }
+  } catch (e) {
+    print("❌ Excepción al enviar webhook: $e");
+  }
+}
+
 
   Future<void> _cargarDatos() async {
     setState(() {
@@ -101,21 +138,27 @@ class _TareasScreenState extends State<TareasScreen> {
     }
   }
 
-  Future<void> _verPasosTarea(Map<String, dynamic> registro, Map<String, dynamic> tarea) async {
-    final resultado = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PasosTareaScreen(
-          idRegistro: registro['id'],
-          idTarea: registro['id_tarea'],
-          nombreTarea: tarea['nombre_tarea'] ?? 'Tarea',
-        ),
+Future<void> _verPasosTarea(Map<String, dynamic> registro, Map<String, dynamic> tarea) async {
+  // Enviar webhook antes de abrir pasos
+  final operadorNombre = operador?['nombreoperador'] ?? 'Operador desconocido';
+  await enviarWebhook(DateTime.now(), 1, operadorNombre);
+
+  // Luego abrir pantalla de pasos
+  final resultado = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => PasosTareaScreen(
+        idRegistro: registro['id'],
+        idTarea: registro['id_tarea'],
+        nombreTarea: tarea['nombre_tarea'] ?? 'Tarea',
       ),
-    );
-    if (resultado == true) {
-      _cargarDatos();
-    }
+    ),
+  );
+  if (resultado == true) {
+    _cargarDatos();
   }
+}
+
 
   Color _colorFrecuencia(String? frecuencia) {
     switch (frecuencia?.toLowerCase()) {
