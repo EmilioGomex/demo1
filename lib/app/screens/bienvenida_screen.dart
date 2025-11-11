@@ -1,3 +1,4 @@
+import 'dart:io'; // Importar para SocketException
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../supabase_manager.dart';
@@ -30,6 +31,9 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   String? _nombreOperador;
 
   late RealtimeChannel _rfidChannel;
+
+  // Optimización: "Lock" para evitar validaciones múltiples (Debouncing)
+  bool _isValidando = false;
 
   @override
   void initState() {
@@ -69,7 +73,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
 
-    // --- SUSCRIPCIÓN REALTIME RFID ---
+    // --- SUSCRIPCIÓN REALTIME RFID (Actualizada) ---
     _rfidChannel = Supabase.instance.client
         .channel('public:lecturas_rfid')
         .on(
@@ -78,16 +82,37 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
             event: 'INSERT',
             schema: 'public',
             table: 'lecturas_rfid',
+            // Nuevo: Filtra para que solo nos lleguen lecturas no procesadas
+            filter: 'procesado=eq.false',
           ),
           (payload, [ref]) {
             final data = payload['new'] ?? payload['record'] ?? payload;
             final idOperador = data['id_operador']?.toString();
-            if (idOperador != null && idOperador.isNotEmpty) {
-              _validarOperador(idOperador);
+            // Nuevo: Obtenemos el ID de la fila (UUID)
+            final idLectura = data['id']?.toString();
+
+            if (idOperador != null &&
+                idOperador.isNotEmpty &&
+                idLectura != null) {
+              // Nuevo: Pasamos ambos IDs a la función de validación
+              _validarOperador(idOperador, idLectura: idLectura);
             }
           },
         );
+    // Nuevo: Manejador de errores para el canal Realtime
+    _rfidChannel.onError((e) {
+      debugPrint('Error en el canal Realtime: $e');
+      if (mounted) {
+        setState(() {
+          _mensajeEstado = 'Error de conexión Realtime';
+          _error = 'No se pudo conectar al lector RFID';
+        });
+      }
+    });
     _rfidChannel.subscribe();
+
+    // --- NUEVO: Buscar lecturas pendientes al iniciar ---
+    _buscarLecturaPendiente();
   }
 
   @override
@@ -100,8 +125,48 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     super.dispose();
   }
 
-  void _validarOperador(String id) async {
-    final trimmedId = id.trim();
+  // --- NUEVO: Función para buscar lecturas pendientes ---
+  Future<void> _buscarLecturaPendiente() async {
+    // Damos un respiro para que la UI se construya
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Si ya está validando o el widget no está montado, no hacer nada
+    if (_isValidando || !mounted) return;
+
+    try {
+      // Calcula "hace un minuto"
+      final oneMinuteAgo = DateTime.now().subtract(const Duration(minutes: 1));
+
+      final response = await Supabase.instance.client
+          .from('lecturas_rfid')
+          .select('id, id_operador') // Traemos el id de la lectura y del operador
+          .eq('procesado', false) // Que no esté procesada
+          .gte('fecha_lectura',
+              oneMinuteAgo.toIso8601String()) // De hace 1 min
+          .order('fecha_lectura', ascending: false) // La más reciente primero
+          .limit(1) // Solo queremos una
+          .maybeSingle();
+
+      if (response != null && mounted) {
+        // ¡Encontramos una lectura pendiente!
+        final String idLectura = response['id'];
+        final String idOperador = response['id_operador'];
+
+        // La mandamos al validador, que la marcará como procesada
+        _validarOperador(idOperador, idLectura: idLectura);
+      }
+    } catch (e) {
+      debugPrint('Error buscando lectura pendiente: $e');
+      // No es crítico, el usuario simplemente tendrá que escanear de nuevo.
+    }
+  }
+
+  // --- FUNCIÓN _validarOperador (Actualizada) ---
+  void _validarOperador(String idOperador, {String? idLectura}) async {
+    // Optimización: Debounce check
+    if (_isValidando) return;
+
+    final trimmedId = idOperador.trim();
     if (trimmedId.isEmpty) {
       setState(() {
         _error = 'ID inválido, intenta de nuevo';
@@ -111,10 +176,25 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     }
 
     setState(() {
+      _isValidando = true; // "Bloquea" para evitar dobles validaciones
       _error = null;
       _mensajeEstado = 'Validando operador...';
     });
 
+    // Nuevo: Si la validación viene de un RFID (Realtime o pendiente),
+    // la "reclamamos" marcándola como procesada.
+    if (idLectura != null) {
+      try {
+        await SupabaseManager.client
+            .from('lecturas_rfid')
+            .update({'procesado': true}).eq('id', idLectura);
+      } catch (e) {
+        debugPrint('Error al marcar lectura como procesada: $e');
+        // No detenemos el flujo de login, pero es bueno registrarlo.
+      }
+    }
+
+    // Optimización: Manejo de errores de red y Supabase
     try {
       final response = await SupabaseManager.client
           .from('operadores')
@@ -133,6 +213,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           setState(() {
             _error = null;
             _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
+            _isValidando = false; // "Libera" el lock
           });
         });
 
@@ -173,10 +254,26 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           );
         }
       }
+    } on SocketException catch (_) {
+      // Error de conexión
+      setState(() {
+        _error = 'Error de red. Revisa tu conexión a internet.';
+        _mensajeEstado = '';
+        _isValidando = false; // "Libera" el lock
+      });
+    } on PostgrestException catch (e) {
+      // Error de Supabase (ej. permisos, tabla no existe)
+      setState(() {
+        _error = 'Error de base de datos: ${e.message}';
+        _mensajeEstado = '';
+        _isValidando = false; // "Libera" el lock
+      });
     } catch (e) {
+      // Error inesperado
       setState(() {
         _error = 'Error inesperado: $e';
         _mensajeEstado = '';
+        _isValidando = false; // "Libera" el lock
       });
     }
   }
@@ -186,6 +283,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     final Color backgroundColor = const Color(0xFFF5F5F7);
     final Color accentGreen = const Color(0xFF007A3D);
 
+    // --- Pantalla de Bienvenida (con foto) ---
+    // Optimización UX: Se eliminó el "Cargando tareas..."
     if (_operadorValido && _fotoOperador != null) {
       return Scaffold(
         backgroundColor: backgroundColor,
@@ -261,21 +360,14 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                   color: Colors.black87,
                 ),
               ),
-              const SizedBox(height: 20),
-              CircularProgressIndicator(
-                color: accentGreen,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Cargando tareas...',
-                style: TextStyle(fontSize: 18, color: Colors.black54),
-              ),
+              // Indicador de carga y texto "Cargando..." ELIMINADOS
             ],
           ),
         ),
       );
     }
 
+    // --- Pantalla Principal (de escaneo) ---
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
@@ -287,152 +379,157 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
               children: [
                 Container(
                   decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: accentGreen.withOpacity(0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Image.asset(
-                      'assets/logo_heineken.png',
-                      height: 100,
-                      fit: BoxFit.contain,
-                      color: accentGreen.withOpacity(0.85),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 15),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 12,
-                          offset: Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: const [
-                        Text(
-                          'Registro diario de tareas CILT',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87,
-                            letterSpacing: 1.1,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Limpieza, Inspección, Lubricación, Apriete',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.black54,
-                            fontStyle: FontStyle.italic,
-                            letterSpacing: 1.0,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (_error == null)
-                          Icon(Icons.qr_code_scanner,
-                              color: accentGreen, size: 28)
-                        else
-                          const Icon(Icons.error,
-                              color: Colors.redAccent, size: 28),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: accentGreen, width: 1.8),
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.white,
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 8,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _mensajeEstado,
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                  color: _error == null
-                                      ? accentGreen
-                                      : Colors.redAccent,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              if (_mensajeEstado == 'Validando operador...')
-                                const SizedBox(width: 12),
-                              if (_mensajeEstado == 'Validando operador...')
-                                SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    color: accentGreen,
-                                    strokeWidth: 3,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        color: Colors.redAccent,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentGreen.withOpacity(0.25),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                      textAlign: TextAlign.center,
+                    ],
+                  ),
+                  child: Image.asset(
+                    'assets/logo_heineken.png',
+                    height: 100,
+                    fit: BoxFit.contain,
+                    color: accentGreen.withOpacity(0.85),
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 12,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: const [
+                      Text(
+                        'Registro diario de tareas CILT',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                          letterSpacing: 1.1,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Limpieza, Inspección, Lubricación, Apriete',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black54,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 1.0,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (_error == null)
+                        Icon(Icons.qr_code_scanner,
+                            color: accentGreen, size: 28)
+                      else
+                        const Icon(Icons.error,
+                            color: Colors.redAccent, size: 28),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: accentGreen, width: 1.8),
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 8,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _mensajeEstado,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: _error == null
+                                    ? accentGreen
+                                    : Colors.redAccent,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (_mensajeEstado == 'Validando operador...')
+                              const SizedBox(width: 12),
+                            if (_mensajeEstado == 'Validando operador...')
+                              SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: accentGreen,
+                                  strokeWidth: 3,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                  Opacity(
-                    opacity: 0,
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      autofocus: true,
-                      onSubmitted: _validarOperador,
-                      keyboardType: TextInputType.text,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
-              ),
+                Opacity(
+                  opacity: 0,
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    autofocus: true,
+                    // Actualizado: Llama a la nueva firma de la función
+                    // y limpia el controlador.
+                    onSubmitted: (idOperador) {
+                      _validarOperador(idOperador, idLectura: null);
+                      _controller.clear();
+                    },
+                    keyboardType: TextInputType.text,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-      );
+      ),
+    );
   }
 }

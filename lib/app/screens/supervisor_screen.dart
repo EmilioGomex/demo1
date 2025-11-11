@@ -164,7 +164,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                             prefixIcon: Icon(Icons.precision_manufacturing, color: accentGreen),
                           ),
-                          value: maquinaSeleccionada,
+                          initialValue: maquinaSeleccionada,
                           items: maquinas.map<DropdownMenuItem<String>>((m) {
                             return DropdownMenuItem(
                               value: m['id_maquina'],
@@ -188,7 +188,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                             prefixIcon: Icon(Icons.person, color: accentGreen),
                           ),
-                          value: operadorSeleccionado,
+                          initialValue: operadorSeleccionado,
                           items: operadores
                               .where((o) => maquinaSeleccionada == null || o['id_maquina'] == maquinaSeleccionada)
                               .map<DropdownMenuItem<String>>((o) {

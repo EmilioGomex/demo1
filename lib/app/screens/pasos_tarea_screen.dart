@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../supabase_manager.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+
 class PasosTareaScreen extends StatefulWidget {
   final String idRegistro;
   final String idTarea;
@@ -39,6 +40,43 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     super.dispose();
   }
 
+  // --- NUEVO: Función para transformar la URL de Supabase ---
+  /// Aplica transformaciones de Supabase para optimizar la imagen.
+  /// No aplica transformaciones a los GIFs para no romper la animación.
+  String _transformarUrl(String url, {bool esGif = false}) {
+    if (esGif || url.isEmpty) {
+      return url;
+    }
+
+    // Pide una imagen de 800px de ancho, calidad 80%, y formato webp (si es posible)
+    // w=800 (ancho)
+    // q=80 (calidad)
+    // format=auto (usa webp o avif si el navegador/app lo soporta)
+    return '$url?transform=w_800,q_80,format_auto';
+  }
+
+  // --- NUEVO: Función para pre-cachear imágenes ---
+  /// Inicia la descarga de las primeras 5 imágenes en segundo plano.
+  Future<void> _preCacheImagenes() async {
+    // Espera un segundo para no bloquear la animación de entrada
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    for (int i = 0; i < pasos.length && i < 5; i++) { // Precarga las primeras 5
+      final paso = pasos[i];
+      final url = paso['imagenurl'] ?? '';
+      if (url.isNotEmpty) {
+        final esGif = url.toLowerCase().endsWith('.gif');
+        if (!esGif) {
+          final urlTransformada = _transformarUrl(url);
+          // Usa CachedNetworkImageProvider para precargar la imagen
+          precacheImage(CachedNetworkImageProvider(urlTransformada), context);
+        }
+      }
+    }
+  }
+
   Future<void> _cargarPasos() async {
     final response = await SupabaseManager.client
         .from('pasos_tarea')
@@ -54,6 +92,11 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         pasos = data;
         cargando = false;
       });
+
+      // --- MODIFICADO: Llama a la función de pre-cache ---
+      if (pasos.isNotEmpty) {
+        _preCacheImagenes();
+      }
     } else {
       setState(() {
         cargando = false;
@@ -67,50 +110,51 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     });
   }
 
-Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) async {
-  final url = Uri.parse(
-    "https://prod-34.westeurope.logic.azure.com:443/workflows/78b16d627488439a9bd7f0d54129e613/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PqLeUOugoiB9i6nbSJoqZVu_PQ5HzsseO8Bx49YE5oc"
-  );
-
-  // Convertir a segundos desde epoch
-  final timestamp = (fecha.millisecondsSinceEpoch / 1000).round();
-
-  final body = {
-    "fecha": timestamp,  // <-- en segundos
-    "estado": estado,
-    "operador": operadorNombre,
-  };
-
-  try {
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode(body),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 202) {
-      print("✅ Webhook enviado correctamente");
-    } else {
-      print("⚠️ Error al enviar webhook: ${response.statusCode}");
-      print("Respuesta: ${response.body}");
-    }
-  } catch (e) {
-    print("❌ Excepción al enviar webhook: $e");
+  Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) async {
+    // ... (Tu función de Webhook - Sin cambios) ...
+     final url = Uri.parse(
+       "https://prod-34.westeurope.logic.azure.com:443/workflows/78b16d627488439a9bd7f0d54129e613/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PqLeUOugoiB9i6nbSJoqZVu_PQ5HzsseO8Bx49YE5oc"
+     );
+     final timestamp = (fecha.millisecondsSinceEpoch / 1000).round();
+     final body = {
+       "fecha": timestamp,
+       "estado": estado,
+       "operador": operadorNombre,
+     };
+     try {
+       final response = await http.post(
+         url,
+         headers: {
+           "Content-Type": "application/json",
+         },
+         body: jsonEncode(body),
+       );
+       if (response.statusCode == 200 || response.statusCode == 202) {
+         print("✅ Webhook enviado correctamente");
+       } else {
+         print("⚠️ Error al enviar webhook: ${response.statusCode}");
+         print("Respuesta: ${response.body}");
+       }
+     } catch (e) {
+       print("❌ Excepción al enviar webhook: $e");
+     }
   }
-}
+
   Future<void> _confirmarTarea() async {
+    // --- MODIFICADO: Llama al webhook SIN 'await' ---
+    // El 'await' aquí no es necesario y puede hacer que la app se sienta lenta.
+    // "Dispara y olvida"
+    enviarWebhook(DateTime.now(), 0, "Nombre del Operador"); // reemplaza con el nombre real
+    
     await SupabaseManager.client
         .from('registro_tareas')
         .update({
-          'estado': 'Completado',
-          'fecha_completado': DateTime.now().toIso8601String(), // <-- Agrega la fecha actual
+          'estado': 'Completado', // Asegúrate que sea 'Completado' (con C)
+          'fecha_completado': DateTime.now().toIso8601String(),
         })
         .eq('id', widget.idRegistro)
         .execute();
-// Enviar webhook con estado = 0
-  await enviarWebhook(DateTime.now(), 0, "Nombre del Operador"); // reemplaza con el nombre real
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -128,7 +172,7 @@ Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) as
     await SupabaseManager.client
         .from('registro_tareas')
         .update({
-          'estado': 'Pendiente',
+          'estado': 'Pendiente', // Asegúrate que sea 'Pendiente' (con P)
           'fecha_completado': null,
         })
         .eq('id', widget.idRegistro)
@@ -148,7 +192,8 @@ Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) as
   }
 
   Widget _buildDots() {
-    return Row(
+    // ... (Tu widget _buildDots - Sin cambios) ...
+     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(pasos.length, (index) {
         return AnimatedContainer(
@@ -171,6 +216,7 @@ Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) as
 
     return Scaffold(
       appBar: AppBar(
+        // ... (Tu AppBar - Sin cambios) ...
         title: Text(
           widget.nombreTarea,
           style: const TextStyle(color: Colors.white),
@@ -184,6 +230,7 @@ Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) as
               children: [
                 Expanded(
                   child: Container(
+                    // ... (Tu decoración de Container - Sin cambios) ...
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -199,6 +246,7 @@ Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) as
                     ),
                     child: pasos.isEmpty
                         ? Center(
+                            // ... (Tu widget de "No hay pasos" - Sin cambios) ...
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: const [
@@ -232,27 +280,36 @@ Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) as
                                 final paso = pasos[index];
                                 final url = paso['imagenurl'] ?? '';
 
+                                // --- MODIFICADO: Lógica para usar la URL transformada ---
+                                final esGif = url.toLowerCase().endsWith('.gif');
+                                final urlParaMostrar = _transformarUrl(url, esGif: esGif);
+
                                 Widget imagenWidget;
 
-                                if (url.toLowerCase().endsWith('.gif')) {
-                                  // Mostrar GIF animado con Image.network
+                                if (esGif) {
+                                  // Los GIF no se cachean ni transforman para mantener animación
                                   imagenWidget = Image.network(
-                                    url,
+                                    url, // Usar la URL original
                                     fit: BoxFit.contain,
                                   );
                                 } else {
-                                  // Imagen estática con CachedNetworkImage
+                                  // Imagen estática con CachedNetworkImage y URL transformada
                                   imagenWidget = CachedNetworkImage(
-                                    imageUrl: url,
+                                    imageUrl: urlParaMostrar, // <-- URL TRANSFORMADA
                                     fit: BoxFit.contain,
-                                    placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                                    placeholder: (context, url) => const Center(
+                                        child: CircularProgressIndicator()),
                                     errorWidget: (context, url, error) => Center(
                                       child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: const [
-                                          Icon(Icons.broken_image, size: 80, color: Colors.redAccent),
+                                          Icon(Icons.broken_image,
+                                              size: 80, color: Colors.redAccent),
                                           SizedBox(height: 8),
-                                          Text('Error al cargar imagen', style: TextStyle(color: Colors.redAccent)),
+                                          Text('Error al cargar imagen',
+                                              style: TextStyle(
+                                                  color: Colors.redAccent)),
                                         ],
                                       ),
                                     ),
@@ -277,6 +334,7 @@ Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) as
                 ],
                 const SizedBox(height: 16),
                 Container(
+                  // ... (Tus botones - Sin cambios) ...
                   color: Colors.grey.shade100,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Row(
