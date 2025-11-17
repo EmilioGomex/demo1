@@ -9,12 +9,16 @@ class PasosTareaScreen extends StatefulWidget {
   final String idRegistro;
   final String idTarea;
   final String nombreTarea;
+  
+  // Recibe el ID del job ya creado en la pantalla anterior
+  final String? parsableJobId; 
 
   const PasosTareaScreen({
     super.key,
     required this.idRegistro,
     required this.idTarea,
     required this.nombreTarea,
+    this.parsableJobId,
   });
 
   @override
@@ -22,6 +26,11 @@ class PasosTareaScreen extends StatefulWidget {
 }
 
 class _PasosTareaScreenState extends State<PasosTareaScreen> {
+  // --- CONFIGURACIÓN PARSABLE ---
+  static const String parsableRpcUrl = "https://api.eu-west-1.parsable.net/api/jobs#completeWithOpts";
+  // ⚠️ TOKEN REAL
+  static const String parsableToken = "Token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTM5MDA2MDEsImlzcyI6ImF1dGg6cHJvZHVjdGlvbiIsInNlcmE6Y3J0ciI6IjY4NmI4M2ZlLWY3YmYtNDA3Ni1iZWJkLTUzNjM1YTgwZmNkNSIsInNlcmE6c2lkIjoiZjk4NDI5Y2MtYzBkMy00Y2VjLWI2YjctZjlmMmQ1ZjA3NmFiIiwic2VyYTp0ZWFtSWQiOiJhNDJlNzJkZC0zMzRhLTQzOTUtYjc2YS05ZDgxZjBjOGQyMTMiLCJzZXJhOnR5cCI6InBlcnNpc3RlbnQiLCJzdWIiOiIzYWYxYmU0NS0zOTQyLTQzZDEtOTVmZC1jMjg5NTQzMmVmMTcifQ.oyskbCMhYyLoSW_S2SLyGf7LdKoynMaRa8W8wTh6QDM"; 
+  
   List<dynamic> pasos = [];
   bool cargando = true;
   int paginaActual = 0;
@@ -40,39 +49,20 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     super.dispose();
   }
 
-  // --- NUEVO: Función para transformar la URL de Supabase ---
-  /// Aplica transformaciones de Supabase para optimizar la imagen.
-  /// No aplica transformaciones a los GIFs para no romper la animación.
+  // --- GESTIÓN DE IMÁGENES ---
   String _transformarUrl(String url, {bool esGif = false}) {
-    if (esGif || url.isEmpty) {
-      return url;
-    }
-
-    // Pide una imagen de 800px de ancho, calidad 80%, y formato webp (si es posible)
-    // w=800 (ancho)
-    // q=80 (calidad)
-    // format=auto (usa webp o avif si el navegador/app lo soporta)
+    if (esGif || url.isEmpty) return url;
     return '$url?transform=w_800,q_80,format_auto';
   }
 
-  // --- NUEVO: Función para pre-cachear imágenes ---
-  /// Inicia la descarga de las primeras 5 imágenes en segundo plano.
   Future<void> _preCacheImagenes() async {
-    // Espera un segundo para no bloquear la animación de entrada
-    await Future.delayed(const Duration(seconds: 1));
-
+    await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-
-    for (int i = 0; i < pasos.length && i < 5; i++) { // Precarga las primeras 5
+    for (int i = 0; i < pasos.length && i < 5; i++) {
       final paso = pasos[i];
       final url = paso['imagenurl'] ?? '';
-      if (url.isNotEmpty) {
-        final esGif = url.toLowerCase().endsWith('.gif');
-        if (!esGif) {
-          final urlTransformada = _transformarUrl(url);
-          // Usa CachedNetworkImageProvider para precargar la imagen
-          precacheImage(CachedNetworkImageProvider(urlTransformada), context);
-        }
+      if (url.isNotEmpty && !url.toLowerCase().endsWith('.gif')) {
+        precacheImage(CachedNetworkImageProvider(_transformarUrl(url)), context);
       }
     }
   }
@@ -92,108 +82,166 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         pasos = data;
         cargando = false;
       });
-
-      // --- MODIFICADO: Llama a la función de pre-cache ---
-      if (pasos.isNotEmpty) {
-        _preCacheImagenes();
-      }
+      if (pasos.isNotEmpty) _preCacheImagenes();
     } else {
-      setState(() {
-        cargando = false;
-      });
+      setState(() => cargando = false);
     }
   }
 
   void _onPageChanged(int index) {
-    setState(() {
-      paginaActual = index;
-    });
+    setState(() => paginaActual = index);
   }
 
-  Future<void> enviarWebhook(DateTime fecha, int estado, String operadorNombre) async {
-    // ... (Tu función de Webhook - Sin cambios) ...
-     final url = Uri.parse(
-       "https://prod-34.westeurope.logic.azure.com:443/workflows/78b16d627488439a9bd7f0d54129e613/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PqLeUOugoiB9i6nbSJoqZVu_PQ5HzsseO8Bx49YE5oc"
-     );
-     final timestamp = (fecha.millisecondsSinceEpoch / 1000).round();
-     final body = {
-       "fecha": timestamp,
-       "estado": estado,
-       "operador": operadorNombre,
-     };
-     try {
-       final response = await http.post(
-         url,
-         headers: {
-           "Content-Type": "application/json",
-         },
-         body: jsonEncode(body),
-       );
-       if (response.statusCode == 200 || response.statusCode == 202) {
-         print("✅ Webhook enviado correctamente");
-       } else {
-         print("⚠️ Error al enviar webhook: ${response.statusCode}");
-         print("Respuesta: ${response.body}");
-       }
-     } catch (e) {
-       print("❌ Excepción al enviar webhook: $e");
-     }
+  // --- ACCIONES PARSABLE (JSON-RPC) ---
+
+  Future<void> _cerrarJobParsable() async {
+    if (widget.parsableJobId == null) return;
+
+    final body = {
+      "method": "complete",
+      "arguments": {
+        "jobId": widget.parsableJobId,
+        "reason": "Completado desde ECILT"
+      }
+    };
+
+    // --- DEBUG: IMPRIMIR JSON ---
+    print("🔵 CERRANDO JOB...");
+    print("🔵 URL: $parsableRpcUrl");
+    print("🔵 JSON Enviado:\n${jsonEncode(body)}");
+    // ----------------------------
+
+    try {
+      final response = await http.post(
+        Uri.parse(parsableRpcUrl),
+        headers: { 
+          "Content-Type": "application/json", 
+          "accept": "application/json", 
+          "Authorization": parsableToken,
+          "PARSABLE-CUSTOM-TOUCHSTONE": "heineken/heineken" 
+        },
+        body: jsonEncode(body),
+      );
+      
+      if (response.statusCode == 200) {
+        print("🏁 Job Cerrado Correctamente. Respuesta: ${response.body}");
+      } else {
+        print("⚠️ Error cerrando job (${response.statusCode}): ${response.body}");
+      }
+    } catch (e) {
+      print("❌ Excepción cerrando job: $e");
+    }
   }
+
+  Future<void> _reabrirJobParsable() async {
+    if (widget.parsableJobId == null) return;
+
+    final body = {
+      "method": "reopen", 
+      "arguments": {
+        "jobId": widget.parsableJobId,
+        "reason": "Reabierto desde ECILT"
+      }
+    };
+
+    // --- DEBUG: IMPRIMIR JSON ---
+    print("🔵 REABRIENDO JOB...");
+    print("🔵 URL: $parsableRpcUrl");
+    print("🔵 JSON Enviado:\n${jsonEncode(body)}");
+    // ----------------------------
+
+    try {
+      final response = await http.post(
+        Uri.parse(parsableRpcUrl),
+        headers: { 
+          "Content-Type": "application/json", 
+          "Authorization": parsableToken,
+          "PARSABLE-CUSTOM-TOUCHSTONE": "heineken/heineken" 
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        print("🔄 Job Reabierto Correctamente. Respuesta: ${response.body}");
+      } else {
+        print("⚠️ Error reabriendo job (${response.statusCode}): ${response.body}");
+      }
+    } catch (e) {
+      print("❌ Excepción reabriendo job: $e");
+    }
+  }
+
+  // --- LÓGICA BOTONES ---
 
   Future<void> _confirmarTarea() async {
-    // --- MODIFICADO: Llama al webhook SIN 'await' ---
-    // El 'await' aquí no es necesario y puede hacer que la app se sienta lenta.
-    // "Dispara y olvida"
-    enviarWebhook(DateTime.now(), 0, "Nombre del Operador"); // reemplaza con el nombre real
-    
-    await SupabaseManager.client
-        .from('registro_tareas')
-        .update({
-          'estado': 'Completado', // Asegúrate que sea 'Completado' (con C)
-          'fecha_completado': DateTime.now().toIso8601String(),
-        })
-        .eq('id', widget.idRegistro)
-        .execute();
+    setState(() => cargando = true);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Tarea completada correctamente'),
-          backgroundColor: Colors.green.shade600,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      await Future.delayed(const Duration(seconds: 1));
-      Navigator.pop(context, true);
+    try {
+      // 1. Actualizar Supabase Localmente
+      await SupabaseManager.client
+          .from('registro_tareas')
+          .update({
+            'estado': 'Completado',
+            'fecha_completado': DateTime.now().toIso8601String(),
+          })
+          .eq('id', widget.idRegistro)
+          .execute();
+
+      // 2. Cerrar en Parsable
+      await _cerrarJobParsable();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Tarea completada y sincronizada'),
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        await Future.delayed(const Duration(seconds: 1));
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      print("Error confirmando tarea: $e");
+      if (mounted) setState(() => cargando = false);
     }
   }
 
   Future<void> _marcarPendiente() async {
-    await SupabaseManager.client
-        .from('registro_tareas')
-        .update({
-          'estado': 'Pendiente', // Asegúrate que sea 'Pendiente' (con P)
-          'fecha_completado': null,
-        })
-        .eq('id', widget.idRegistro)
-        .execute();
+    setState(() => cargando = true);
+    try {
+      // 1. Reabrir en Parsable
+      await _reabrirJobParsable();
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Tarea marcada como pendiente'),
-          backgroundColor: Colors.orange.shade600,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      await Future.delayed(const Duration(seconds: 1));
-      Navigator.pop(context, true);
+      // 2. Actualizar Supabase Local
+      await SupabaseManager.client
+          .from('registro_tareas')
+          .update({
+            'estado': 'Pendiente',
+            'fecha_completado': null,
+          })
+          .eq('id', widget.idRegistro)
+          .execute();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Tarea marcada como pendiente'),
+            backgroundColor: Colors.orange.shade600,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        await Future.delayed(const Duration(seconds: 1));
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      print("Error marcando pendiente: $e");
+      if (mounted) setState(() => cargando = false);
     }
   }
 
   Widget _buildDots() {
-    // ... (Tu widget _buildDots - Sin cambios) ...
-     return Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(pasos.length, (index) {
         return AnimatedContainer(
@@ -216,7 +264,6 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // ... (Tu AppBar - Sin cambios) ...
         title: Text(
           widget.nombreTarea,
           style: const TextStyle(color: Colors.white),
@@ -230,7 +277,6 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
               children: [
                 Expanded(
                   child: Container(
-                    // ... (Tu decoración de Container - Sin cambios) ...
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -246,15 +292,10 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                     ),
                     child: pasos.isEmpty
                         ? Center(
-                            // ... (Tu widget de "No hay pasos" - Sin cambios) ...
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: const [
-                                Icon(
-                                  Icons.info_outline,
-                                  size: 80,
-                                  color: Colors.grey,
-                                ),
+                                Icon(Icons.info_outline, size: 80, color: Colors.grey),
                                 SizedBox(height: 16),
                                 Text(
                                   'No hay pasos para mostrar.',
@@ -279,39 +320,20 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                               itemBuilder: (context, index) {
                                 final paso = pasos[index];
                                 final url = paso['imagenurl'] ?? '';
-
-                                // --- MODIFICADO: Lógica para usar la URL transformada ---
                                 final esGif = url.toLowerCase().endsWith('.gif');
-                                final urlParaMostrar = _transformarUrl(url, esGif: esGif);
+                                final urlFinal = _transformarUrl(url, esGif: esGif);
 
                                 Widget imagenWidget;
-
                                 if (esGif) {
-                                  // Los GIF no se cachean ni transforman para mantener animación
-                                  imagenWidget = Image.network(
-                                    url, // Usar la URL original
-                                    fit: BoxFit.contain,
-                                  );
+                                  imagenWidget = Image.network(urlFinal, fit: BoxFit.contain);
                                 } else {
-                                  // Imagen estática con CachedNetworkImage y URL transformada
                                   imagenWidget = CachedNetworkImage(
-                                    imageUrl: urlParaMostrar, // <-- URL TRANSFORMADA
+                                    imageUrl: urlFinal,
                                     fit: BoxFit.contain,
                                     placeholder: (context, url) => const Center(
                                         child: CircularProgressIndicator()),
-                                    errorWidget: (context, url, error) => Center(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: const [
-                                          Icon(Icons.broken_image,
-                                              size: 80, color: Colors.redAccent),
-                                          SizedBox(height: 8),
-                                          Text('Error al cargar imagen',
-                                              style: TextStyle(
-                                                  color: Colors.redAccent)),
-                                        ],
-                                      ),
+                                    errorWidget: (context, url, error) => const Center(
+                                      child: Icon(Icons.broken_image, size: 80, color: Colors.redAccent),
                                     ),
                                   );
                                 }
@@ -334,7 +356,6 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                 ],
                 const SizedBox(height: 16),
                 Container(
-                  // ... (Tus botones - Sin cambios) ...
                   color: Colors.grey.shade100,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Row(
@@ -342,9 +363,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                     children: [
                       OutlinedButton(
                         child: const Text('No'),
-                        onPressed: () {
-                          _marcarPendiente();
-                        },
+                        onPressed: () => _marcarPendiente(),
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
