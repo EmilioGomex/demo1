@@ -1,0 +1,17 @@
+[build]
+  publish = "build/web"
+  command = "flutter build web --release --web-renderer html"
+
+# Regla del Proxy para Parsable (Evita CORS)
+[[redirects]]
+  from = "/api-parsable/*"
+  to = "https://api.eu-west-1.parsable.net/api/:splat"
+  status = 200
+  force = true
+  headers = {X-From = "Netlify Proxy"}
+
+# Regla para que Flutter no de error 404 al recargar
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

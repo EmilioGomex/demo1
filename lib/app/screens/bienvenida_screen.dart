@@ -1,4 +1,4 @@
-import 'dart:io'; // Importar para SocketException
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../supabase_manager.dart';
@@ -6,7 +6,13 @@ import 'tareas_screen.dart';
 import 'supervisor_screen.dart';
 
 class BienvenidaScreen extends StatefulWidget {
-  const BienvenidaScreen({super.key});
+  // Variable para definir qué máquina es esta tablet (Ej: 'LLENADORA_01')
+  final String idMaquinaLocal;
+
+  const BienvenidaScreen({
+    super.key,
+    required this.idMaquinaLocal,
+  });
 
   @override
   _BienvenidaScreenState createState() => _BienvenidaScreenState();
@@ -18,6 +24,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   late FocusNode _focusNode;
 
   String? _error;
+  // Estado inicial estándar
   String _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
 
   late AnimationController _animationController;
@@ -31,8 +38,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   String? _nombreOperador;
 
   late RealtimeChannel _rfidChannel;
-
-  // Optimización: "Lock" para evitar validaciones múltiples (Debouncing)
   bool _isValidando = false;
 
   @override
@@ -73,7 +78,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
 
-    // --- SUSCRIPCIÓN REALTIME RFID (Actualizada) ---
+    // --- SUSCRIPCIÓN REALTIME ---
     _rfidChannel = Supabase.instance.client
         .channel('public:lecturas_rfid')
         .on(
@@ -82,36 +87,28 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
             event: 'INSERT',
             schema: 'public',
             table: 'lecturas_rfid',
-            // Nuevo: Filtra para que solo nos lleguen lecturas no procesadas
             filter: 'procesado=eq.false',
           ),
           (payload, [ref]) {
             final data = payload['new'] ?? payload['record'] ?? payload;
             final idOperador = data['id_operador']?.toString();
-            // Nuevo: Obtenemos el ID de la fila (UUID)
             final idLectura = data['id']?.toString();
 
             if (idOperador != null &&
                 idOperador.isNotEmpty &&
                 idLectura != null) {
-              // Nuevo: Pasamos ambos IDs a la función de validación
               _validarOperador(idOperador, idLectura: idLectura);
             }
           },
         );
-    // Nuevo: Manejador de errores para el canal Realtime
+
     _rfidChannel.onError((e) {
-      debugPrint('Error en el canal Realtime: $e');
-      if (mounted) {
-        setState(() {
-          _mensajeEstado = 'Error de conexión Realtime';
-          _error = 'No se pudo conectar al lector RFID';
-        });
-      }
+      debugPrint('Error Realtime: $e');
+      // En caso de error de conexión, aquí sí podrías querer avisar discretamente,
+      // o dejarlo silencioso también según tu preferencia.
     });
     _rfidChannel.subscribe();
 
-    // --- NUEVO: Buscar lecturas pendientes al iniciar ---
     _buscarLecturaPendiente();
   }
 
@@ -125,77 +122,56 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     super.dispose();
   }
 
-  // --- NUEVO: Función para buscar lecturas pendientes ---
   Future<void> _buscarLecturaPendiente() async {
-    // Damos un respiro para que la UI se construya
     await Future.delayed(const Duration(milliseconds: 500));
-
-    // Si ya está validando o el widget no está montado, no hacer nada
     if (_isValidando || !mounted) return;
 
     try {
-      // Calcula "hace un minuto"
       final oneMinuteAgo = DateTime.now().subtract(const Duration(minutes: 1));
-
       final response = await Supabase.instance.client
           .from('lecturas_rfid')
-          .select('id, id_operador') // Traemos el id de la lectura y del operador
-          .eq('procesado', false) // Que no esté procesada
-          .gte('fecha_lectura',
-              oneMinuteAgo.toIso8601String()) // De hace 1 min
-          .order('fecha_lectura', ascending: false) // La más reciente primero
-          .limit(1) // Solo queremos una
+          .select('id, id_operador')
+          .eq('procesado', false)
+          .gte('fecha_lectura', oneMinuteAgo.toIso8601String())
+          .order('fecha_lectura', ascending: false)
+          .limit(1)
           .maybeSingle();
 
       if (response != null && mounted) {
-        // ¡Encontramos una lectura pendiente!
         final String idLectura = response['id'];
         final String idOperador = response['id_operador'];
-
-        // La mandamos al validador, que la marcará como procesada
         _validarOperador(idOperador, idLectura: idLectura);
       }
     } catch (e) {
       debugPrint('Error buscando lectura pendiente: $e');
-      // No es crítico, el usuario simplemente tendrá que escanear de nuevo.
     }
   }
 
-  // --- FUNCIÓN _validarOperador (Actualizada) ---
-  void _validarOperador(String idOperador, {String? idLectura}) async {
-    // Optimización: Debounce check
+void _validarOperador(String idOperador, {String? idLectura}) async {
     if (_isValidando) return;
 
     final trimmedId = idOperador.trim();
-    if (trimmedId.isEmpty) {
-      setState(() {
-        _error = 'ID inválido, intenta de nuevo';
-        _mensajeEstado = '';
-      });
-      return;
-    }
+    if (trimmedId.isEmpty) return;
 
     setState(() {
-      _isValidando = true; // "Bloquea" para evitar dobles validaciones
+      _isValidando = true;
+      _mensajeEstado = 'Validando...';
       _error = null;
-      _mensajeEstado = 'Validando operador...';
     });
 
-    // Nuevo: Si la validación viene de un RFID (Realtime o pendiente),
-    // la "reclamamos" marcándola como procesada.
     if (idLectura != null) {
       try {
         await SupabaseManager.client
             .from('lecturas_rfid')
             .update({'procesado': true}).eq('id', idLectura);
       } catch (e) {
-        debugPrint('Error al marcar lectura como procesada: $e');
-        // No detenemos el flujo de login, pero es bueno registrarlo.
+        debugPrint('Error update procesado: $e');
       }
     }
 
-    // Optimización: Manejo de errores de red y Supabase
     try {
+      // 1. CAMBIO IMPORTANTE: Quitamos el filtro .eq('id_maquina', ...)
+      // Buscamos al operador solo por su ID de tarjeta para ver quién es primero.
       final response = await SupabaseManager.client
           .from('operadores')
           .select()
@@ -203,77 +179,84 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           .maybeSingle();
 
       if (response == null) {
-        setState(() {
-          _error = '';
-          _mensajeEstado = 'Operador no válido, intenta de nuevo';
-        });
-
-        Future.delayed(const Duration(seconds: 3), () {
-          if (!mounted) return;
-          setState(() {
-            _error = null;
-            _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
-            _isValidando = false; // "Libera" el lock
-          });
-        });
-
+        // El operador no existe en la base de datos
+        debugPrint('Operador no encontrado');
+        _resetearEstadoSilencioso();
         return;
-      } else {
-        final tipo = (response['tipo'] ?? '').toString().toLowerCase();
-        final nombre = response['nombreoperador'] ?? 'Supervisor';
-        setState(() {
-          _mensajeEstado = 'Bienvenido, $nombre';
-          _error = null;
-          _operadorValido = true;
-          _fotoOperador = response['foto_operador'];
-          _nombreOperador = nombre;
-        });
-
-        _scaleController.forward(from: 0.0);
-
-        await Future.delayed(const Duration(seconds: 3));
-
-        if (!mounted) return;
-
-        if (tipo == 'supervisor') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SupervisorScreen(
-                nombreSupervisor: nombre,
-                tipo: tipo,
-              ),
-            ),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TareasScreen(idOperador: trimmedId),
-            ),
-          );
-        }
       }
-    } on SocketException catch (_) {
-      // Error de conexión
+
+      // 2. OBTENEMOS LOS DATOS
+      final tipo = (response['tipo'] ?? '').toString().toLowerCase().trim();
+      final idMaquinaOperador = response['id_maquina']?.toString();
+      final nombre = response['nombreoperador'] ?? 'Usuario';
+
+      // 3. LÓGICA DE PERMISOS (Aquí está la magia)
+      // - Si es supervisor: PASA SIEMPRE.
+      // - Si NO es supervisor: Solo pasa si su máquina coincide con la tablet.
+      
+      bool esSupervisor = tipo == 'supervisor';
+      bool esMaquinaCorrecta = idMaquinaOperador == widget.idMaquinaLocal;
+
+      if (!esSupervisor && !esMaquinaCorrecta) {
+        // Es un operador normal intentando entrar en la máquina equivocada
+        debugPrint('Acceso denegado: Operador de $idMaquinaOperador en tablet ${widget.idMaquinaLocal}');
+        _resetearEstadoSilencioso();
+        return;
+      }
+
+      // --- SI LLEGA AQUÍ, EL ACCESO ES VÁLIDO ---
+
       setState(() {
-        _error = 'Error de red. Revisa tu conexión a internet.';
-        _mensajeEstado = '';
-        _isValidando = false; // "Libera" el lock
+        _mensajeEstado = 'Bienvenido, $nombre';
+        _error = null;
+        _operadorValido = true;
+        _fotoOperador = response['foto_operador'];
+        _nombreOperador = nombre;
       });
-    } on PostgrestException catch (e) {
-      // Error de Supabase (ej. permisos, tabla no existe)
-      setState(() {
-        _error = 'Error de base de datos: ${e.message}';
-        _mensajeEstado = '';
-        _isValidando = false; // "Libera" el lock
-      });
+
+      _scaleController.forward(from: 0.0);
+
+      await Future.delayed(const Duration(seconds: 3));
+
+      if (!mounted) return;
+
+      // Navegación según el tipo
+      if (esSupervisor) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SupervisorScreen(
+              nombreSupervisor: nombre,
+              tipo: tipo,
+            ),
+          ),
+        );
+      } else {
+        // Si es operador, pasamos también la máquina para asegurar consistencia
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TareasScreen(
+              idOperador: trimmedId,
+              idMaquinaLocal: widget.idMaquinaLocal,
+            ),
+          ),
+        );
+      }
+
     } catch (e) {
-      // Error inesperado
+      debugPrint('Error en validación: $e');
+      _resetearEstadoSilencioso();
+    }
+  }
+
+  // Helper para limpiar el estado sin repetir código
+  void _resetearEstadoSilencioso() {
+    if (mounted) {
       setState(() {
-        _error = 'Error inesperado: $e';
-        _mensajeEstado = '';
-        _isValidando = false; // "Libera" el lock
+        _isValidando = false;
+        _error = null;
+        _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
       });
     }
   }
@@ -283,8 +266,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     final Color backgroundColor = const Color(0xFFF5F5F7);
     final Color accentGreen = const Color(0xFF007A3D);
 
-    // --- Pantalla de Bienvenida (con foto) ---
-    // Optimización UX: Se eliminó el "Cargando tareas..."
+    // --- Pantalla de Bienvenida (Éxito) ---
     if (_operadorValido && _fotoOperador != null) {
       return Scaffold(
         backgroundColor: backgroundColor,
@@ -306,46 +288,14 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                         offset: const Offset(0, 6),
                       ),
                     ],
-                    border: Border.all(
-                      color: accentGreen,
-                      width: 4,
-                    ),
+                    border: Border.all(color: accentGreen, width: 4),
                   ),
                   child: ClipOval(
                     child: Image.network(
                       _fotoOperador!,
                       fit: BoxFit.cover,
-                      frameBuilder:
-                          (context, child, frame, wasSynchronouslyLoaded) {
-                        if (wasSynchronouslyLoaded || frame != null) {
-                          return AnimatedOpacity(
-                            opacity: 1,
-                            duration: const Duration(milliseconds: 500),
-                            child: child,
-                          );
-                        } else {
-                          return AnimatedOpacity(
-                            opacity: 0,
-                            duration: const Duration(milliseconds: 500),
-                            child: child,
-                          );
-                        }
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            color: accentGreen,
-                            strokeWidth: 4,
-                          ),
-                        );
-                      },
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.person_off,
-                          size: 120,
-                          color: Colors.grey,
-                        );
+                        return const Icon(Icons.person, size: 100, color: Colors.grey);
                       },
                     ),
                   ),
@@ -360,14 +310,13 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                   color: Colors.black87,
                 ),
               ),
-              // Indicador de carga y texto "Cargando..." ELIMINADOS
             ],
           ),
         ),
       );
     }
 
-    // --- Pantalla Principal (de escaneo) ---
+    // --- Pantalla Principal ---
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
@@ -397,8 +346,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                 ),
                 const SizedBox(height: 40),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -443,16 +391,11 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (_error == null)
-                        Icon(Icons.qr_code_scanner,
-                            color: accentGreen, size: 28)
-                      else
-                        const Icon(Icons.error,
-                            color: Colors.redAccent, size: 28),
+                      // Siempre mostramos el icono verde, ya que no habrá estados de error visuales
+                      Icon(Icons.qr_code_scanner, color: accentGreen, size: 28),
                       const SizedBox(width: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         decoration: BoxDecoration(
                           border: Border.all(color: accentGreen, width: 1.8),
                           borderRadius: BorderRadius.circular(12),
@@ -473,15 +416,12 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
-                                color: _error == null
-                                    ? accentGreen
-                                    : Colors.redAccent,
+                                color: accentGreen, // Siempre verde
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            if (_mensajeEstado == 'Validando operador...')
+                            if (_mensajeEstado == 'Validando...') ...[
                               const SizedBox(width: 12),
-                            if (_mensajeEstado == 'Validando operador...')
                               SizedBox(
                                 height: 20,
                                 width: 20,
@@ -490,32 +430,20 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                                   strokeWidth: 3,
                                 ),
                               ),
+                            ]
                           ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _error!,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                // Eliminamos la sección visual de mostrar _error en texto rojo
                 Opacity(
                   opacity: 0,
                   child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
                     autofocus: true,
-                    // Actualizado: Llama a la nueva firma de la función
-                    // y limpia el controlador.
                     onSubmitted: (idOperador) {
                       _validarOperador(idOperador, idLectura: null);
                       _controller.clear();

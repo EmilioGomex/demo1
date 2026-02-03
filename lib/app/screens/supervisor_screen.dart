@@ -69,7 +69,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
           onPressed: () {
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (context) => const BienvenidaScreen()),
+              MaterialPageRoute(builder: (context) => const BienvenidaScreen(idMaquinaLocal: '9991',)),
               (route) => false,
             );
           },
@@ -222,7 +222,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => TareasScreen(
-                                          idOperador: operadorSeleccionado!,
+                                          idOperador: operadorSeleccionado!, idMaquinaLocal: '',
                                         ),
                                       ),
                                     );
