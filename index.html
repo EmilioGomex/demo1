@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin de ECILT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        /* --- UTILIDADES --- */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* --- FORMULARIOS --- */
+        .form-input, .form-select { width: 100%; background-color: #374151; border: 1px solid #4b5563; border-radius: 0.375rem; padding: 0.5rem; color: #e5e7eb; font-size: 0.875rem; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: #10b981; ring: 1px solid #10b981; }
+        
+        /* --- CHECKBOX LIST --- */
+        .filter-dropdown-container { position: relative; }
+        .filter-dropdown-btn { 
+            width: 100%; text-align: left; background: #374151; border: 1px solid #4b5563; 
+            padding: 0.4rem 0.75rem; border-radius: 0.375rem; color: #d1d5db; font-size: 0.8rem;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        .filter-dropdown-btn:hover { border-color: #9ca3af; }
+        .filter-dropdown-content {
+            display: none; position: absolute; top: 105%; left: 0; width: 100%; max-height: 300px; 
+            overflow-y: auto; background: #1f2937; border: 1px solid #4b5563; border-radius: 0.375rem; 
+            z-index: 50; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); padding: 0.5rem;
+        }
+        .filter-dropdown-content.show { display: block; }
+        .filter-option { display: flex; align-items: center; padding: 0.3rem 0; cursor: pointer; }
+        .filter-option:hover { background-color: #374151; border-radius: 0.25rem; }
+        .filter-checkbox { margin-right: 0.5rem; accent-color: #10b981; width: 1rem; height: 1rem; cursor: pointer; }
+        .filter-label { color: #d1d5db; font-size: 0.8rem; user-select: none; cursor: pointer; width: 100%; }
+
+        /* --- CARDS GENERALES --- */
+        .data-card { background: #1f2937; border: 1px solid #374151; border-radius: 0.5rem; overflow: hidden; transition: transform 0.2s; }
+        .data-card:hover { transform: translateY(-2px); border-color: #10b981; }
+        
+        /* Operador Card */
+        .op-grid { display: flex; align-items: center; padding: 1rem; gap: 1rem; }
+        .op-img { width: 3.5rem; height: 3.5rem; border-radius: 50%; object-fit: cover; border: 2px solid #374151; }
+        .op-role { font-size: 0.7rem; text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 0.25rem; background: #312e81; color: #c7d2fe; font-weight: 700; }
+        
+        /* Estados */
+        .badge { padding: 2px 8px; border-radius: 99px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .badge-pending { background: #78350f; color: #fcd34d; border: 1px solid #b45309; }
+        .badge-late { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+        .badge-done { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
+
+        /* --- GTS LAYOUT --- */
+        .gts-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); 
+            gap: 1rem; 
+            padding: 1rem; 
+        }
+        .gts-card-fixed {
+            background: #1f2937; border: 1px solid #374151; border-radius: 0.75rem; cursor: pointer;
+            position: relative; overflow: hidden; height: 200px; display: flex; flex-direction: column;
+            transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .gts-card-fixed:hover { border-color: #10b981; transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
+        .gts-header { padding: 0.75rem 1rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .gts-body { padding: 1rem; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        
+        /* Variantes de color */
+        .level-linea .gts-header { background: linear-gradient(90deg, #1e3a8a, #172554); border-bottom: 1px solid #1e40af; }
+        .level-maquina .gts-header { background: linear-gradient(90deg, #581c87, #3b0764); border-bottom: 1px solid #6b21a8; }
+        .level-tarea .gts-header { background: linear-gradient(90deg, #064e3b, #065f46); border-bottom: 1px solid #047857; }
+        
+        .gts-body::-webkit-scrollbar { width: 4px; }
+        .gts-body::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 2px; }
+    </style>
+</head>
+<body class="h-full bg-gray-900 text-gray-200 font-sans antialiased flex flex-col">
+
+    <header class="flex-shrink-0 bg-gray-800 border-b border-gray-700 h-16 flex items-center px-6 shadow-lg z-20">
+        <svg class="h-6 w-6 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+        <h1 class="text-xl font-bold text-white tracking-tight">Admin de ECILT</h1>
+    </header>
+
+    <div class="flex-shrink-0 p-4 bg-gray-800 border-b border-gray-700 flex flex-wrap items-center gap-4 z-10">
+        <div class="flex items-center gap-2">
+            <span class="text-gray-400 text-sm font-medium">Vista:</span>
+            <select id="view-selector" class="bg-gray-700 border-gray-600 rounded px-3 py-1.5 text-sm focus:ring-emerald-500"></select>
+        </div>
+        
+        <button id="add-row-btn" class="hidden px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm font-medium transition-colors flex items-center">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span id="add-row-btn-text">Nuevo</span>
+        </button>
+
+        <div id="app-loading" class="ml-auto hidden flex items-center gap-2 text-emerald-400 text-sm">
+            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Cargando...
+        </div>
+    </div>
+
+    <div id="filters-container" class="hidden flex-shrink-0 p-4 bg-gray-900 border-b border-gray-700 flex flex-wrap gap-4 items-end">
+        <div class="w-full text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Filtros de Reporte</div>
+        <div><label class="block text-xs text-gray-400 mb-1">Desde</label><input type="date" id="filter-date-start" class="form-input py-1 h-8 text-xs"></div>
+        <div><label class="block text-xs text-gray-400 mb-1">Hasta</label><input type="date" id="filter-date-end" class="form-input py-1 h-8 text-xs"></div>
+        <div class="w-32"><label class="block text-xs text-gray-400 mb-1">Línea</label><select id="filter-area" class="form-select py-1 h-8 text-xs"><option value="">Todas</option></select></div>
+        <div class="w-32"><label class="block text-xs text-gray-400 mb-1">Tipo CILT</label><select id="filter-tipo" class="form-select py-1 h-8 text-xs"><option value="">Todas</option><option value="Limpieza">Limpieza</option><option value="Lubricación">Lubricación</option><option value="Ajuste">Ajuste</option><option value="Inspección">Inspección</option></select></div>
+
+        <div class="w-48 filter-dropdown-container">
+            <label class="block text-xs text-gray-400 mb-1">Operadores</label>
+            <div class="filter-dropdown-btn" onclick="toggleFilter('ops')">
+                <span id="label-ops">Seleccionar...</span>
+                <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            <div id="dropdown-ops" class="filter-dropdown-content">
+                <div class="text-xs text-gray-500 p-2">Cargando...</div>
+            </div>
+        </div>
+
+        <div class="w-48 filter-dropdown-container">
+            <label class="block text-xs text-gray-400 mb-1">Máquinas</label>
+            <div class="filter-dropdown-btn" onclick="toggleFilter('maqs')">
+                <span id="label-maqs">Seleccionar...</span>
+                <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            <div id="dropdown-maqs" class="filter-dropdown-content">
+                <div class="text-xs text-gray-500 p-2">Cargando...</div>
+            </div>
+        </div>
+
+        <div class="ml-auto flex gap-2">
+            <button id="filter-apply-btn" class="px-4 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold uppercase tracking-wide">Filtrar</button>
+            <button id="filter-clear-btn" class="px-3 py-1 text-gray-400 hover:text-white text-xs underline">Limpiar</button>
+        </div>
+    </div>
+
+    <main class="flex-grow overflow-hidden relative flex flex-col">
+        <div id="card-view" class="flex-grow overflow-y-auto hidden p-4">
+            <div id="card-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4"></div>
+        </div>
+        
+        <div id="pagination-controls" class="hidden flex-shrink-0 bg-gray-800 border-t border-gray-700 p-2 flex justify-between items-center px-4">
+             <div class="text-xs text-gray-400" id="pagination-info">Mostrando 0 registros</div>
+             <div class="flex gap-2">
+                 <button id="btn-prev" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white disabled:opacity-50">Anterior</button>
+                 <span id="page-display" class="px-2 py-1 text-xs font-mono bg-black/30 rounded border border-gray-700 flex items-center">1</span>
+                 <button id="btn-next" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white disabled:opacity-50">Siguiente</button>
+             </div>
+        </div>
+
+        <div id="gts-view" class="absolute inset-0 flex flex-col bg-gray-900 hidden">
+            <div class="p-3 border-b border-gray-800 flex justify-between items-center bg-gray-800 shadow-sm">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <button id="gts-back" class="text-gray-400 hover:text-white flex items-center text-sm font-medium transition-colors">
+                        <svg class="w-5 h-5 mr-1 bg-gray-700 rounded-full p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> 
+                        Atrás
+                    </button>
+                    <div id="gts-breadcrumbs" class="flex items-center text-sm text-gray-300 gap-2 whitespace-nowrap">
+                        <span class="text-emerald-500 font-bold">Inicio</span>
+                    </div>
+                </div>
+                <div class="flex gap-2 flex-shrink-0 items-center">
+                    <div id="gts-excel-container" class="flex gap-2"></div>
+
+                    <button id="btn-create-gts" class="hidden px-4 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-500 shadow-lg shadow-emerald-900/50 transition-all flex items-center">
+                        <span class="mr-1 text-lg leading-none">+</span> Nuevo
+                    </button>
+                </div>
+            </div>
+
+            <div id="gts-container" class="flex-grow overflow-y-auto gts-grid content-start"></div>
+
+            <div id="gts-pagination" class="hidden flex-shrink-0 bg-gray-800/90 border-t border-gray-700 p-2 flex justify-center gap-4 text-xs">
+                <button id="gts-prev" class="text-gray-300 hover:text-white disabled:opacity-30">◀ Anterior</button>
+                <span id="gts-page-info" class="text-gray-500">Página 1</span>
+                <button id="gts-next" class="text-gray-300 hover:text-white disabled:opacity-30">Siguiente ▶</button>
+            </div>
+        </div>
+    </main>
+
+    <input type="file" id="excel-upload" accept=".xlsx, .xls, .xlsm" class="hidden" />
+
+    <div id="modal-editor" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] border border-gray-700">
+            <div class="p-4 border-b border-gray-700 bg-gray-850 flex justify-between items-center">
+                <h3 id="modal-title" class="text-lg font-bold text-white">Editor</h3>
+                <button onclick="toggleClass('modal-editor', 'hidden', true)" class="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow bg-gray-800"><form id="dynamic-form" class="space-y-5"></form></div>
+            <div class="p-4 border-t border-gray-700 flex justify-end gap-3 bg-gray-850">
+                <button id="modal-close" class="px-4 py-2 text-gray-300 hover:bg-gray-700 rounded transition-colors">Cancelar</button>
+                <button id="modal-save" class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 shadow-lg transition-colors">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-delete" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+        <div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full border border-gray-700 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-2">¿Eliminar registro?</h3>
+            <p class="text-gray-400 text-sm mb-6">Esta acción no se puede deshacer.</p>
+            <div class="flex justify-end gap-3">
+                <button id="del-cancel" class="px-4 py-2 text-gray-300 hover:bg-gray-700 rounded">Cancelar</button>
+                <button id="del-confirm" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+        // --- CONFIGURACIÓN ---
+        const SUPABASE_URL = 'https://czxyfzxjwzaykwoxyjah.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eHlmenhqd3pheWt3b3h5amFoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDQyODMwMCwiZXhwIjoyMDY2MDA0MzAwfQ.4An36Hs_o_aiTGfqpRC85L4jMfhfWgbAthypB0QL0yU';
+        const VIEWS = ['Histórico de CILTs', 'Gestión de Tareas y Pasos', 'Gestión de Operadores'];
+        const LINEAS = ['Latas', 'Botellas', 'Utilidades', 'Cocimiento', 'Filtracion', 'Fermentacion', 'Logistica', 'Ingenieria'];
+        const FRECUENCIAS_VALIDAS = ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Semestral', 'Tres años'];
+        
+        const PAGE_SIZE = 24;      // Paginación Principal
+        const GTS_PAGE_SIZE = 20;  // Paginación para Tareas/Pasos
+
+        let supabase, currentView, currentTable, editingId, deleteId;
+        let currentPage = 1, totalCount = 0;
+        
+        // Estado del Navegador GTS
+        let gtsState = { level: 'lines', line: null, machine: null, task: null, machineName: '', taskName: '' };
+        let gtsPage = 1; // Pagina interna del GTS
+
+        // DOM SHORTCUTS
+        const el = (id) => document.getElementById(id);
+        const toggleClass = (id, cls, condition) => condition ? el(id).classList.add(cls) : el(id).classList.remove(cls);
+
+        // --- INICIO ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+            window.supabase = supabase; // Exportar para funciones inline
+            
+            el('view-selector').innerHTML = VIEWS.map(v => `<option value="${v}">${v}</option>`).join('');
+            el('view-selector').addEventListener('change', () => { currentPage = 1; changeView(); });
+            el('filter-area').innerHTML = '<option value="">Todas</option>' + LINEAS.map(l => `<option value="${l}">${l}</option>`).join('');
+
+            // Eventos Globales
+            el('add-row-btn').onclick = () => openEditor();
+            el('filter-apply-btn').onclick = () => { currentPage = 1; applyFilters(); };
+            el('filter-clear-btn').onclick = clearFilters;
+            el('modal-close').onclick = () => toggleClass('modal-editor', 'hidden', true);
+            el('modal-save').onclick = saveData;
+            el('del-cancel').onclick = () => toggleClass('modal-delete', 'hidden', true);
+            el('del-confirm').onclick = deleteData;
+            
+            // LISTENER DE EXCEL
+            el('excel-upload').addEventListener('change', handleExcelUpload);
+
+            // Paginación Principal
+            el('btn-prev').onclick = () => { if(currentPage > 1) { currentPage--; applyFilters(); }};
+            el('btn-next').onclick = () => { if(currentPage * PAGE_SIZE < totalCount) { currentPage++; applyFilters(); }};
+
+            // Eventos GTS (Navegador)
+            el('gts-back').onclick = gtsGoBack;
+            el('btn-create-gts').onclick = () => openEditorGTS();
+            el('gts-prev').onclick = () => { if(gtsPage > 1) { gtsPage--; renderGTS(gtsState.level, null, true); } };
+            el('gts-next').onclick = () => { gtsPage++; renderGTS(gtsState.level, null, true); }; 
+
+            // Dropdowns Filtros
+            window.onclick = (e) => {
+                if (!e.target.closest('.filter-dropdown-container')) {
+                    document.querySelectorAll('.filter-dropdown-content').forEach(d => d.classList.remove('show'));
+                }
+            };
+
+            // Carga inicial
+            changeView(); 
+            loadFilterOptions();
+        });
+
+        // --- CONTROL DE VISTAS ---
+        function changeView() {
+            currentView = el('view-selector').value;
+            
+            toggleClass('filters-container', 'hidden', true);
+            toggleClass('card-view', 'hidden', true);
+            toggleClass('gts-view', 'hidden', true);
+            toggleClass('add-row-btn', 'hidden', true);
+            toggleClass('pagination-controls', 'hidden', true);
+
+            if (currentView === 'Histórico de CILTs') {
+                currentTable = 'registro_tareas';
+                toggleClass('filters-container', 'hidden', false);
+                toggleClass('card-view', 'hidden', false);
+                toggleClass('pagination-controls', 'hidden', false);
+                applyFilters(); 
+            } 
+            else if (currentView === 'Gestión de Operadores') {
+                currentTable = 'operadores';
+                toggleClass('card-view', 'hidden', false);
+                toggleClass('add-row-btn', 'hidden', false);
+                toggleClass('pagination-controls', 'hidden', false);
+                el('add-row-btn-text').textContent = 'Nuevo Operador';
+                fetchData();
+            }
+            else { // GTS
+                toggleClass('gts-view', 'hidden', false);
+                gtsState = { level: 'lines', line: null, machine: null, task: null, machineName: '', taskName: '' }; // Reset
+                renderGTS('lines');
+            }
+        }
+
+        // --- SISTEMA GTS (NAVEGADOR MEJORADO) ---
+        async function renderGTS(level, param = null, isPagination = false, extraName = '') {
+            if (!isPagination) gtsPage = 1; // Resetear página al cambiar de nivel
+            gtsState.level = level;
+
+            // Actualizar estado para Breadcrumbs
+            if(level === 'machines' && param) { gtsState.line = param; }
+            if(level === 'tasks' && param) { gtsState.machine = param; if(extraName) gtsState.machineName = extraName; }
+            if(level === 'steps' && param) { gtsState.task = param; if(extraName) gtsState.taskName = extraName; }
+
+            const container = el('gts-container');
+            const breadcrumbs = el('gts-breadcrumbs');
+            const addBtn = el('btn-create-gts');
+            const gtsPag = el('gts-pagination');
+            const excelContainer = el('gts-excel-container');
+            
+            toggleClass('app-loading', 'hidden', false);
+            toggleClass('gts-pagination', 'hidden', true); 
+            if(excelContainer) excelContainer.innerHTML = ''; // Limpiar botones Excel
+            
+            // Construir Breadcrumbs (Migas de pan)
+            let bcHtml = `<span onclick="renderGTS('lines')" class="cursor-pointer hover:text-white">Áreas</span>`;
+            if (level !== 'lines') bcHtml += ` <span class="text-gray-600">/</span> <span onclick="renderGTS('machines', '${gtsState.line}')" class="cursor-pointer hover:text-white ${level==='machines'?'text-emerald-400 font-bold':''}">${gtsState.line}</span>`;
+            if (level === 'tasks' || level === 'steps') bcHtml += ` <span class="text-gray-600">/</span> <span onclick="renderGTS('tasks', '${gtsState.machine}', false, '${gtsState.machineName}')" class="cursor-pointer hover:text-white ${level==='tasks'?'text-emerald-400 font-bold':''}">${gtsState.machineName || gtsState.machine}</span>`;
+            if (level === 'steps') bcHtml += ` <span class="text-gray-600">/</span> <span class="text-emerald-400 font-bold">${gtsState.taskName || 'Tarea'}</span>`;
+            breadcrumbs.innerHTML = bcHtml;
+
+            toggleClass('gts-back', 'hidden', level === 'lines');
+            toggleClass('btn-create-gts', 'hidden', level === 'lines');
+
+            // --- CARGA DE DATOS ---
+            const from = (gtsPage - 1) * GTS_PAGE_SIZE;
+            const to = from + GTS_PAGE_SIZE - 1;
+            let data = [], error = null, count = 0;
+
+            // 1. LINEAS
+            if (level === 'lines') {
+                container.innerHTML = LINEAS.map(l => `
+                    <div class="gts-card-fixed level-linea group" onclick="navGTS('machines', '${l}')">
+                        <div class="gts-header text-blue-200">
+                            <span>ÁREA</span>
+                            <svg class="w-5 h-5 opacity-50 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>
+                        <div class="gts-body justify-center items-center text-center">
+                            <div class="text-5xl mb-2">🏭</div>
+                            <div class="text-xl font-bold text-white tracking-wide">${l}</div>
+                            <div class="text-xs text-gray-400 mt-2">Click para ver máquinas</div>
+                        </div>
+                    </div>
+                `).join('');
+                
+            }
+            // 2. MAQUINAS
+            else if (level === 'machines') {
+                addBtn.textContent = 'Nueva Máquina';
+                currentTable = 'maquinas';
+                
+                const res = await supabase.from('maquinas').select('*', { count: 'exact' }).eq('linea', gtsState.line).range(from, to);
+                data = res.data; count = res.count; error = res.error;
+                
+                handleGTSPagination(count);
+
+                container.innerHTML = (!data || !data.length) ? '<div class="col-span-full text-center text-gray-500 mt-10">No hay máquinas registradas en esta línea.</div>' : data.map(m => `
+                    <div class="gts-card-fixed level-maquina group" onclick="navGTS('tasks', '${m.id_maquina}', '${m.id}', '${m.nombre}')">
+                        <div class="gts-header text-purple-200">
+                            <span class="text-xs font-mono opacity-80">${m.id_maquina}</span>
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button class="hover:text-white" onclick="event.stopPropagation(); editItem('${m.id}')">✏️</button>
+                                <button class="hover:text-red-400" onclick="event.stopPropagation(); askDelete('${m.id}')">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="gts-body">
+                            <div class="text-lg font-bold text-white mb-1 leading-tight">${m.nombre}</div>
+                            <div class="mt-auto text-xs text-purple-300 flex items-center gap-1">
+                                Ver Tareas
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            // 3. TAREAS
+            else if (level === 'tasks') {
+                addBtn.textContent = 'Nueva Tarea';
+                currentTable = 'tareas';
+                
+                // --- INYECTAR BOTONES DE EXCEL ---
+                if(excelContainer) {
+                    excelContainer.innerHTML = `
+                        <button onclick="downloadTemplate()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm shadow-lg flex items-center transition-colors">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Plantilla
+                        </button>
+                        <button onclick="document.getElementById('excel-upload').click()" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm shadow-lg flex items-center transition-colors">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Cargar Excel
+                        </button>
+                    `;
+                }
+
+                const res = await supabase.from('tareas').select('*', { count: 'exact' }).eq('id_maquina', gtsState.machine).order('nombre_tarea').range(from, to);
+                data = res.data; count = res.count; error = res.error;
+                
+                handleGTSPagination(count);
+
+                container.innerHTML = (!data || !data.length) ? '<div class="col-span-full text-center text-gray-500 mt-10">No hay tareas creadas para esta máquina.</div>' : data.map(t => `
+                    <div class="gts-card-fixed level-tarea group" onclick="navGTS('steps', '${t.id_tarea}', '${t.id}', '${t.nombre_tarea}')">
+                        <div class="gts-header text-emerald-200">
+                            <span class="text-[10px] uppercase border border-emerald-700 px-1 rounded bg-emerald-900/50">${t.tipo || 'Gral'}</span>
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button class="hover:text-white" onclick="event.stopPropagation(); editItem('${t.id}')">✏️</button>
+                                <button class="hover:text-red-400" onclick="event.stopPropagation(); askDelete('${t.id}')">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="gts-body">
+                            <div class="font-bold text-white text-md mb-2 leading-snug">${t.nombre_tarea}</div>
+                            <div class="text-xs text-gray-400 mb-2">ID: ${t.id_tarea}</div>
+                            
+                            <div class="mt-auto flex justify-between items-end border-t border-gray-700 pt-2">
+                                <div class="text-xs text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded">↻ ${t.frecuencia}</div>
+                                <div class="text-xs text-emerald-500 font-bold">Ver Pasos →</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            // 4. PASOS
+            else if (level === 'steps') {
+                addBtn.textContent = 'Nuevo Paso';
+                currentTable = 'pasos_tarea';
+
+                // Usamos gtsState.task (que ahora contiene id_tarea TEXTO) para filtrar
+                const res = await supabase.from('pasos_tarea').select('*', { count: 'exact' }).eq('id_tarea', gtsState.task).order('numeropaso').range(from, to);
+                data = res.data; count = res.count; error = res.error;
+                handleGTSPagination(count);
+
+                container.innerHTML = (!data || !data.length) ? '<div class="col-span-full text-center text-gray-500 mt-10">No hay pasos definidos.</div>' : data.map(s => `
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-3 flex gap-4 group hover:border-emerald-500 transition-colors h-32 overflow-hidden relative">
+                        ${s.imagenurl ? `<img src="${s.imagenurl}" class="w-24 h-full object-cover rounded bg-black cursor-pointer" onclick="event.stopPropagation(); window.open('${s.imagenurl}')">` : '<div class="w-24 h-full bg-gray-900 rounded flex items-center justify-center text-xs text-gray-600">Sin img</div>'}
+                        <div class="flex-grow overflow-y-auto pr-1 custom-scroll">
+                            <div class="flex items-center gap-2 mb-1 sticky top-0 bg-gray-800 pb-1">
+                                <span class="bg-emerald-600 text-white font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs">${s.numeropaso}</span>
+                                <span class="text-xs text-emerald-400 uppercase font-bold tracking-wide">Instrucción</span>
+                            </div>
+                            <p class="text-sm text-gray-300 leading-relaxed">${s.descripcion}</p>
+                        </div>
+                        <div class="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900/80 p-1 rounded">
+                            <button class="text-gray-400 hover:text-white" onclick="event.stopPropagation(); editItem('${s.id}')">✏️</button>
+                            <button class="text-gray-400 hover:text-red-400" onclick="event.stopPropagation(); askDelete('${s.id}')">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            if(error) console.error(error);
+            toggleClass('app-loading', 'hidden', true);
+        }
+
+        // Helper para paginación interna de GTS
+        function handleGTSPagination(count) {
+            const gtsPag = el('gts-pagination');
+            if (count > GTS_PAGE_SIZE) {
+                toggleClass('gts-pagination', 'hidden', false);
+                el('gts-page-info').textContent = `Pág ${gtsPage} de ${Math.ceil(count/GTS_PAGE_SIZE)}`;
+                el('gts-prev').disabled = gtsPage === 1;
+                el('gts-next').disabled = gtsPage >= Math.ceil(count/GTS_PAGE_SIZE);
+            } else {
+                toggleClass('gts-pagination', 'hidden', true);
+            }
+        }
+
+        window.navGTS = (level, p1, p2, name) => renderGTS(level, p1, false, name);
+        
+        window.gtsGoBack = () => {
+            if (gtsState.level === 'machines') renderGTS('lines');
+            else if (gtsState.level === 'tasks') renderGTS('machines', gtsState.line);
+            else if (gtsState.level === 'steps') renderGTS('tasks', gtsState.machine, false, gtsState.machineName);
+        };
+
+        // --- FUNCIONES EXCEL (NUEVO) ---
+        window.downloadTemplate = () => {
+            const link = document.createElement('a');
+            link.href = 'https://czxyfzxjwzaykwoxyjah.supabase.co/storage/v1/object/public/pasosimagen/Carga-CILT.xlsm';
+            link.download = 'Carga-CILT.xlsm'; link.target = '_blank';
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        };
+
+        window.handleExcelUpload = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            toggleClass('app-loading', 'hidden', false);
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    await processComplexExcel(workbook);
+                } catch (error) { console.error(error); alert("Error: " + error.message); } 
+                finally { toggleClass('app-loading', 'hidden', true); e.target.value = ''; }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        function sanitizeSheetName(name) { return name.replace(/[:\\/?*\[\]]/g, '').substring(0, 31).trim(); }
+
+        async function processComplexExcel(workbook) {
+            if (!gtsState.machine) { alert("Error: No se ha seleccionado una máquina."); return; }
+
+            // 1. Encontrar Hoja Maestra. Logica robusta
+            let masterSheetName = workbook.SheetNames.find(n => n.toLowerCase().includes("tareas")) || workbook.SheetNames[0];
+            const masterSheet = workbook.Sheets[masterSheetName];
+            
+            // Fila 1 (Index 0): Logo. Fila 2 (Index 1): Headers. Fila 3 (Index 2): Datos.
+            const masterData = XLSX.utils.sheet_to_json(masterSheet, { header: 1, range: 2 });
+            let createdCount = 0; let errors = [];
+
+            for (let i = 0; i < masterData.length; i++) {
+                const row = masterData[i];
+                // MAPEO EXACTO: A=0(Nombre), C=2(Tipo), D=3(Frecuencia)
+                const rawNombre = row[0];
+                let rawTipo = row[2];
+                let rawFrec = row[3];
+
+                if (!rawNombre) continue; 
+
+                // Validar Frecuencia Estricta
+                let validFrec = 'Diario'; 
+                if (rawFrec) {
+                    const cleanFrec = rawFrec.toString().trim();
+                    const formatted = cleanFrec.charAt(0).toUpperCase() + cleanFrec.slice(1).toLowerCase();
+                    if (FRECUENCIAS_VALIDAS.includes(cleanFrec)) validFrec = cleanFrec;
+                    else if (FRECUENCIAS_VALIDAS.includes(formatted)) validFrec = formatted;
+                    else if (cleanFrec === '3 años') validFrec = 'Tres años';
+                }
+
+                // Generar ID_TAREA Único (Texto)
+                const generatedIdTarea = `${gtsState.machine}-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+
+                // A. Insertar Tarea
+                const { error: errTarea } = await window.supabase.from('tareas').insert([{
+                    id_maquina: gtsState.machine, id_tarea: generatedIdTarea,
+                    nombre_tarea: rawNombre, frecuencia: validFrec, tipo: rawTipo || 'General', es_compartida: false
+                }]);
+
+                if (errTarea) {
+                    console.error(`Error tarea "${rawNombre}":`, errTarea);
+                    errors.push(rawNombre); continue;
+                }
+
+                // B. Buscar Pasos en Hoja de Detalle
+                const possibleSheetName = sanitizeSheetName(rawNombre);
+                const foundSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === possibleSheetName.toLowerCase());
+                
+                if (foundSheetName) {
+                    const detailSheet = workbook.Sheets[foundSheetName];
+                    const detailData = XLSX.utils.sheet_to_json(detailSheet, { header: 1, range: 3 });
+                    const pasosToInsert = [];
+
+                    detailData.forEach(stepRow => {
+                        const numPaso = stepRow[0];
+                        const descPaso = stepRow[1];
+                        const rawImage = stepRow[2];
+                        const imageUrl = rawImage ? rawImage.toString().trim() : null;
+                        if (numPaso && descPaso) {
+                            pasosToInsert.push({
+                                id_tarea: generatedIdTarea, numeropaso: parseInt(numPaso)||0,
+                                descripcion: descPaso, imagenurl: imageUrl || null
+                            });
+                        }
+                    });
+
+                    if (pasosToInsert.length > 0) await window.supabase.from('pasos_tarea').insert(pasosToInsert);
+                }
+                createdCount++;
+            }
+            alert(`Proceso finalizado. ${createdCount} tareas. ${errors.length ? 'Errores: '+errors.join(',') : ''}`);
+            renderGTS('tasks', gtsState.machine, false, gtsState.machineName);
+        }
+
+        // --- FILTROS Y DATOS GENERALES ---
+        window.toggleFilter = (id) => {
+            const dropdown = el('dropdown-' + id);
+            const isShown = dropdown.classList.contains('show');
+            document.querySelectorAll('.filter-dropdown-content').forEach(d => d.classList.remove('show'));
+            if (!isShown) dropdown.classList.add('show');
+        };
+
+        async function loadFilterOptions() {
+            try {
+                const { data: ops } = await supabase.from('operadores').select('id_operador, nombreoperador');
+                renderCheckboxList('dropdown-ops', ops || [], 'id_operador', 'nombreoperador', 'label-ops');
+                const { data: maqs } = await supabase.from('maquinas').select('id_maquina, nombre');
+                renderCheckboxList('dropdown-maqs', maqs || [], 'id_maquina', 'nombre', 'label-maqs');
+            } catch (err) { console.error("Error filters", err); }
+        }
+
+        function renderCheckboxList(containerId, data, valKey, labelKey, labelDisplayId) {
+            const container = el(containerId);
+            if (!data.length) { container.innerHTML = '<div class="text-xs p-2">Sin datos</div>'; return; }
+            container.innerHTML = data.map(item => `
+                <label class="filter-option">
+                    <input type="checkbox" class="filter-checkbox" value="${item[valKey]}" onchange="updateLabel('${containerId}', '${labelDisplayId}')">
+                    <span class="filter-label">${item[labelKey]}</span>
+                </label>`).join('');
+        }
+
+        window.updateLabel = (cId, lId) => {
+            const n = el(cId).querySelectorAll('input:checked').length;
+            el(lId).textContent = n > 0 ? `${n} Seleccionados` : 'Seleccionar...';
+            el(lId).classList.toggle('text-white', n > 0);
+        };
+
+        function getCheckedValues(id) { return Array.from(el(id).querySelectorAll('input:checked')).map(cb => cb.value); }
+
+        async function applyFilters() {
+            const filters = {
+                start: el('filter-date-start').value,
+                end: el('filter-date-end').value,
+                area: el('filter-area').value,
+                tipo: el('filter-tipo').value,
+                ops: getCheckedValues('dropdown-ops'),
+                maqs: getCheckedValues('dropdown-maqs')
+            };
+            fetchData(filters);
+        }
+
+        function clearFilters() {
+            el('filter-date-start').value = ''; el('filter-date-end').value = '';
+            el('filter-area').value = ''; el('filter-tipo').value = '';
+            document.querySelectorAll('.filter-checkbox').forEach(c => c.checked = false);
+            updateLabel('dropdown-ops', 'label-ops'); updateLabel('dropdown-maqs', 'label-maqs');
+            currentPage = 1;
+            applyFilters();
+        }
+
+        async function fetchData(filters = {}) {
+            toggleClass('app-loading', 'hidden', false);
+            el('card-grid').innerHTML = '';
+            const from = (currentPage - 1) * PAGE_SIZE;
+            const to = from + PAGE_SIZE - 1;
+
+            let query = supabase.from(currentTable).select('*', { count: 'exact' });
+
+            if (currentTable === 'registro_tareas') {
+                let tJoin = 'tareas(nombre_tarea, frecuencia, tipo)';
+                let oJoin = 'operadores(nombreoperador, linea)';
+                if (filters.tipo) tJoin = 'tareas!inner(nombre_tarea, frecuencia, tipo)';
+                if (filters.area) oJoin = 'operadores!inner(nombreoperador, linea)';
+                query = supabase.from(currentTable).select(`*, ${tJoin}, ${oJoin}`, { count: 'exact' });
+
+                if (filters.start) query = query.gte('fecha_limite', filters.start);
+                if (filters.end) query = query.lte('fecha_limite', filters.end + 'T23:59:59');
+                if (filters.ops && filters.ops.length) query = query.in('id_operador', filters.ops);
+                if (filters.maqs && filters.maqs.length) query = query.in('id_maquina', filters.maqs);
+                if (filters.area) query = query.eq('operadores.linea', filters.area);
+                if (filters.tipo) query = query.eq('tareas.tipo', filters.tipo);
+                query = query.order('fecha_limite', { ascending: false });
+            } else if (currentTable === 'operadores') {
+                query = query.order('nombreoperador');
+            }
+
+            const { data, count, error } = await query.range(from, to);
+            toggleClass('app-loading', 'hidden', true);
+
+            if (error) { alert("Error: " + error.message); return; }
+            totalCount = count || 0;
+            updatePaginationUI();
+            if (!data || !data.length) { el('card-grid').innerHTML = '<div class="col-span-full text-center text-gray-500 py-10">No se encontraron datos</div>'; return; }
+            renderCards(data);
+        }
+
+        function updatePaginationUI() {
+            el('page-display').textContent = currentPage;
+            const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+            el('pagination-info').textContent = `Total: ${totalCount} | Pág ${currentPage} de ${totalPages || 1}`;
+            el('btn-prev').disabled = currentPage === 1;
+            el('btn-next').disabled = currentPage >= totalPages || totalPages === 0;
+        }
+
+        function renderCards(data) {
+            el('card-grid').innerHTML = data.map(item => {
+                if (currentTable === 'operadores') {
+                    const img = item.foto_operador || `https://ui-avatars.com/api/?name=${item.nombreoperador}&background=random`;
+                    return `
+                    <div class="data-card relative group">
+                        <div class="op-grid">
+                            <img src="${img}" class="op-img">
+                            <div>
+                                <div class="font-bold text-white leading-tight">${item.nombreoperador}</div>
+                                <span class="op-role mt-1 inline-block">${item.tipo || 'Operador'}</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 p-3 flex justify-between text-xs text-gray-400 border-t border-gray-700">
+                            <div>LINEA: <span class="text-emerald-400">${item.linea || '-'}</span></div>
+                            <div>ID: ${item.id_operador}</div>
+                        </div>
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button class="bg-black/50 p-1.5 rounded hover:bg-emerald-600 text-white" onclick="editItem('${item.id}')">✏️</button>
+                            <button class="bg-black/50 p-1.5 rounded hover:bg-red-600 text-white" onclick="askDelete('${item.id}')">🗑️</button>
+                        </div>
+                    </div>`;
+                } else {
+                    const t = item.tareas || {};
+                    const o = item.operadores || {};
+                    const st = item.estado || 'Pendiente';
+                    let cls = st === 'Completado' ? 'badge-done' : (st === 'Atrasado' ? 'badge-late' : 'badge-pending');
+                    return `
+                    <div class="data-card p-4 flex flex-col gap-3">
+                        <div class="flex justify-between items-start">
+                            <span class="badge ${cls}">${st}</span>
+                            <span class="text-xs font-mono text-gray-500">${new Date(item.fecha_limite).toLocaleDateString()}</span>
+                        </div>
+                        <div class="font-bold text-white text-lg leading-snug">${t.nombre_tarea || 'Tarea Desconocida'}</div>
+                        <div class="flex gap-2">
+                            <span class="text-[10px] border border-gray-600 text-gray-300 px-1.5 rounded">${t.tipo || 'General'}</span>
+                            <span class="text-[10px] border border-gray-600 text-blue-300 px-1.5 rounded">${t.frecuencia || '-'}</span>
+                        </div>
+                        <div class="mt-auto pt-3 border-t border-gray-700 text-sm text-gray-400">
+                            <div class="flex items-center gap-2 mb-1">
+                                👤 <span class="text-gray-200 truncate">${o.nombreoperador || 'Sin asignar'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                🏭 <span class="text-gray-200">${o.linea || '-'}</span>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        // --- EDITOR GENERICO ---
+        window.openEditor = () => openEditorGTS();
+        window.openEditorGTS = async () => {
+            editingId = null;
+            el('modal-title').textContent = 'Crear Nuevo';
+            el('dynamic-form').innerHTML = await buildForm();
+            toggleClass('modal-editor', 'hidden', false);
+        };
+        window.editItem = async (id) => {
+            editingId = id;
+            toggleClass('app-loading', 'hidden', false);
+            const { data } = await supabase.from(currentTable).select('*').eq('id', id).single();
+            el('modal-title').textContent = 'Editar';
+            el('dynamic-form').innerHTML = await buildForm(data);
+            toggleClass('app-loading', 'hidden', true);
+            toggleClass('modal-editor', 'hidden', false);
+        };
+        window.saveData = async () => {
+            const formData = new FormData(el('dynamic-form'));
+            const payload = Object.fromEntries(formData);
+            
+            // Fix para booleano si se edita tareas manualmente
+            if(currentTable === 'tareas') payload.es_compartida = false;
+
+            const { error } = editingId 
+                ? await supabase.from(currentTable).update(payload).eq('id', editingId)
+                : await supabase.from(currentTable).insert([payload]);
+
+            if (error) { alert(error.message); return; }
+            toggleClass('modal-editor', 'hidden', true);
+            
+            if (currentView.includes('GTS')) {
+                renderGTS(gtsState.level, (gtsState.level==='tasks'?gtsState.machine : (gtsState.level==='steps'?gtsState.task:gtsState.line)), true);
+            } else { 
+                fetchData(); 
+            }
+        };
+        window.askDelete = (id) => { deleteId = id; toggleClass('modal-delete', 'hidden', false); };
+        window.deleteData = async () => {
+            await supabase.from(currentTable).delete().eq('id', deleteId);
+            toggleClass('modal-delete', 'hidden', true);
+            if (currentView.includes('GTS')) renderGTS(gtsState.level, (gtsState.level==='tasks'?gtsState.machine : (gtsState.level==='steps'?gtsState.task:gtsState.line)), true);
+            else fetchData();
+        };
+
+        // --- FORM BUILDER ---
+        async function buildForm(data = {}) {
+            let fields = [];
+            if (currentTable === 'operadores') {
+                fields = [
+                    { name: 'id_operador', label: 'ID RFID', type: 'text' },
+                    { name: 'nombreoperador', label: 'Nombre Completo', type: 'text' },
+                    { name: 'linea', label: 'Línea', type: 'select', options: LINEAS },
+                    { name: 'tipo', label: 'Rol', type: 'select', options: ['operador', 'supervisor'] },
+                    { name: 'foto_operador', label: 'URL Foto', type: 'text' }
+                ];
+            } else if (currentTable === 'maquinas') {
+                fields = [
+                    { name: 'id_maquina', label: 'ID Máquina', type: 'text', value: data.id_maquina || 'MAQ-' + Math.floor(Math.random()*9999) },
+                    { name: 'nombre', label: 'Nombre', type: 'text' },
+                    { name: 'linea', label: 'Línea', type: 'select', options: LINEAS }
+                ];
+            } else if (currentTable === 'tareas') {
+                fields = [
+                    { name: 'id_maquina', type: 'hidden', value: gtsState.machine },
+                    { name: 'id_tarea', label: 'ID Tarea (Texto Único)', type: 'text', value: data.id_tarea || `${gtsState.machine}-${Date.now()}` },
+                    { name: 'nombre_tarea', label: 'Nombre Tarea', type: 'text' },
+                    { name: 'frecuencia', label: 'Frecuencia', type: 'select', options: FRECUENCIAS_VALIDAS },
+                    { name: 'tipo', label: 'Tipo', type: 'select', options: ['Limpieza','Lubricación','Inspección','Ajuste'] }
+                ];
+            } else if (currentTable === 'pasos_tarea') {
+                fields = [
+                    { name: 'id_tarea', type: 'hidden', value: gtsState.task },
+                    { name: 'numeropaso', label: 'Número Paso', type: 'number' },
+                    { name: 'descripcion', label: 'Instrucción', type: 'textarea' },
+                    { name: 'imagenurl', label: 'URL Imagen', type: 'text' }
+                ];
+            }
+            return fields.map(f => {
+                const val = data[f.name] !== undefined ? data[f.name] : (f.value || '');
+                if (f.type === 'hidden') return `<input type="hidden" name="${f.name}" value="${val}">`;
+                if (f.type === 'select') return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><select name="${f.name}" class="form-select">${f.options.map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
+                if (f.type === 'textarea') return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><textarea name="${f.name}" class="form-input h-24">${val}</textarea></div>`;
+                return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><input type="${f.type}" name="${f.name}" value="${val}" class="form-input"></div>`;
+            }).join('');
+        }
+        async function getNextId(table, col) { return "1"; } 
+    </script>
+</body>
+</html>
