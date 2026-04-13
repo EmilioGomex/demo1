@@ -20,5 +20,6 @@
     "fs",
     "http",
     "net"
-  ]
+  ],
+  "cmake.sourceDirectory": "C:/Users/gomex/OneDrive - Heineken International/Documents/eCILT/demo1/linux"
 }

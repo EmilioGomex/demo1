@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../supabase_manager.dart';
@@ -6,7 +5,6 @@ import 'tareas_screen.dart';
 import 'supervisor_screen.dart';
 
 class BienvenidaScreen extends StatefulWidget {
-  // Variable para definir qué máquina es esta tablet (Ej: 'LLENADORA_01')
   final String idMaquinaLocal;
 
   const BienvenidaScreen({
@@ -20,12 +18,14 @@ class BienvenidaScreen extends StatefulWidget {
 
 class _BienvenidaScreenState extends State<BienvenidaScreen>
     with TickerProviderStateMixin {
+  static const _backgroundColor = Color(0xFFF5F5F7);
+  static const _accentGreen = Color(0xFF007A3D);
+  static const _mensajeInicial = 'Escanea tu tarjeta para registrar actividad';
+
   final TextEditingController _controller = TextEditingController();
   late FocusNode _focusNode;
 
-  String? _error;
-  // Estado inicial estándar
-  String _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
+  String _mensajeEstado = _mensajeInicial;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -147,7 +147,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     }
   }
 
-void _validarOperador(String idOperador, {String? idLectura}) async {
+  Future<void> _validarOperador(String idOperador, {String? idLectura}) async {
     if (_isValidando) return;
 
     final trimmedId = idOperador.trim();
@@ -156,7 +156,6 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
     setState(() {
       _isValidando = true;
       _mensajeEstado = 'Validando...';
-      _error = null;
     });
 
     if (idLectura != null) {
@@ -208,7 +207,6 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
 
       setState(() {
         _mensajeEstado = 'Bienvenido, $nombre';
-        _error = null;
         _operadorValido = true;
         _fotoOperador = response['foto_operador'];
         _nombreOperador = nombre;
@@ -250,75 +248,75 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
     }
   }
 
-  // Helper para limpiar el estado sin repetir código
   void _resetearEstadoSilencioso() {
     if (mounted) {
       setState(() {
         _isValidando = false;
-        _error = null;
-        _mensajeEstado = 'Escanea tu tarjeta para registrar actividad';
+        _mensajeEstado = _mensajeInicial;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color backgroundColor = const Color(0xFFF5F5F7);
-    final Color accentGreen = const Color(0xFF007A3D);
-
-    // --- Pantalla de Bienvenida (Éxito) ---
     if (_operadorValido && _fotoOperador != null) {
-      return Scaffold(
-        backgroundColor: backgroundColor,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ScaleTransition(
-                scale: _scaleAnimation,
-                child: Container(
-                  height: 250,
-                  width: 250,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: accentGreen.withOpacity(0.25),
-                        blurRadius: 15,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                    border: Border.all(color: accentGreen, width: 4),
-                  ),
-                  child: ClipOval(
-                    child: Image.network(
-                      _fotoOperador!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.person, size: 100, color: Colors.grey);
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Bienvenido, $_nombreOperador',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildWelcomeScreen();
     }
+    return _buildScanScreen();
+  }
 
-    // --- Pantalla Principal ---
+  Widget _buildWelcomeScreen() {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: _backgroundColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ScaleTransition(
+              scale: _scaleAnimation,
+              child: Container(
+                height: 250,
+                width: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _accentGreen.withValues(alpha: 0.25),
+                      blurRadius: 15,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                  border: Border.all(color: _accentGreen, width: 4),
+                ),
+                child: ClipOval(
+                  child: Image.network(
+                    _fotoOperador!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.person, size: 100, color: Colors.grey);
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Bienvenido, $_nombreOperador',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScanScreen() {
+    return Scaffold(
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -331,7 +329,7 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: accentGreen.withOpacity(0.25),
+                        color: _accentGreen.withValues(alpha: 0.25),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -341,7 +339,7 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
                     'assets/logo_heineken.png',
                     height: 100,
                     fit: BoxFit.contain,
-                    color: accentGreen.withOpacity(0.85),
+                    color: _accentGreen.withValues(alpha: 0.85),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -358,8 +356,8 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
                       ),
                     ],
                   ),
-                  child: Column(
-                    children: const [
+                  child: const Column(
+                    children: [
                       Text(
                         'Registro diario de tareas CILT',
                         style: TextStyle(
@@ -391,13 +389,12 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Siempre mostramos el icono verde, ya que no habrá estados de error visuales
-                      Icon(Icons.qr_code_scanner, color: accentGreen, size: 28),
+                      Icon(Icons.qr_code_scanner, color: _accentGreen, size: 28),
                       const SizedBox(width: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         decoration: BoxDecoration(
-                          border: Border.all(color: accentGreen, width: 1.8),
+                          border: Border.all(color: _accentGreen, width: 1.8),
                           borderRadius: BorderRadius.circular(12),
                           color: Colors.white,
                           boxShadow: const [
@@ -413,20 +410,20 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
                           children: [
                             Text(
                               _mensajeEstado,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
-                                color: accentGreen, // Siempre verde
+                                color: _accentGreen,
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            if (_mensajeEstado == 'Validando...') ...[
+                            if (_isValidando) ...[
                               const SizedBox(width: 12),
-                              SizedBox(
+                              const SizedBox(
                                 height: 20,
                                 width: 20,
                                 child: CircularProgressIndicator(
-                                  color: accentGreen,
+                                  color: _accentGreen,
                                   strokeWidth: 3,
                                 ),
                               ),
@@ -437,7 +434,6 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
                     ],
                   ),
                 ),
-                // Eliminamos la sección visual de mostrar _error en texto rojo
                 Opacity(
                   opacity: 0,
                   child: TextField(
@@ -445,7 +441,7 @@ void _validarOperador(String idOperador, {String? idLectura}) async {
                     focusNode: _focusNode,
                     autofocus: true,
                     onSubmitted: (idOperador) {
-                      _validarOperador(idOperador, idLectura: null);
+                      _validarOperador(idOperador);
                       _controller.clear();
                     },
                     keyboardType: TextInputType.text,

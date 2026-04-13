@@ -9,9 +9,7 @@ class PasosTareaScreen extends StatefulWidget {
   final String idRegistro;
   final String idTarea;
   final String nombreTarea;
-  
-  // Recibe el ID del job ya creado en la pantalla anterior
-  final String? parsableJobId; 
+  final String? parsableJobId;
 
   const PasosTareaScreen({
     super.key,
@@ -26,11 +24,18 @@ class PasosTareaScreen extends StatefulWidget {
 }
 
 class _PasosTareaScreenState extends State<PasosTareaScreen> {
-  // --- CONFIGURACIÓN PARSABLE ---
-  static const String parsableRpcUrl = "https://api.eu-west-1.parsable.net/api/jobs#completeWithOpts";
-  // ⚠️ TOKEN REAL
-  static const String parsableToken = "Token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTM5MDA2MDEsImlzcyI6ImF1dGg6cHJvZHVjdGlvbiIsInNlcmE6Y3J0ciI6IjY4NmI4M2ZlLWY3YmYtNDA3Ni1iZWJkLTUzNjM1YTgwZmNkNSIsInNlcmE6c2lkIjoiZjk4NDI5Y2MtYzBkMy00Y2VjLWI2YjctZjlmMmQ1ZjA3NmFiIiwic2VyYTp0ZWFtSWQiOiJhNDJlNzJkZC0zMzRhLTQzOTUtYjc2YS05ZDgxZjBjOGQyMTMiLCJzZXJhOnR5cCI6InBlcnNpc3RlbnQiLCJzdWIiOiIzYWYxYmU0NS0zOTQyLTQzZDEtOTVmZC1jMjg5NTQzMmVmMTcifQ.oyskbCMhYyLoSW_S2SLyGf7LdKoynMaRa8W8wTh6QDM"; 
-  
+  static const _verdeHeineken = Color(0xFF007A3D);
+  static const _parsableRpcUrl =
+      "https://api.eu-west-1.parsable.net/api/jobs#completeWithOpts";
+  static const _parsableToken =
+      "Token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTM5MDA2MDEsImlzcyI6ImF1dGg6cHJvZHVjdGlvbiIsInNlcmE6Y3J0ciI6IjY4NmI4M2ZlLWY3YmYtNDA3Ni1iZWJkLTUzNjM1YTgwZmNkNSIsInNlcmE6c2lkIjoiZjk4NDI5Y2MtYzBkMy00Y2VjLWI2YjctZjlmMmQ1ZjA3NmFiIiwic2VyYTp0ZWFtSWQiOiJhNDJlNzJkZC0zMzRhLTQzOTUtYjc2YS05ZDgxZjBjOGQyMTMiLCJzZXJhOnR5cCI6InBlcnNpc3RlbnQiLCJzdWIiOiIzYWYxYmU0NS0zOTQyLTQzZDEtOTVmZC1jMjg5NTQzMmVmMTcifQ.oyskbCMhYyLoSW_S2SLyGf7LdKoynMaRa8W8wTh6QDM";
+  static const _parsableHeaders = {
+    "Content-Type": "application/json",
+    "accept": "application/json",
+    "Authorization": _parsableToken,
+    "PARSABLE-CUSTOM-TOUCHSTONE": "heineken/heineken",
+  };
+
   List<dynamic> pasos = [];
   bool cargando = true;
   int paginaActual = 0;
@@ -49,7 +54,6 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     super.dispose();
   }
 
-  // --- GESTIÓN DE IMÁGENES ---
   String _transformarUrl(String url, {bool esGif = false}) {
     if (esGif || url.isEmpty) return url;
     return '$url?transform=w_800,q_80,format_auto';
@@ -59,8 +63,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
     for (int i = 0; i < pasos.length && i < 5; i++) {
-      final paso = pasos[i];
-      final url = paso['imagenurl'] ?? '';
+      final url = pasos[i]['imagenurl'] ?? '';
       if (url.isNotEmpty && !url.toLowerCase().endsWith('.gif')) {
         precacheImage(CachedNetworkImageProvider(_transformarUrl(url)), context);
       }
@@ -76,10 +79,8 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         .execute();
 
     if (response.status == 200 && response.data != null) {
-      List<dynamic> data = response.data;
-      data.sort((a, b) => (a['numeropaso'] ?? 0).compareTo(b['numeropaso'] ?? 0));
       setState(() {
-        pasos = data;
+        pasos = response.data as List<dynamic>;
         cargando = false;
       });
       if (pasos.isNotEmpty) _preCacheImagenes();
@@ -88,96 +89,38 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     }
   }
 
-  void _onPageChanged(int index) {
-    setState(() => paginaActual = index);
-  }
+  void _onPageChanged(int index) => setState(() => paginaActual = index);
 
-  // --- ACCIONES PARSABLE (JSON-RPC) ---
-
-  Future<void> _cerrarJobParsable() async {
+  Future<void> _callParsableRpc(String method, String reason) async {
     if (widget.parsableJobId == null) return;
 
     final body = {
-      "method": "complete",
-      "arguments": {
-        "jobId": widget.parsableJobId,
-        "reason": "Completado desde ECILT"
-      }
+      "method": method,
+      "arguments": {"jobId": widget.parsableJobId, "reason": reason},
     };
 
-    // --- DEBUG: IMPRIMIR JSON ---
-    print("🔵 CERRANDO JOB...");
-    print("🔵 URL: $parsableRpcUrl");
-    print("🔵 JSON Enviado:\n${jsonEncode(body)}");
-    // ----------------------------
+    debugPrint('Parsable RPC [$method] → ${jsonEncode(body)}');
 
     try {
       final response = await http.post(
-        Uri.parse(parsableRpcUrl),
-        headers: { 
-          "Content-Type": "application/json", 
-          "accept": "application/json", 
-          "Authorization": parsableToken,
-          "PARSABLE-CUSTOM-TOUCHSTONE": "heineken/heineken" 
-        },
-        body: jsonEncode(body),
-      );
-      
-      if (response.statusCode == 200) {
-        print("🏁 Job Cerrado Correctamente. Respuesta: ${response.body}");
-      } else {
-        print("⚠️ Error cerrando job (${response.statusCode}): ${response.body}");
-      }
-    } catch (e) {
-      print("❌ Excepción cerrando job: $e");
-    }
-  }
-
-  Future<void> _reabrirJobParsable() async {
-    if (widget.parsableJobId == null) return;
-
-    final body = {
-      "method": "reopen", 
-      "arguments": {
-        "jobId": widget.parsableJobId,
-        "reason": "Reabierto desde ECILT"
-      }
-    };
-
-    // --- DEBUG: IMPRIMIR JSON ---
-    print("🔵 REABRIENDO JOB...");
-    print("🔵 URL: $parsableRpcUrl");
-    print("🔵 JSON Enviado:\n${jsonEncode(body)}");
-    // ----------------------------
-
-    try {
-      final response = await http.post(
-        Uri.parse(parsableRpcUrl),
-        headers: { 
-          "Content-Type": "application/json", 
-          "Authorization": parsableToken,
-          "PARSABLE-CUSTOM-TOUCHSTONE": "heineken/heineken" 
-        },
+        Uri.parse(_parsableRpcUrl),
+        headers: _parsableHeaders,
         body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {
-        print("🔄 Job Reabierto Correctamente. Respuesta: ${response.body}");
+        debugPrint('Parsable [$method] OK: ${response.body}');
       } else {
-        print("⚠️ Error reabriendo job (${response.statusCode}): ${response.body}");
+        debugPrint('Parsable [$method] error (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
-      print("❌ Excepción reabriendo job: $e");
+      debugPrint('Parsable [$method] exception: $e');
     }
   }
-
-  // --- LÓGICA BOTONES ---
 
   Future<void> _confirmarTarea() async {
     setState(() => cargando = true);
-
     try {
-      // 1. Actualizar Supabase Localmente
       await SupabaseManager.client
           .from('registro_tareas')
           .update({
@@ -187,8 +130,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
           .eq('id', widget.idRegistro)
           .execute();
 
-      // 2. Cerrar en Parsable
-      await _cerrarJobParsable();
+      await _callParsableRpc('complete', 'Completado desde ECILT');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -202,7 +144,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
-      print("Error confirmando tarea: $e");
+      debugPrint('Error confirmando tarea: $e');
       if (mounted) setState(() => cargando = false);
     }
   }
@@ -210,16 +152,11 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
   Future<void> _marcarPendiente() async {
     setState(() => cargando = true);
     try {
-      // 1. Reabrir en Parsable
-      await _reabrirJobParsable();
+      await _callParsableRpc('reopen', 'Reabierto desde ECILT');
 
-      // 2. Actualizar Supabase Local
       await SupabaseManager.client
           .from('registro_tareas')
-          .update({
-            'estado': 'Pendiente',
-            'fecha_completado': null,
-          })
+          .update({'estado': 'Pendiente', 'fecha_completado': null})
           .eq('id', widget.idRegistro)
           .execute();
 
@@ -235,9 +172,28 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
-      print("Error marcando pendiente: $e");
+      debugPrint('Error marcando pendiente: $e');
       if (mounted) setState(() => cargando = false);
     }
+  }
+
+  Widget _buildPasoImage(Map<dynamic, dynamic> paso) {
+    final url = paso['imagenurl'] ?? '';
+    final esGif = url.toLowerCase().endsWith('.gif');
+    final urlFinal = _transformarUrl(url, esGif: esGif);
+
+    if (esGif) {
+      return Image.network(urlFinal, fit: BoxFit.contain);
+    }
+    return CachedNetworkImage(
+      imageUrl: urlFinal,
+      fit: BoxFit.contain,
+      placeholder: (context, url) =>
+          const Center(child: CircularProgressIndicator()),
+      errorWidget: (context, url, error) => const Center(
+        child: Icon(Icons.broken_image, size: 80, color: Colors.redAccent),
+      ),
+    );
   }
 
   Widget _buildDots() {
@@ -250,7 +206,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
           width: paginaActual == index ? 16 : 10,
           height: 10,
           decoration: BoxDecoration(
-            color: paginaActual == index ? const Color(0xFF007A3D) : Colors.grey.shade400,
+            color: paginaActual == index ? _verdeHeineken : Colors.grey.shade400,
             borderRadius: BorderRadius.circular(5),
           ),
         );
@@ -260,19 +216,17 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final verdeHeineken = const Color(0xFF007A3D);
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
           widget.nombreTarea,
           style: const TextStyle(color: Colors.white),
         ),
-        backgroundColor: verdeHeineken,
+        backgroundColor: _verdeHeineken,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: cargando
-          ? Center(child: CircularProgressIndicator(color: verdeHeineken))
+          ? const Center(child: CircularProgressIndicator(color: _verdeHeineken))
           : Column(
               children: [
                 Expanded(
@@ -291,10 +245,10 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                       ],
                     ),
                     child: pasos.isEmpty
-                        ? Center(
+                        ? const Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
+                              children: [
                                 Icon(Icons.info_outline, size: 80, color: Colors.grey),
                                 SizedBox(height: 16),
                                 Text(
@@ -318,31 +272,11 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                               onPageChanged: _onPageChanged,
                               itemCount: pasos.length,
                               itemBuilder: (context, index) {
-                                final paso = pasos[index];
-                                final url = paso['imagenurl'] ?? '';
-                                final esGif = url.toLowerCase().endsWith('.gif');
-                                final urlFinal = _transformarUrl(url, esGif: esGif);
-
-                                Widget imagenWidget;
-                                if (esGif) {
-                                  imagenWidget = Image.network(urlFinal, fit: BoxFit.contain);
-                                } else {
-                                  imagenWidget = CachedNetworkImage(
-                                    imageUrl: urlFinal,
-                                    fit: BoxFit.contain,
-                                    placeholder: (context, url) => const Center(
-                                        child: CircularProgressIndicator()),
-                                    errorWidget: (context, url, error) => const Center(
-                                      child: Icon(Icons.broken_image, size: 80, color: Colors.redAccent),
-                                    ),
-                                  );
-                                }
-
                                 return Padding(
                                   padding: const EdgeInsets.all(12),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: imagenWidget,
+                                    child: _buildPasoImage(pasos[index]),
                                   ),
                                 );
                               },
@@ -362,13 +296,14 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       OutlinedButton(
+                        onPressed: _marcarPendiente,
                         child: const Text('No'),
-                        onPressed: () => _marcarPendiente(),
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: verdeHeineken,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          backgroundColor: _verdeHeineken,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
                         ),
                         onPressed: _confirmarTarea,
                         child: const Text(
