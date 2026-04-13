@@ -20,6 +20,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     with TickerProviderStateMixin {
   static const _backgroundColor = Color(0xFFF5F5F7);
   static const _accentGreen = Color(0xFF007A3D);
+  static const _accentRed = Color(0xFFD32F2F);
   static const _mensajeInicial = 'Escanea tu tarjeta para registrar actividad';
 
   final TextEditingController _controller = TextEditingController();
@@ -27,15 +28,20 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   String _mensajeEstado = _mensajeInicial;
 
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  // Animación de pulso radial para el icono NFC
+  late AnimationController _pulseController;
 
+  // Animación de escala para la foto del operador
   late AnimationController _scaleController;
   late Animation<double> _scaleAnimation;
+
+  // Barra de progreso en pantalla de bienvenida (3s)
+  late AnimationController _progressController;
 
   bool _operadorValido = false;
   String? _fotoOperador;
   String? _nombreOperador;
+  bool _accesoDenegado = false;
 
   late RealtimeChannel _rfidChannel;
   bool _isValidando = false;
@@ -58,16 +64,11 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       }
     });
 
-    _animationController = AnimationController(
+    // Pulso continuo para el icono NFC — 2s, repeat hacia adelante
+    _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
-    _animationController.repeat(reverse: true);
+      duration: const Duration(seconds: 2),
+    )..repeat();
 
     _scaleController = AnimationController(
       vsync: this,
@@ -76,6 +77,12 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
       CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
+
+    // Progreso suave de 3 segundos para la pantalla de bienvenida
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
     );
 
     // --- SUSCRIPCIÓN REALTIME ---
@@ -104,8 +111,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
     _rfidChannel.onError((e) {
       debugPrint('Error Realtime: $e');
-      // En caso de error de conexión, aquí sí podrías querer avisar discretamente,
-      // o dejarlo silencioso también según tu preferencia.
     });
     _rfidChannel.subscribe();
 
@@ -114,8 +119,9 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _pulseController.dispose();
     _scaleController.dispose();
+    _progressController.dispose();
     _focusNode.dispose();
     _controller.dispose();
     _rfidChannel.unsubscribe();
@@ -169,8 +175,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     }
 
     try {
-      // 1. CAMBIO IMPORTANTE: Quitamos el filtro .eq('id_maquina', ...)
-      // Buscamos al operador solo por su ID de tarjeta para ver quién es primero.
       final response = await SupabaseManager.client
           .from('operadores')
           .select()
@@ -178,32 +182,23 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           .maybeSingle();
 
       if (response == null) {
-        // El operador no existe en la base de datos
         debugPrint('Operador no encontrado');
         _resetearEstadoSilencioso();
         return;
       }
 
-      // 2. OBTENEMOS LOS DATOS
       final tipo = (response['tipo'] ?? '').toString().toLowerCase().trim();
       final idMaquinaOperador = response['id_maquina']?.toString();
       final nombre = response['nombreoperador'] ?? 'Usuario';
 
-      // 3. LÓGICA DE PERMISOS (Aquí está la magia)
-      // - Si es supervisor: PASA SIEMPRE.
-      // - Si NO es supervisor: Solo pasa si su máquina coincide con la tablet.
-      
       bool esSupervisor = tipo == 'supervisor';
       bool esMaquinaCorrecta = idMaquinaOperador == widget.idMaquinaLocal;
 
       if (!esSupervisor && !esMaquinaCorrecta) {
-        // Es un operador normal intentando entrar en la máquina equivocada
         debugPrint('Acceso denegado: Operador de $idMaquinaOperador en tablet ${widget.idMaquinaLocal}');
-        _resetearEstadoSilencioso();
+        _mostrarAccesoDenegado();
         return;
       }
-
-      // --- SI LLEGA AQUÍ, EL ACCESO ES VÁLIDO ---
 
       setState(() {
         _mensajeEstado = 'Bienvenido, $nombre';
@@ -213,12 +208,12 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       });
 
       _scaleController.forward(from: 0.0);
+      _progressController.forward(from: 0.0);
 
       await Future.delayed(const Duration(seconds: 3));
 
       if (!mounted) return;
 
-      // Navegación según el tipo
       if (esSupervisor) {
         Navigator.pushReplacement(
           context,
@@ -230,7 +225,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           ),
         );
       } else {
-        // Si es operador, pasamos también la máquina para asegurar consistencia
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -241,7 +235,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           ),
         );
       }
-
     } catch (e) {
       debugPrint('Error en validación: $e');
       _resetearEstadoSilencioso();
@@ -252,6 +245,22 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     if (mounted) {
       setState(() {
         _isValidando = false;
+        _mensajeEstado = _mensajeInicial;
+      });
+    }
+  }
+
+  Future<void> _mostrarAccesoDenegado() async {
+    if (!mounted) return;
+    setState(() {
+      _accesoDenegado = true;
+      _isValidando = false;
+      _mensajeEstado = 'Acceso no autorizado';
+    });
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      setState(() {
+        _accesoDenegado = false;
         _mensajeEstado = _mensajeInicial;
       });
     }
@@ -308,6 +317,39 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                 color: Colors.black87,
               ),
             ),
+            const SizedBox(height: 28),
+            // Barra de progreso + countdown antes de navegar
+            SizedBox(
+              width: 260,
+              child: AnimatedBuilder(
+                animation: _progressController,
+                builder: (context, _) {
+                  final segundosRestantes =
+                      (3 - (_progressController.value * 3)).ceil();
+                  return Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: _progressController.value,
+                          minHeight: 6,
+                          backgroundColor: Colors.black12,
+                          color: _accentGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Entrando en ${segundosRestantes}s...',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black45,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -315,6 +357,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   }
 
   Widget _buildScanScreen() {
+    final Color statusColor = _accesoDenegado ? _accentRed : _accentGreen;
+
     return Scaffold(
       backgroundColor: _backgroundColor,
       body: SafeArea(
@@ -344,7 +388,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                 ),
                 const SizedBox(height: 40),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -384,55 +429,121 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                   ),
                 ),
                 const SizedBox(height: 30),
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.qr_code_scanner, color: _accentGreen, size: 28),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: _accentGreen, width: 1.8),
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.white,
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 8,
-                              offset: Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _mensajeEstado,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: _accentGreen,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            if (_isValidando) ...[
-                              const SizedBox(width: 12),
-                              const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: _accentGreen,
-                                  strokeWidth: 3,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Icono NFC con ondas de pulso radial
+                    AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        final v1 = _pulseController.value;
+                        final v2 = (_pulseController.value + 0.5) % 1.0;
+                        return SizedBox(
+                          width: 90,
+                          height: 90,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Onda exterior 1
+                              Opacity(
+                                opacity: (1 - v1) * 0.55,
+                                child: Container(
+                                  width: 56 + 34 * v1,
+                                  height: 56 + 34 * v1,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: statusColor,
+                                      width: 2.0 * (1 - v1) + 0.5,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ]
-                          ],
-                        ),
+                              // Onda exterior 2 (desfasada 0.5)
+                              Opacity(
+                                opacity: (1 - v2) * 0.55,
+                                child: Container(
+                                  width: 56 + 34 * v2,
+                                  height: 56 + 34 * v2,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: statusColor,
+                                      width: 2.0 * (1 - v2) + 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Icono NFC central
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: statusColor.withValues(alpha: 0.08),
+                                  border:
+                                      Border.all(color: statusColor, width: 2),
+                                ),
+                                child: Icon(Icons.nfc,
+                                    color: statusColor, size: 30),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    // Caja de mensaje de estado con transición animada
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: statusColor, width: 1.8),
+                        borderRadius: BorderRadius.circular(12),
+                        color: _accesoDenegado
+                            ? _accentRed.withValues(alpha: 0.07)
+                            : Colors.white,
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _mensajeEstado,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: statusColor,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (_isValidando) ...[
+                            const SizedBox(width: 12),
+                            SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: statusColor,
+                                strokeWidth: 3,
+                              ),
+                            ),
+                          ],
+                          if (_accesoDenegado) ...[
+                            const SizedBox(width: 10),
+                            const Icon(Icons.block,
+                                color: _accentRed, size: 22),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 Opacity(
                   opacity: 0,
