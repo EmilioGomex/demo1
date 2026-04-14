@@ -45,7 +45,7 @@ class _TareasScreenState extends State<TareasScreen> {
     try {
       final operadorResp = await SupabaseManager.client
           .from('operadores')
-          .select('id_operador, nombreoperador, linea, id_maquina, maquinas (nombre)')
+          .select('id_operador, nombreoperador, linea, id_maquina, foto_operador, maquinas (nombre)')
           .eq('id_operador', widget.idOperador)
           .maybeSingle();
 
@@ -466,101 +466,160 @@ class _TareasScreenState extends State<TareasScreen> {
         ? _formatearFechaCompletado(registro['fecha_completado']?.toString())
         : 'Fecha límite: ${_formatearFechaLimite(registro['fecha_limite']?.toString())}';
 
-    return Card(
-      color: completado ? Colors.grey.shade50 : Colors.white,
-      elevation: completado ? 1 : 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              radius: 26,
-              backgroundColor: completado
-                  ? Colors.grey.shade300
-                  : _colorFrecuencia(frecuencia),
-              child: _iconoTipoTarea(tipo),
-            ),
-            title: Text(
-              nombreTarea,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                decoration: subtitleDecoration,
-                color: completado ? Colors.grey.shade500 : Colors.black87,
-              ),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Frecuencia: $frecuencia',
-                  style: TextStyle(
-                      fontSize: 14,
-                      color: subtitleColor,
-                      decoration: subtitleDecoration),
-                ),
-                if (segundaLinea.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    segundaLinea,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: completado ? Colors.green.shade600 : subtitleColor,
-                      decoration: completado ? null : subtitleDecoration,
-                      fontWeight:
-                          completado ? FontWeight.w500 : FontWeight.normal,
-                    ),
-                  ),
-                ],
-                if (!completado && motivo != null && motivo.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  _motivoChip(motivo),
-                ],
-              ],
-            ),
-            trailing: _iconoEstado(estado),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: completado ? Colors.grey.shade50 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             onTap: completado
                 ? () => _confirmarReapertura(registro, tarea)
                 : () => _procesarYNavigar(registro, tarea),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor: completado
+                        ? Colors.grey.shade300
+                        : _colorFrecuencia(frecuencia),
+                    child: _iconoTipoTarea(tipo),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                nombreTarea,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                  decoration: subtitleDecoration,
+                                  color: completado
+                                      ? Colors.grey.shade500
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _iconoEstado(estado),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Frecuencia: $frecuencia',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: subtitleColor,
+                              decoration: subtitleDecoration),
+                        ),
+                        if (segundaLinea.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            segundaLinea,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: completado
+                                  ? Colors.green.shade600
+                                  : subtitleColor,
+                              decoration: completado ? null : subtitleDecoration,
+                              fontWeight: completado
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                        if (!completado && motivo != null && motivo.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          _motivoChip(motivo),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard() {
-    return Card(
-      color: Colors.green.shade50,
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _infoItem(Icons.person, 'Operador', operador?['nombreoperador'] ?? '-'),
-            _infoItem(Icons.factory, 'Máquina', operador?['maquinas']?['nombre'] ?? '-'),
-            _infoItem(Icons.line_weight, 'Línea', operador?['linea'] ?? '-'),
-            _infoItem(Icons.work, 'Rol', 'Operador'),
-          ],
         ),
       ),
     );
   }
 
-  Widget _infoItem(IconData icon, String label, String value) {
-    return Column(
-      children: [
-        Icon(icon, color: _accentGreen, size: 28),
-        const SizedBox(height: 6),
-        Text(label,
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.grey.shade800)),
-        const SizedBox(height: 2),
-        Text(value,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-      ],
+  Widget _buildInfoCard() {
+    final nombre = operador?['nombreoperador'] ?? '-';
+    final maquina = operador?['maquinas']?['nombre'] ?? '-';
+    final linea = operador?['linea'] ?? '-';
+    final foto = operador?['foto_operador']?.toString() ?? '';
+
+    return Card(
+      color: Colors.green.shade50,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 34,
+              backgroundColor: _accentGreen,
+              backgroundImage: foto.isNotEmpty ? NetworkImage(foto) : null,
+              onBackgroundImageError: foto.isNotEmpty ? (_, __) {} : null,
+              child: foto.isEmpty
+                  ? const Icon(Icons.person, color: Colors.white, size: 38)
+                  : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nombre,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.factory, size: 14, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        maquina,
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(Icons.line_weight, size: 14, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Línea $linea',
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _buildResumenTareas(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -603,10 +662,7 @@ class _TareasScreenState extends State<TareasScreen> {
 
     if (parts.isEmpty) return const SizedBox.shrink();
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Wrap(spacing: 8, children: parts),
-    );
+    return Wrap(spacing: 8, runSpacing: 4, children: parts);
   }
 
   Widget _resumenChip(String label, Color textColor, Color bgColor) {
@@ -656,9 +712,16 @@ class _TareasScreenState extends State<TareasScreen> {
             ),
           ),
         ),
-        title: Text(
-          'Tareas de ${operador?['nombreoperador'] ?? 'Operador'}',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star, color: Colors.red.shade400, size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              'Heineken - ECILT',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+            ),
+          ],
         ),
         centerTitle: true,
       ),
@@ -692,13 +755,22 @@ class _TareasScreenState extends State<TareasScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildInfoCard(),
-                      const SizedBox(height: 30),
-                      const Text(
-                        'Tareas asignadas',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          const Text(
+                            'Tareas asignadas',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black54,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      _buildResumenTareas(),
                       const SizedBox(height: 8),
                       Expanded(
                         child: tareasOrdenadas.isEmpty
@@ -725,9 +797,11 @@ class _TareasScreenState extends State<TareasScreen> {
                                   ),
                                   child: ListView.builder(
                                     physics: const AlwaysScrollableScrollPhysics(),
+                                    cacheExtent: 400,
                                     itemCount: tareasOrdenadas.length,
-                                    itemBuilder: (_, index) =>
-                                        _buildTareaCard(tareasOrdenadas[index]),
+                                    itemBuilder: (_, index) => RepaintBoundary(
+                                      child: _buildTareaCard(tareasOrdenadas[index]),
+                                    ),
                                   ),
                                 ),
                               ),

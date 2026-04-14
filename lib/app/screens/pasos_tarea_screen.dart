@@ -240,22 +240,16 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     setState(() { cargando = true; _procesando = true; });
 
     try {
-      final reg = await SupabaseManager.client
-          .from('registro_tareas')
-          .select('fecha_limite')
-          .eq('id', widget.idRegistro)
-          .single();
-
-      final fechaActual =
-          DateTime.tryParse(reg['fecha_limite']?.toString() ?? '') ??
-              DateTime.now();
-      final nuevaFecha = fechaActual.add(Duration(days: diasExtension));
+      final hoy = DateTime.now();
+      final nuevaFecha = DateTime(hoy.year, hoy.month, hoy.day)
+          .add(Duration(days: diasExtension));
 
       await SupabaseManager.client
           .from('registro_tareas')
           .update({
             'fecha_limite': nuevaFecha.toUtc().toIso8601String(),
             'motivo_bloqueo': motivo,
+            'estado': 'Pendiente',
           })
           .eq('id', widget.idRegistro);
 
