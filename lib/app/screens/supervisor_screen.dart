@@ -5,12 +5,14 @@ import 'bienvenida_screen.dart';
 
 class SupervisorScreen extends StatefulWidget {
   final String nombreSupervisor;
-  final String tipo;
+  final String idMaquinaLocal;
+  final String? fotoSupervisor;
 
   const SupervisorScreen({
     super.key,
     required this.nombreSupervisor,
-    required this.tipo,
+    required this.idMaquinaLocal,
+    this.fotoSupervisor,
   });
 
   @override
@@ -26,6 +28,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
   String? maquinaSeleccionada;
   String? operadorSeleccionado;
   bool cargando = true;
+  bool _errorCarga = false;
 
   @override
   void initState() {
@@ -36,31 +39,46 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
   Future<void> _cargarDatos() async {
     setState(() => cargando = true);
 
-    final results = await Future.wait([
-      SupabaseManager.client
-          .from('maquinas')
-          .select('id_maquina, nombre')
-          .order('nombre'),
-      SupabaseManager.client
-          .from('operadores')
-          .select('id_operador, nombreoperador, id_maquina')
-          .order('nombreoperador'),
-    ]);
+    try {
+      final results = await Future.wait([
+        SupabaseManager.client
+            .from('maquinas')
+            .select('id_maquina, nombre')
+            .order('nombre'),
+        SupabaseManager.client
+            .from('operadores')
+            .select('id_operador, nombreoperador, id_maquina')
+            .neq('tipo', 'supervisor')
+            .order('nombreoperador'),
+      ]);
 
-    setState(() {
-      maquinas = results[0];
-      operadores = results[1];
-      cargando = false;
-    });
+      setState(() {
+        maquinas = results[0];
+        operadores = results[1];
+        cargando = false;
+      });
+    } catch (e) {
+      debugPrint('Error cargando datos supervisor: $e');
+      setState(() {
+        cargando = false;
+        _errorCarga = true;
+      });
+    }
   }
 
   void _irATareas() {
+    final op = operadores.firstWhere(
+      (o) => o['id_operador'] == operadorSeleccionado,
+      orElse: () => {},
+    );
+    final idMaquina = op['id_maquina']?.toString() ?? '';
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TareasScreen(
           idOperador: operadorSeleccionado!,
-          idMaquinaLocal: '',
+          idMaquinaLocal: idMaquina,
         ),
       ),
     );
@@ -80,10 +98,18 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
       margin: const EdgeInsets.only(bottom: 28),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 28,
             backgroundColor: _accentGreen,
-            child: Icon(Icons.person, color: Colors.white, size: 32),
+            backgroundImage: (widget.fotoSupervisor != null &&
+                    widget.fotoSupervisor!.isNotEmpty)
+                ? NetworkImage(widget.fotoSupervisor!)
+                : null,
+            onBackgroundImageError: (_, __) {},
+            child: (widget.fotoSupervisor == null ||
+                    widget.fotoSupervisor!.isEmpty)
+                ? const Icon(Icons.person, color: Colors.white, size: 32)
+                : null,
           ),
           const SizedBox(width: 18),
           Expanded(
@@ -132,6 +158,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
   Widget _buildDropdown<T>({
     required T? value,
     required IconData icon,
+    required String hint,
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
   }) {
@@ -148,6 +175,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
         isExpanded: true,
         underline: const SizedBox(),
         padding: const EdgeInsets.symmetric(horizontal: 12),
+        hint: Text(hint, style: const TextStyle(color: Colors.black45)),
         items: items,
         onChanged: onChanged,
       ),
@@ -169,7 +197,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
             context,
             MaterialPageRoute(
               builder: (context) =>
-                  const BienvenidaScreen(idMaquinaLocal: '9991'),
+                  BienvenidaScreen(idMaquinaLocal: widget.idMaquinaLocal),
             ),
             (route) => false,
           ),
@@ -177,6 +205,33 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
       ),
       body: cargando
           ? const Center(child: CircularProgressIndicator())
+          : _errorCarga
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off, size: 64, color: Colors.black26),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Error al cargar los datos',
+                    style: TextStyle(fontSize: 18, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _accentGreen,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      setState(() => _errorCarga = false);
+                      _cargarDatos();
+                    },
+                  ),
+                ],
+              ),
+            )
           : Center(
               child: SingleChildScrollView(
                 padding:
@@ -214,13 +269,21 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                         _buildDropdown<String>(
                           value: maquinaSeleccionada,
                           icon: Icons.precision_manufacturing,
-                          items: maquinas
-                              .map<DropdownMenuItem<String>>((m) =>
-                                  DropdownMenuItem(
-                                    value: m['id_maquina'],
-                                    child: Text(m['nombre']),
-                                  ))
-                              .toList(),
+                          hint: 'Todas las máquinas',
+                          items: [
+                            const DropdownMenuItem<String>(
+                              value: null,
+                              child: Text(
+                                '— Todas las máquinas —',
+                                style: TextStyle(color: Colors.black54),
+                              ),
+                            ),
+                            ...maquinas.map<DropdownMenuItem<String>>((m) =>
+                                DropdownMenuItem(
+                                  value: m['id_maquina'],
+                                  child: Text(m['nombre']),
+                                )),
+                          ],
                           onChanged: (value) => setState(() {
                             maquinaSeleccionada = value;
                             operadorSeleccionado = null;
@@ -239,6 +302,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                         _buildDropdown<String>(
                           value: operadorSeleccionado,
                           icon: Icons.person,
+                          hint: 'Selecciona un operador',
                           items: _operadoresFiltrados
                               .map<DropdownMenuItem<String>>((o) =>
                                   DropdownMenuItem(
@@ -265,8 +329,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                                   fontSize: 18, fontWeight: FontWeight.bold),
                               elevation: 2,
                             ),
-                            onPressed: maquinaSeleccionada != null &&
-                                    operadorSeleccionado != null
+                            onPressed: operadorSeleccionado != null
                                 ? _irATareas
                                 : null,
                             label: const Text('Ver tareas del operador'),

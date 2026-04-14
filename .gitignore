@@ -1,3 +1,6 @@
+# Secrets — never commit
+lib/config/parsable_secrets.dart
+
 # Miscellaneous
 *.class
 *.log

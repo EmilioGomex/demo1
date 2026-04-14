@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import '../../supabase_manager.dart';
+import '../../config/parsable_secrets.dart';
 import 'pasos_tarea_screen.dart';
 import 'bienvenida_screen.dart';
 import 'dart:convert';
@@ -60,8 +61,8 @@ class _TareasScreenState extends State<TareasScreen> {
       final idMaquina = operador!['id_maquina'] ?? '';
 
       final hoy = DateTime.now();
-      final inicioHoy = DateTime.utc(hoy.year, hoy.month, hoy.day).toIso8601String();
-      final finHoy = DateTime.utc(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999).toIso8601String();
+      final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day).toUtc().toIso8601String();
+      final finHoy = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999).toUtc().toIso8601String();
 
       final filtroOperador =
           'id_operador.eq.${widget.idOperador},and(id_operador.is.null,id_maquina.eq.$idMaquina)';
@@ -71,7 +72,7 @@ class _TareasScreenState extends State<TareasScreen> {
       final listaTareas = await SupabaseManager.client
           .from('registro_tareas')
           .select('''
-            id, id_tarea, fecha_periodo, fecha_limite, estado, fecha_completado, parsable_job_id,
+            id, id_tarea, fecha_periodo, fecha_limite, estado, fecha_completado, parsable_job_id, motivo_bloqueo,
             tareas(nombre_tarea, frecuencia, tipo, es_compartida)
           ''')
           .or(filtroOperador)
@@ -137,7 +138,7 @@ class _TareasScreenState extends State<TareasScreen> {
       await SupabaseManager.client.from('semaforo_maquina').upsert({
         'id_maquina': widget.idMaquinaLocal,
         'estado': nuevoColor,
-        'fecha_actualizacion': DateTime.now().toIso8601String(),
+        'fecha_actualizacion': DateTime.now().toUtc().toIso8601String(),
       }, onConflict: 'id_maquina');
       debugPrint('Semáforo actualizado a: $nuevoColor');
     } catch (e) {
@@ -193,10 +194,12 @@ class _TareasScreenState extends State<TareasScreen> {
         Uri.parse('${ParsableConfig.apiUrl}/jobs'),
         headers: ParsableConfig.headers,
         body: jsonEncode(bodyCreate),
-      );
+      ).timeout(const Duration(seconds: 15));
 
-      if (response.statusCode != 200) {
-        debugPrint('Error creando Job: ${response.body}');
+      debugPrint('Parsable create → HTTP ${response.statusCode}: ${response.body}');
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint('Error creando Job (${response.statusCode}): ${response.body}');
         return null;
       }
 
@@ -237,12 +240,12 @@ class _TareasScreenState extends State<TareasScreen> {
           }
         };
 
-        await http.post(
+        final stepResponse = await http.post(
           Uri.parse('${ParsableConfig.apiUrl}/jobs'),
           headers: ParsableConfig.headers,
           body: jsonEncode(bodyStep),
-        );
-        debugPrint('Nombre enviado a Parsable.');
+        ).timeout(const Duration(seconds: 15));
+        debugPrint('Parsable sendExecData → HTTP ${stepResponse.statusCode}: ${stepResponse.body}');
       }
 
       return jobId;
@@ -252,12 +255,60 @@ class _TareasScreenState extends State<TareasScreen> {
     }
   }
 
-  Future<void> _procesarYNavigar(
+  Future<void> _confirmarReapertura(
       Map<String, dynamic> registro, Map<String, dynamic>? tarea) async {
+    final nombreTarea = tarea?['nombre_tarea'] ?? 'Tarea';
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tarea completada'),
+        content: Text('«$nombreTarea» ya fue completada.\n¿Deseas reabrirla?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _accentGreen,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sí, reabrir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar == true && mounted) {
+      _procesarYNavigar(registro, tarea, estaCompletado: true);
+    }
+  }
+
+  Future<void> _procesarYNavigar(
+      Map<String, dynamic> registro, Map<String, dynamic>? tarea,
+      {bool estaCompletado = false}) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: _accentGreen)),
+      builder: (_) => const Center(
+        child: Card(
+          color: Colors.white,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: _accentGreen),
+                SizedBox(height: 16),
+                Text(
+                  'Preparando tarea...',
+                  style: TextStyle(fontSize: 15, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
 
     final operadorNombre = operador?['nombreoperador'] ?? 'Operador';
@@ -286,10 +337,11 @@ class _TareasScreenState extends State<TareasScreen> {
             idTarea: registro['id_tarea'],
             nombreTarea: nombreTarea,
             parsableJobId: parsableJobId,
+            estaCompletado: estaCompletado,
           ),
         ),
       );
-      if (resultado == true) _cargarDatos();
+      if (resultado == true && mounted) _cargarDatos();
     }
   }
 
@@ -317,7 +369,7 @@ class _TareasScreenState extends State<TareasScreen> {
       case 'ajuste':
         return const Icon(Icons.construction, color: Colors.white, size: 28);
       default:
-        return const Icon(Icons.visibility, color: Colors.white, size: 28);
+        return const Icon(Icons.task_alt, color: Colors.white, size: 28);
     }
   }
 
@@ -354,53 +406,126 @@ class _TareasScreenState extends State<TareasScreen> {
     }
   }
 
+  String _formatearFechaCompletado(String? raw) {
+    if (raw == null) return '';
+    try {
+      final fecha = DateTime.parse(raw).toLocal();
+      final ahora = DateTime.now();
+      final esHoy = fecha.year == ahora.year &&
+          fecha.month == ahora.month &&
+          fecha.day == ahora.day;
+      final hora =
+          '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
+      return esHoy ? 'Completado hoy a las $hora' : 'Completado el ${fecha.day}/${fecha.month} a las $hora';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Widget _motivoChip(String motivo) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.event_busy, size: 13, color: Colors.orange.shade700),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              'Aplazada: $motivo',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.orange.shade800,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTareaCard(Map<String, dynamic> registro) {
     final tarea = registro['tareas'] as Map<String, dynamic>?;
     final estado = registro['estado'] ?? 'Pendiente';
     final frecuencia = tarea?['frecuencia'] ?? 'Otro';
     final tipo = tarea?['tipo'] ?? 'Otro';
     final nombreTarea = tarea?['nombre_tarea'] ?? 'Tarea Desconocida';
-    final fechaLimite = _formatearFechaLimite(registro['fecha_limite']?.toString());
     final completado = estado.toString().toLowerCase() == 'completado';
-    final subtitleColor = completado ? Colors.grey.shade600 : Colors.grey.shade700;
+    final motivo = registro['motivo_bloqueo']?.toString();
+    final subtitleColor = completado ? Colors.grey.shade500 : Colors.grey.shade700;
     final subtitleDecoration = completado ? TextDecoration.lineThrough : null;
 
+    final segundaLinea = completado
+        ? _formatearFechaCompletado(registro['fecha_completado']?.toString())
+        : 'Fecha límite: ${_formatearFechaLimite(registro['fecha_limite']?.toString())}';
+
     return Card(
-      color: Colors.white,
-      elevation: 4,
+      color: completado ? Colors.grey.shade50 : Colors.white,
+      elevation: completado ? 1 : 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 26,
-          backgroundColor: _colorFrecuencia(frecuencia),
-          child: _iconoTipoTarea(tipo),
-        ),
-        title: Text(
-          nombreTarea,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            decoration: subtitleDecoration,
-            color: completado ? Colors.grey.shade600 : Colors.black87,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              radius: 26,
+              backgroundColor: completado
+                  ? Colors.grey.shade300
+                  : _colorFrecuencia(frecuencia),
+              child: _iconoTipoTarea(tipo),
+            ),
+            title: Text(
+              nombreTarea,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                decoration: subtitleDecoration,
+                color: completado ? Colors.grey.shade500 : Colors.black87,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Frecuencia: $frecuencia',
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: subtitleColor,
+                      decoration: subtitleDecoration),
+                ),
+                if (segundaLinea.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    segundaLinea,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: completado ? Colors.green.shade600 : subtitleColor,
+                      decoration: completado ? null : subtitleDecoration,
+                      fontWeight:
+                          completado ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+                if (!completado && motivo != null && motivo.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _motivoChip(motivo),
+                ],
+              ],
+            ),
+            trailing: _iconoEstado(estado),
+            onTap: completado
+                ? () => _confirmarReapertura(registro, tarea)
+                : () => _procesarYNavigar(registro, tarea),
           ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Frecuencia: $frecuencia',
-              style: TextStyle(fontSize: 14, color: subtitleColor, decoration: subtitleDecoration),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Fecha límite: $fechaLimite',
-              style: TextStyle(fontSize: 14, color: subtitleColor, decoration: subtitleDecoration),
-            ),
-          ],
-        ),
-        trailing: _iconoEstado(estado),
-        onTap: () => _procesarYNavigar(registro, tarea),
+        ],
       ),
     );
   }
@@ -436,6 +561,65 @@ class _TareasScreenState extends State<TareasScreen> {
         Text(value,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
       ],
+    );
+  }
+
+  Map<String, int> get _resumenTareas {
+    int pendientes = 0, atrasadas = 0, completadas = 0;
+    for (final r in tareasOrdenadas) {
+      final estado = (r['estado'] ?? '').toString().toLowerCase();
+      if (estado == 'completado') { completadas++; }
+      else if (estado == 'atrasado') { atrasadas++; }
+      else { pendientes++; }
+    }
+    return {'pendientes': pendientes, 'atrasadas': atrasadas, 'completadas': completadas};
+  }
+
+  Widget _buildResumenTareas() {
+    final r = _resumenTareas;
+    final parts = <Widget>[];
+
+    if (r['atrasadas']! > 0) {
+      parts.add(_resumenChip(
+        '${r['atrasadas']} atrasada${r['atrasadas']! > 1 ? 's' : ''}',
+        Colors.red.shade600,
+        Colors.red.shade50,
+      ));
+    }
+    if (r['pendientes']! > 0) {
+      parts.add(_resumenChip(
+        '${r['pendientes']} pendiente${r['pendientes']! > 1 ? 's' : ''}',
+        Colors.orange.shade700,
+        Colors.orange.shade50,
+      ));
+    }
+    if (r['completadas']! > 0) {
+      parts.add(_resumenChip(
+        '${r['completadas']} completada${r['completadas']! > 1 ? 's' : ''}',
+        Colors.green.shade700,
+        Colors.green.shade50,
+      ));
+    }
+
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Wrap(spacing: 8, children: parts),
+    );
+  }
+
+  Widget _resumenChip(String label, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+      ),
     );
   }
 
@@ -481,7 +665,27 @@ class _TareasScreenState extends State<TareasScreen> {
       body: cargando
           ? const Center(child: CircularProgressIndicator(color: _accentGreen))
           : error != null
-              ? Center(child: Text(error!, style: const TextStyle(color: Colors.redAccent)))
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                      const SizedBox(height: 12),
+                      Text(error!, style: const TextStyle(color: Colors.redAccent, fontSize: 16)),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: _cargarDatos,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reintentar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accentGreen,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               : Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -493,25 +697,41 @@ class _TareasScreenState extends State<TareasScreen> {
                         'Tareas asignadas',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 16),
-                      tareasOrdenadas.isEmpty
-                          ? _sinTareasWidget()
-                          : Expanded(
-                              child: ScrollConfiguration(
-                                behavior: ScrollConfiguration.of(context).copyWith(
-                                  dragDevices: {
-                                    PointerDeviceKind.touch,
-                                    PointerDeviceKind.mouse,
-                                  },
+                      const SizedBox(height: 8),
+                      _buildResumenTareas(),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: tareasOrdenadas.isEmpty
+                            ? RefreshIndicator(
+                                color: _accentGreen,
+                                onRefresh: _cargarDatos,
+                                child: SingleChildScrollView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  child: SizedBox(
+                                    height: 400,
+                                    child: _sinTareasWidget(),
+                                  ),
                                 ),
-                                child: ListView.builder(
-                                  physics: const ClampingScrollPhysics(),
-                                  itemCount: tareasOrdenadas.length,
-                                  itemBuilder: (_, index) =>
-                                      _buildTareaCard(tareasOrdenadas[index]),
+                              )
+                            : RefreshIndicator(
+                                color: _accentGreen,
+                                onRefresh: _cargarDatos,
+                                child: ScrollConfiguration(
+                                  behavior: ScrollConfiguration.of(context).copyWith(
+                                    dragDevices: {
+                                      PointerDeviceKind.touch,
+                                      PointerDeviceKind.mouse,
+                                    },
+                                  ),
+                                  child: ListView.builder(
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    itemCount: tareasOrdenadas.length,
+                                    itemBuilder: (_, index) =>
+                                        _buildTareaCard(tareasOrdenadas[index]),
+                                  ),
                                 ),
                               ),
-                            ),
+                      ),
                     ],
                   ),
                 ),
@@ -522,14 +742,15 @@ class _TareasScreenState extends State<TareasScreen> {
 // --- CONFIGURACIÓN PARSABLE ---
 class ParsableConfig {
   static const String apiUrl = "https://api.eu-west-1.parsable.net/api";
-  static const String token =
-      "Token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTM5MDA2MDEsImlzcyI6ImF1dGg6cHJvZHVjdGlvbiIsInNlcmE6Y3J0ciI6IjY4NmI4M2ZlLWY3YmYtNDA3Ni1iZWJkLTUzNjM1YTgwZmNkNSIsInNlcmE6c2lkIjoiZjk4NDI5Y2MtYzBkMy00Y2VjLWI2YjctZjlmMmQ1ZjA3NmFiIiwic2VyYTp0ZWFtSWQiOiJhNDJlNzJkZC0zMzRhLTQzOTUtYjc2YS05ZDgxZjBjOGQyMTMiLCJzZXJhOnR5cCI6InBlcnNpc3RlbnQiLCJzdWIiOiIzYWYxYmU0NS0zOTQyLTQzZDEtOTVmZC1jMjg5NTQzMmVmMTcifQ.oyskbCMhYyLoSW_S2SLyGf7LdKoynMaRa8W8wTh6QDM";
   static const String teamId = "a42e72dd-334a-4395-b76a-9d81f0c8d213";
   static const String templateId = "7feea96e-f049-42a3-a652-dedd8c3c34c5";
   static const String stepIdNombre = "6846c276-d7ec-4d69-af72-0eea2a125cad";
   static const String fieldIdNombre = "db5ba0f0-62f1-47e5-9cb2-b27996ede80b";
-  static const String defaultEmail = "gomeze44@heiway.net";
   static const String jobRoleId = "fc49020e-3c13-48ec-a29a-cd367fc89d18";
+
+  // Credenciales en archivo separado (gitignored)
+  static const String token = ParsableSecrets.token;
+  static const String defaultEmail = ParsableSecrets.defaultEmail;
 
   static const Map<String, String> headers = {
     "Content-Type": "application/json",

@@ -45,6 +45,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   late RealtimeChannel _rfidChannel;
   bool _isValidando = false;
+  bool _selectorAbierto = false;
 
   @override
   void initState() {
@@ -57,9 +58,9 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     });
 
     _focusNode.addListener(() {
-      if (!_focusNode.hasFocus) {
+      if (!_focusNode.hasFocus && !_operadorValido) {
         Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) _focusNode.requestFocus();
+          if (mounted && !_operadorValido) _focusNode.requestFocus();
         });
       }
     });
@@ -133,8 +134,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     if (_isValidando || !mounted) return;
 
     try {
-      final oneMinuteAgo = DateTime.now().subtract(const Duration(minutes: 1));
-      final response = await Supabase.instance.client
+      final oneMinuteAgo = DateTime.now().toUtc().subtract(const Duration(minutes: 1));
+      final response = await SupabaseManager.client
           .from('lecturas_rfid')
           .select('id, id_operador')
           .eq('procesado', false)
@@ -153,8 +154,26 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     }
   }
 
+  Widget _avatarBienvenida() {
+    return Container(
+      color: Colors.grey.shade100,
+      child: const Icon(Icons.person, size: 100, color: Colors.grey),
+    );
+  }
+
+  String _saludo() {
+    final hora = TimeOfDay.now().hour;
+    if (hora < 12) return 'Buenos días';
+    if (hora < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
   Future<void> _validarOperador(String idOperador, {String? idLectura}) async {
     if (_isValidando) return;
+    if (_selectorAbierto) {
+      _selectorAbierto = false;
+      if (mounted) Navigator.pop(context);
+    }
 
     final trimmedId = idOperador.trim();
     if (trimmedId.isEmpty) return;
@@ -212,7 +231,10 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
       await Future.delayed(const Duration(seconds: 3));
 
-      if (!mounted) return;
+      if (!mounted) {
+        _isValidando = false;
+        return;
+      }
 
       if (esSupervisor) {
         Navigator.pushReplacement(
@@ -220,7 +242,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           MaterialPageRoute(
             builder: (context) => SupervisorScreen(
               nombreSupervisor: nombre,
-              tipo: tipo,
+              idMaquinaLocal: widget.idMaquinaLocal,
+              fotoSupervisor: response['foto_operador']?.toString(),
             ),
           ),
         );
@@ -250,6 +273,23 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     }
   }
 
+  void _abrirSelectorOperador() {
+    _selectorAbierto = true;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _OperadorSelectorSheet(
+        idMaquinaLocal: widget.idMaquinaLocal,
+        onOperadorSeleccionado: (idOperador) {
+          _selectorAbierto = false;
+          Navigator.pop(context);
+          _validarOperador(idOperador);
+        },
+      ),
+    ).whenComplete(() => _selectorAbierto = false);
+  }
+
   Future<void> _mostrarAccesoDenegado() async {
     if (!mounted) return;
     setState(() {
@@ -268,7 +308,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_operadorValido && _fotoOperador != null) {
+    if (_operadorValido) {
       return _buildWelcomeScreen();
     }
     return _buildScanScreen();
@@ -298,19 +338,19 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                   border: Border.all(color: _accentGreen, width: 4),
                 ),
                 child: ClipOval(
-                  child: Image.network(
-                    _fotoOperador!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.person, size: 100, color: Colors.grey);
-                    },
-                  ),
+                  child: _fotoOperador != null && _fotoOperador!.isNotEmpty
+                      ? Image.network(
+                          _fotoOperador!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _avatarBienvenida(),
+                        )
+                      : _avatarBienvenida(),
                 ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              'Bienvenido, $_nombreOperador',
+              '${_saludo()}, $_nombreOperador',
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -560,11 +600,293 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                     autocorrect: false,
                   ),
                 ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: _abrirSelectorOperador,
+                  icon: const Icon(Icons.person_outline, size: 20),
+                  label: const Text('Ingresar sin tarjeta'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.black45,
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.black26, width: 1.2),
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    textStyle: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w500),
+                    elevation: 0,
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Bottom sheet: carrusel de operadores de la máquina
+// ─────────────────────────────────────────────────────────────
+
+class _OperadorSelectorSheet extends StatefulWidget {
+  final String idMaquinaLocal;
+  final void Function(String idOperador) onOperadorSeleccionado;
+
+  const _OperadorSelectorSheet({
+    required this.idMaquinaLocal,
+    required this.onOperadorSeleccionado,
+  });
+
+  @override
+  State<_OperadorSelectorSheet> createState() => _OperadorSelectorSheetState();
+}
+
+class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
+  static const _accentGreen = Color(0xFF007A3D);
+
+  List<Map<String, dynamic>> _operadores = [];
+  bool _cargando = true;
+  late PageController _pageController;
+  int _paginaActual = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.72);
+    _cargarOperadores();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarOperadores() async {
+    try {
+      final response = await SupabaseManager.client
+          .from('operadores')
+          .select()
+          .eq('id_maquina', widget.idMaquinaLocal)
+          .neq('tipo', 'supervisor')
+          .order('nombreoperador');
+
+      if (mounted) {
+        setState(() {
+          _operadores = List<Map<String, dynamic>>.from(response);
+          _cargando = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error cargando operadores: $e');
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFF5F5F7),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.only(top: 16, bottom: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black26,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Selecciona tu usuario',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (_cargando)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: CircularProgressIndicator(color: _accentGreen),
+            )
+          else if (_operadores.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48, horizontal: 32),
+              child: Text(
+                'No hay operadores registrados\npara esta máquina.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+            )
+          else ...[
+            SizedBox(
+              height: 260,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _operadores.length,
+                onPageChanged: (i) => setState(() => _paginaActual = i),
+                itemBuilder: (context, index) {
+                  final op = _operadores[index];
+                  final bool activo = index == _paginaActual;
+                  final foto = op['foto_operador']?.toString() ?? '';
+
+                  return GestureDetector(
+                    onTap: () {
+                      if (activo) {
+                        widget.onOperadorSeleccionado(op['id_operador'].toString());
+                      } else {
+                        _pageController.animateToPage(
+                          index,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    child: AnimatedScale(
+                      scale: activo ? 1.0 : 0.88,
+                      duration: const Duration(milliseconds: 200),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: activo ? _accentGreen : Colors.transparent,
+                              width: 2.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: activo
+                                    ? _accentGreen.withValues(alpha: 0.15)
+                                    : Colors.black.withValues(alpha: 0.07),
+                                blurRadius: activo ? 16 : 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: activo
+                                        ? _accentGreen
+                                        : Colors.grey.shade300,
+                                    width: 3,
+                                  ),
+                                ),
+                                child: ClipOval(child: _buildFoto(foto)),
+                              ),
+                              const SizedBox(height: 14),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  op['nombreoperador'] ?? 'Operador',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 14),
+            // Indicador de puntos
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(_operadores.length, (i) {
+                final bool activo = i == _paginaActual;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: activo ? 18 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: activo ? _accentGreen : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _accentGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 2,
+                  ),
+                  onPressed: () {
+                    final op = _operadores[_paginaActual];
+                    widget.onOperadorSeleccionado(
+                        op['id_operador'].toString());
+                  },
+                  child: const Text(
+                    'Iniciar sesión',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFoto(String url) {
+    if (url.isNotEmpty) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _avatarGenerico(),
+      );
+    }
+    return _avatarGenerico();
+  }
+
+  Widget _avatarGenerico() {
+    return Container(
+      color: Colors.grey.shade100,
+      child: const Icon(Icons.person, size: 64, color: Colors.grey),
     );
   }
 }
