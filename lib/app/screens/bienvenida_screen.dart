@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
 import '../../supabase_manager.dart';
+import '../utils/app_routes.dart';
+import 'config_screen.dart';
 import 'tareas_screen.dart';
 import 'supervisor_screen.dart';
 
@@ -13,7 +17,7 @@ class BienvenidaScreen extends StatefulWidget {
   });
 
   @override
-  _BienvenidaScreenState createState() => _BienvenidaScreenState();
+  State<BienvenidaScreen> createState() => _BienvenidaScreenState();
 }
 
 class _BienvenidaScreenState extends State<BienvenidaScreen>
@@ -46,6 +50,11 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   late RealtimeChannel _rfidChannel;
   bool _isValidando = false;
   bool _selectorAbierto = false;
+  String? _nombreMaquina;
+
+  // Pre-carga en segundo plano
+  List<Map<String, dynamic>> _operadoresPrecargados = [];
+  bool _operadoresCargados = false;
 
   @override
   void initState() {
@@ -116,6 +125,63 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     _rfidChannel.subscribe();
 
     _buscarLecturaPendiente();
+    _cargarNombreMaquina();
+    _precargarOperadores();
+    _actualizarTareasVencidas();
+  }
+
+  /// Marca como 'Atrasado' todas las tareas Pendiente con fecha_limite vencida.
+  /// Corre en background al iniciar, sin bloquear la UI.
+  Future<void> _actualizarTareasVencidas() async {
+    try {
+      final hoyInicio = DateTime.now();
+      final limiteFecha = DateTime(hoyInicio.year, hoyInicio.month, hoyInicio.day)
+          .toUtc()
+          .toIso8601String();
+      await SupabaseManager.client
+          .from('registro_tareas')
+          .update({'estado': 'Atrasado'})
+          .eq('estado', 'Pendiente')
+          .lt('fecha_limite', limiteFecha);
+      debugPrint('Tareas vencidas actualizadas a Atrasado');
+    } catch (e) {
+      debugPrint('Error actualizando tareas vencidas: $e');
+    }
+  }
+
+  Future<void> _precargarOperadores() async {
+    try {
+      final response = await SupabaseManager.client
+          .from('operadores')
+          .select()
+          .eq('id_maquina', widget.idMaquinaLocal)
+          .neq('tipo', 'supervisor')
+          .order('nombreoperador');
+      if (mounted) {
+        setState(() {
+          _operadoresPrecargados = List<Map<String, dynamic>>.from(response);
+          _operadoresCargados = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error precargando operadores: $e');
+      if (mounted) setState(() => _operadoresCargados = true);
+    }
+  }
+
+  Future<void> _cargarNombreMaquina() async {
+    try {
+      final resp = await SupabaseManager.client
+          .from('maquinas')
+          .select('nombre')
+          .eq('id_maquina', widget.idMaquinaLocal)
+          .maybeSingle();
+      if (resp != null && mounted) {
+        setState(() => _nombreMaquina = resp['nombre']?.toString());
+      }
+    } catch (e) {
+      debugPrint('Error cargando nombre máquina: $e');
+    }
   }
 
   @override
@@ -198,7 +264,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           .from('operadores')
           .select()
           .eq('id_operador', trimmedId)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 10));
 
       if (response == null) {
         debugPrint('Operador no encontrado');
@@ -239,24 +306,30 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       if (esSupervisor) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => SupervisorScreen(
-              nombreSupervisor: nombre,
-              idMaquinaLocal: widget.idMaquinaLocal,
-              fotoSupervisor: response['foto_operador']?.toString(),
-            ),
-          ),
+          AppRoutes.fade(SupervisorScreen(
+            nombreSupervisor: nombre,
+            idMaquinaLocal: widget.idMaquinaLocal,
+            fotoSupervisor: response['foto_operador']?.toString(),
+          )),
         );
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => TareasScreen(
-              idOperador: trimmedId,
-              idMaquinaLocal: widget.idMaquinaLocal,
-            ),
-          ),
+          AppRoutes.fade(TareasScreen(
+            idOperador: trimmedId,
+            idMaquinaLocal: widget.idMaquinaLocal,
+          )),
         );
+      }
+    } on TimeoutException {
+      debugPrint('Timeout validando operador');
+      if (mounted) {
+        setState(() {
+          _isValidando = false;
+          _mensajeEstado = 'Sin conexión. Intenta de nuevo.';
+        });
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) setState(() => _mensajeEstado = _mensajeInicial);
       }
     } catch (e) {
       debugPrint('Error en validación: $e');
@@ -281,6 +354,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => _OperadorSelectorSheet(
         idMaquinaLocal: widget.idMaquinaLocal,
+        operadoresPrecargados: _operadoresCargados ? _operadoresPrecargados : null,
         onOperadorSeleccionado: (idOperador) {
           _selectorAbierto = false;
           Navigator.pop(context);
@@ -339,10 +413,10 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                 ),
                 child: ClipOval(
                   child: _fotoOperador != null && _fotoOperador!.isNotEmpty
-                      ? Image.network(
-                          _fotoOperador!,
+                      ? CachedNetworkImage(
+                          imageUrl: _fotoOperador!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _avatarBienvenida(),
+                          errorWidget: (_, __, ___) => _avatarBienvenida(),
                         )
                       : _avatarBienvenida(),
                 ),
@@ -402,13 +476,17 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     return Scaffold(
       backgroundColor: _backgroundColor,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 50),
+          child: Column(
+            children: [
+              const Spacer(),
+              GestureDetector(
+                onLongPress: () => Navigator.push(
+                  context,
+                  AppRoutes.slide(const ConfigScreen()),
+                ),
+                child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
@@ -426,7 +504,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                     color: _accentGreen.withValues(alpha: 0.85),
                   ),
                 ),
-                const SizedBox(height: 40),
+              ),
+              const SizedBox(height: 32),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
@@ -441,20 +520,20 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                       ),
                     ],
                   ),
-                  child: const Column(
+                  child: Column(
                     children: [
-                      Text(
-                        'Registro diario de tareas CILT',
+                      const Text(
+                        'E-CILT',
                         style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 40,
+                          fontWeight: FontWeight.w800,
                           color: Colors.black87,
-                          letterSpacing: 1.1,
+                          letterSpacing: 4,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: 8),
-                      Text(
+                      const SizedBox(height: 8),
+                      const Text(
                         'Limpieza, Inspección, Lubricación, Apriete',
                         style: TextStyle(
                           fontSize: 16,
@@ -465,12 +544,33 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      if (_nombreMaquina != null) ...[
+                        const SizedBox(height: 12),
+                        const Divider(color: Colors.black12, height: 1),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.precision_manufacturing,
+                                size: 16, color: _accentGreen),
+                            const SizedBox(width: 6),
+                            Text(
+                              _nombreMaquina!,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: _accentGreen,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
                 const SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Icono NFC con ondas de pulso radial
                     AnimatedBuilder(
@@ -532,12 +632,12 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                         );
                       },
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(height: 20),
                     // Caja de mensaje de estado con transición animada
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                          horizontal: 28, vertical: 14),
                       decoration: BoxDecoration(
                         border: Border.all(color: statusColor, width: 1.8),
                         borderRadius: BorderRadius.circular(12),
@@ -617,8 +717,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                     elevation: 0,
                   ),
                 ),
-              ],
-            ),
+              const Spacer(),
+            ],
           ),
         ),
       ),
@@ -633,10 +733,12 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 class _OperadorSelectorSheet extends StatefulWidget {
   final String idMaquinaLocal;
   final void Function(String idOperador) onOperadorSeleccionado;
+  final List<Map<String, dynamic>>? operadoresPrecargados;
 
   const _OperadorSelectorSheet({
     required this.idMaquinaLocal,
     required this.onOperadorSeleccionado,
+    this.operadoresPrecargados,
   });
 
   @override
@@ -655,7 +757,12 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.72);
-    _cargarOperadores();
+    if (widget.operadoresPrecargados != null) {
+      _operadores = widget.operadoresPrecargados!;
+      _cargando = false;
+    } else {
+      _cargarOperadores();
+    }
   }
 
   @override
@@ -874,10 +981,10 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
 
   Widget _buildFoto(String url) {
     if (url.isNotEmpty) {
-      return Image.network(
-        url,
+      return CachedNetworkImage(
+        imageUrl: url,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _avatarGenerico(),
+        errorWidget: (_, __, ___) => _avatarGenerico(),
       );
     }
     return _avatarGenerico();

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../supabase_manager.dart';
 import 'tareas_screen.dart' show ParsableConfig;
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 class PasosTareaScreen extends StatefulWidget {
@@ -37,6 +40,9 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
   bool _procesando = false;
   int paginaActual = 0;
   late PageController _pageController;
+
+  XFile? _fotoEvidencia;
+  Uint8List? _fotoBytes;
 
   @override
   void initState() {
@@ -132,6 +138,45 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
       }
     } catch (e) {
       debugPrint('Parsable [$method] exception: $e');
+    }
+  }
+
+  Future<void> _tomarFoto() async {
+    final foto = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 1280,
+    );
+    if (foto != null && mounted) {
+      final bytes = await foto.readAsBytes();
+      setState(() {
+        _fotoEvidencia = foto;
+        _fotoBytes = bytes;
+      });
+    }
+  }
+
+  Future<String?> _subirFotoEvidencia() async {
+    if (_fotoEvidencia == null || _fotoBytes == null) return null;
+    try {
+      final nombre =
+          '${widget.idRegistro}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await SupabaseManager.client.storage
+          .from('evidencias')
+          .uploadBinary(
+            nombre,
+            _fotoBytes!,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+      return SupabaseManager.client.storage
+          .from('evidencias')
+          .getPublicUrl(nombre);
+    } catch (e) {
+      debugPrint('Error subiendo foto evidencia: $e');
+      return null;
     }
   }
 
@@ -275,11 +320,13 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     if (_procesando) return;
     setState(() { cargando = true; _procesando = true; });
     try {
+      final fotoUrl = await _subirFotoEvidencia();
       await SupabaseManager.client
           .from('registro_tareas')
           .update({
             'estado': 'Completado',
             'fecha_completado': DateTime.now().toUtc().toIso8601String(),
+            if (fotoUrl != null) 'foto_evidencia': fotoUrl,
           })
           .eq('id', widget.idRegistro);
 
@@ -483,7 +530,45 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                           color: Colors.grey.shade700,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
+                      // Evidencia fotográfica
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_fotoBytes != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                _fotoBytes!,
+                                width: 72,
+                                height: 54,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          TextButton.icon(
+                            icon: Icon(
+                              _fotoBytes == null
+                                  ? Icons.camera_alt_outlined
+                                  : Icons.camera_alt,
+                              size: 17,
+                              color: _verdeHeineken,
+                            ),
+                            label: Text(
+                              _fotoBytes == null
+                                  ? 'Agregar foto'
+                                  : 'Cambiar foto',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _verdeHeineken,
+                              ),
+                            ),
+                            onPressed: _procesando ? null : _tomarFoto,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [

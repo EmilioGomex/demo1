@@ -1,28 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app/screens/bienvenida_screen.dart';
+import 'app/screens/config_screen.dart';
 import 'config/parsable_secrets.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Bloquear orientación portrait
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   await Supabase.initialize(
     url: AppSecrets.supabaseUrl,
     anonKey: AppSecrets.supabaseKey,
   );
 
-  runApp(const MyApp());
+  final prefs = await SharedPreferences.getInstance();
+  final idMaquina = prefs.getString('id_maquina_local') ?? '';
+
+  runApp(MyApp(idMaquinaLocal: idMaquina));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String idMaquinaLocal;
+
+  const MyApp({super.key, required this.idMaquinaLocal});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      // Aquí definimos que ESTA tablet es la máquina 9183
-      home: BienvenidaScreen(idMaquinaLocal: '9991'),
+      home: idMaquinaLocal.isEmpty
+          ? const ConfigScreen(primerInicio: true)
+          : BienvenidaScreen(idMaquinaLocal: idMaquinaLocal),
     );
   }
 }

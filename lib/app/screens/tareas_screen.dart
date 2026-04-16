@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
 import '../../supabase_manager.dart';
+import '../utils/app_routes.dart';
+import '../widgets/inactivity_wrapper.dart';
 import '../../config/parsable_secrets.dart';
 import 'pasos_tarea_screen.dart';
 import 'bienvenida_screen.dart';
@@ -47,7 +51,8 @@ class _TareasScreenState extends State<TareasScreen> {
           .from('operadores')
           .select('id_operador, nombreoperador, linea, id_maquina, foto_operador, maquinas (nombre)')
           .eq('id_operador', widget.idOperador)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 10));
 
       if (operadorResp == null) {
         setState(() {
@@ -77,7 +82,8 @@ class _TareasScreenState extends State<TareasScreen> {
           ''')
           .or(filtroOperador)
           .or(filtroEstado)
-          .order('fecha_limite', ascending: true) as List<dynamic>;
+          .order('fecha_limite', ascending: true)
+          .timeout(const Duration(seconds: 10)) as List<dynamic>;
 
       setState(() {
         tareasOrdenadas = _ordenarTareas(listaTareas);
@@ -85,11 +91,17 @@ class _TareasScreenState extends State<TareasScreen> {
       });
 
       _calcularYActualizarSemaforo(listaTareas);
-    } catch (e) {
+    } on TimeoutException {
       setState(() {
-        error = 'Error: $e';
+        error = 'Sin conexión. Verifica la red e intenta de nuevo.';
         cargando = false;
       });
+    } catch (e) {
+      setState(() {
+        error = 'Error al cargar las tareas. Intenta de nuevo.';
+        cargando = false;
+      });
+      debugPrint('Error _cargarDatos: $e');
     }
   }
 
@@ -331,15 +343,13 @@ class _TareasScreenState extends State<TareasScreen> {
       Navigator.pop(context);
       final resultado = await Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => PasosTareaScreen(
-            idRegistro: registro['id'],
-            idTarea: registro['id_tarea'],
-            nombreTarea: nombreTarea,
-            parsableJobId: parsableJobId,
-            estaCompletado: estaCompletado,
-          ),
-        ),
+        AppRoutes.slide(PasosTareaScreen(
+          idRegistro: registro['id'],
+          idTarea: registro['id_tarea'],
+          nombreTarea: nombreTarea,
+          parsableJobId: parsableJobId,
+          estaCompletado: estaCompletado,
+        )),
       );
       if (resultado == true && mounted) _cargarDatos();
     }
@@ -575,7 +585,7 @@ class _TareasScreenState extends State<TareasScreen> {
             CircleAvatar(
               radius: 34,
               backgroundColor: _accentGreen,
-              backgroundImage: foto.isNotEmpty ? NetworkImage(foto) : null,
+              backgroundImage: foto.isNotEmpty ? CachedNetworkImageProvider(foto) : null,
               onBackgroundImageError: foto.isNotEmpty ? (_, __) {} : null,
               child: foto.isEmpty
                   ? const Icon(Icons.person, color: Colors.white, size: 38)
@@ -697,9 +707,20 @@ class _TareasScreenState extends State<TareasScreen> {
     );
   }
 
+  void _autoLogout() {
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      AppRoutes.fade(BienvenidaScreen(idMaquinaLocal: widget.idMaquinaLocal)),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return InactivityWrapper(
+      onTimeout: _autoLogout,
+      child: Scaffold(
       backgroundColor: _background,
       appBar: AppBar(
         backgroundColor: _accentGreen,
@@ -707,9 +728,7 @@ class _TareasScreenState extends State<TareasScreen> {
           icon: const Icon(Icons.home, color: Colors.white, size: 28),
           onPressed: () => Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => BienvenidaScreen(idMaquinaLocal: widget.idMaquinaLocal),
-            ),
+            AppRoutes.fade(BienvenidaScreen(idMaquinaLocal: widget.idMaquinaLocal)),
           ),
         ),
         title: Row(
@@ -809,6 +828,7 @@ class _TareasScreenState extends State<TareasScreen> {
                     ],
                   ),
                 ),
+      ),
     );
   }
 }
