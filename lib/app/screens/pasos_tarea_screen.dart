@@ -83,7 +83,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
           .from('pasos_tarea')
           .select()
           .eq('id_tarea', widget.idTarea)
-          .order('numeropaso');
+          .order('numeropaso', ascending: true);
 
       if (mounted) {
         setState(() {
@@ -186,6 +186,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     String? razonSeleccionada;
     int diasExtension = 1;
     final textController = TextEditingController();
+    String textoOtro = '';
 
     const razones = [
       'Máquina en funcionamiento',
@@ -229,12 +230,13 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: textController,
-                    decoration: const InputDecoration(
+                    onChanged: (v) => setStateDialog(() => textoOtro = v.trim()),
+                    decoration: InputDecoration(
                       hintText: 'Describe el motivo...',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       isDense: true,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      errorText: textoOtro.isEmpty ? 'Escribe el motivo' : null,
                     ),
                   ),
                 ],
@@ -264,7 +266,8 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                 backgroundColor: _verdeHeineken,
                 foregroundColor: Colors.white,
               ),
-              onPressed: razonSeleccionada == null
+              onPressed: (razonSeleccionada == null ||
+                      (razonSeleccionada == 'Otro' && textoOtro.isEmpty))
                   ? null
                   : () => Navigator.pop(ctx, true),
               child: const Text('Aplazar tarea'),
@@ -297,6 +300,20 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
             'estado': 'Pendiente',
           })
           .eq('id', widget.idRegistro);
+
+      // Incrementar contador — best-effort, no bloquea si la columna no existe
+      try {
+        final actual = await SupabaseManager.client
+            .from('registro_tareas')
+            .select('veces_aplazada')
+            .eq('id', widget.idRegistro)
+            .single();
+        final vecesActual = (actual['veces_aplazada'] as int?) ?? 0;
+        await SupabaseManager.client
+            .from('registro_tareas')
+            .update({'veces_aplazada': vecesActual + 1})
+            .eq('id', widget.idRegistro);
+      } catch (_) {}
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

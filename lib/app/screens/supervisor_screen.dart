@@ -43,6 +43,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
 
   Map<String, Map<String, int>> _resumen = {};
   bool _cargandoResumen = false;
+  String? _filtroAlerta;
 
   List<_DatosDia> _datosChart = [];
   bool _cargandoChart = false;
@@ -98,55 +99,89 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
     try {
       final ids = ops.map((o) => o['id_operador'].toString()).toList();
       final hoy = DateTime.now();
-      final inicioHoy =
-          DateTime(hoy.year, hoy.month, hoy.day).toUtc().toIso8601String();
+      final hoyInicio = DateTime(hoy.year, hoy.month, hoy.day);
+      final inicioHoy = hoyInicio.toUtc().toIso8601String();
       final finHoy = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999)
           .toUtc()
           .toIso8601String();
 
-      final tareas = await SupabaseManager.client
-          .from('registro_tareas')
-          .select('id_operador, estado, fecha_limite, fecha_completado')
-          .filter('id_operador', 'in', '(${ids.join(",")})')
-          .or(
-            'estado.in.("Pendiente","Atrasado"),'
-            'and(estado.eq.Completado,fecha_completado.gte.$inicioHoy,fecha_completado.lte.$finHoy)',
-          )
-          .timeout(const Duration(seconds: 10));
+      // machineId → operatorIds: para atribuir tareas compartidas a sus operadores
+      final machineMap = <String, List<String>>{};
+      for (final op in ops) {
+        final mId = op['id_maquina']?.toString();
+        if (mId != null) {
+          machineMap.putIfAbsent(mId, () => []).add(op['id_operador'].toString());
+        }
+      }
+      final machineIds = machineMap.keys.toList();
 
-      final Map<String, Map<String, int>> nuevo = {
+      final nuevo = <String, Map<String, int>>{
         for (final op in ops)
           op['id_operador'].toString(): {
             'atrasadas': 0,
             'pendientes': 0,
             'completadas': 0,
+            'aplazadas': 0,
           }
       };
-      final hoyInicio = DateTime(hoy.year, hoy.month, hoy.day);
 
-      for (final t in tareas) {
-        final idOp = t['id_operador']?.toString() ?? '';
-        if (!nuevo.containsKey(idOp)) continue;
+      final estadoFiltro =
+          'estado.in.("Pendiente","Atrasado"),'
+          'and(estado.eq.Completado,fecha_completado.gte.$inicioHoy,fecha_completado.lte.$finHoy)';
+
+      // Tareas individuales (id_operador asignado)
+      final tareasOp = await SupabaseManager.client
+          .from('registro_tareas')
+          .select('id_operador, estado, fecha_limite, fecha_completado, motivo_bloqueo')
+          .filter('id_operador', 'in', '(${ids.join(",")})')
+          .or(estadoFiltro)
+          .timeout(const Duration(seconds: 10));
+
+      // Tareas compartidas de máquina (id_operador IS NULL)
+      List<dynamic> tareasMaq = [];
+      if (machineIds.isNotEmpty) {
+        tareasMaq = await SupabaseManager.client
+            .from('registro_tareas')
+            .select('id_maquina, estado, fecha_limite, fecha_completado, motivo_bloqueo')
+            .filter('id_maquina', 'in', '(${machineIds.join(",")})')
+            .filter('id_operador', 'is', 'null')
+            .or(estadoFiltro)
+            .timeout(const Duration(seconds: 10));
+      }
+
+      void clasificar(Map<String, int> counts, dynamic t) {
         final estado = (t['estado'] ?? '').toString().toLowerCase();
+        final motivo = t['motivo_bloqueo']?.toString() ?? '';
         if (estado == 'completado') {
-          nuevo[idOp]!['completadas'] = nuevo[idOp]!['completadas']! + 1;
+          counts['completadas'] = counts['completadas']! + 1;
+        } else if (motivo.isNotEmpty) {
+          counts['aplazadas'] = counts['aplazadas']! + 1;
         } else if (estado == 'atrasado') {
-          nuevo[idOp]!['atrasadas'] = nuevo[idOp]!['atrasadas']! + 1;
+          counts['atrasadas'] = counts['atrasadas']! + 1;
         } else {
           bool esAtrasada = false;
-          final fechaStr = t['fecha_limite']?.toString();
-          if (fechaStr != null) {
-            try {
-              final fl = DateTime.parse(fechaStr).toLocal();
-              esAtrasada =
-                  DateTime(fl.year, fl.month, fl.day).isBefore(hoyInicio);
-            } catch (_) {}
-          }
+          try {
+            final fl = DateTime.parse(t['fecha_limite'].toString()).toLocal();
+            esAtrasada = DateTime(fl.year, fl.month, fl.day).isBefore(hoyInicio);
+          } catch (_) {}
           if (esAtrasada) {
-            nuevo[idOp]!['atrasadas'] = nuevo[idOp]!['atrasadas']! + 1;
+            counts['atrasadas'] = counts['atrasadas']! + 1;
           } else {
-            nuevo[idOp]!['pendientes'] = nuevo[idOp]!['pendientes']! + 1;
+            counts['pendientes'] = counts['pendientes']! + 1;
           }
+        }
+      }
+
+      for (final t in tareasOp) {
+        final idOp = t['id_operador']?.toString() ?? '';
+        if (nuevo.containsKey(idOp)) clasificar(nuevo[idOp]!, t);
+      }
+
+      // Tareas compartidas: se cuentan para cada operador de esa máquina
+      for (final t in tareasMaq) {
+        final idMaq = t['id_maquina']?.toString() ?? '';
+        for (final opId in (machineMap[idMaq] ?? [])) {
+          if (nuevo.containsKey(opId)) clasificar(nuevo[opId]!, t);
         }
       }
 
@@ -220,6 +255,83 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
       : operadores
           .where((o) => o['id_maquina'] == maquinaSeleccionada)
           .toList();
+
+  List<dynamic> get _operadoresMostrados {
+    var lista = List<dynamic>.from(_operadoresFiltrados);
+
+    if (_filtroAlerta != null && !_cargandoResumen) {
+      lista = lista.where((o) {
+        final counts = _resumen[o['id_operador'].toString()];
+        if (_filtroAlerta == 'atrasadas') return (counts?['atrasadas'] ?? 0) > 0;
+        if (_filtroAlerta == 'aplazadas') return (counts?['aplazadas'] ?? 0) > 0;
+        return true;
+      }).toList();
+    }
+
+    if (!_cargandoResumen && _resumen.isNotEmpty) {
+      lista.sort((a, b) {
+        final ca = _resumen[a['id_operador'].toString()];
+        final cb = _resumen[b['id_operador'].toString()];
+
+        int prioridad(Map<String, int>? c) {
+          if (c == null) return 3;
+          if ((c['atrasadas'] ?? 0) > 0) return 0;
+          if ((c['aplazadas'] ?? 0) > 0) return 1;
+          if ((c['pendientes'] ?? 0) > 0) return 2;
+          return 3;
+        }
+
+        final diff = prioridad(ca).compareTo(prioridad(cb));
+        if (diff != 0) return diff;
+        return (a['nombreoperador'] ?? '').toString()
+            .compareTo((b['nombreoperador'] ?? '').toString());
+      });
+    }
+
+    return lista;
+  }
+
+  Widget _buildFiltroChips() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          ChoiceChip(
+            label: const Text('Todos'),
+            selected: _filtroAlerta == null,
+            selectedColor: _accentGreen.withValues(alpha: 0.15),
+            checkmarkColor: _accentGreen,
+            onSelected: (_) => setState(() => _filtroAlerta = null),
+          ),
+          ChoiceChip(
+            label: const Text('Con atrasadas'),
+            selected: _filtroAlerta == 'atrasadas',
+            selectedColor: Colors.red.shade50,
+            checkmarkColor: Colors.red.shade600,
+            labelStyle: TextStyle(
+              color: _filtroAlerta == 'atrasadas' ? Colors.red.shade600 : null,
+              fontWeight: _filtroAlerta == 'atrasadas' ? FontWeight.w600 : null,
+            ),
+            onSelected: (_) => setState(() =>
+                _filtroAlerta = _filtroAlerta == 'atrasadas' ? null : 'atrasadas'),
+          ),
+          ChoiceChip(
+            label: const Text('Con aplazadas'),
+            selected: _filtroAlerta == 'aplazadas',
+            selectedColor: Colors.orange.shade50,
+            checkmarkColor: Colors.orange.shade800,
+            labelStyle: TextStyle(
+              color: _filtroAlerta == 'aplazadas' ? Colors.orange.shade800 : null,
+              fontWeight: _filtroAlerta == 'aplazadas' ? FontWeight.w600 : null,
+            ),
+            onSelected: (_) => setState(() =>
+                _filtroAlerta = _filtroAlerta == 'aplazadas' ? null : 'aplazadas'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _autoLogout() {
     if (!mounted) return;
@@ -559,9 +671,10 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
     final foto = op['foto_operador']?.toString() ?? '';
     final counts = _resumen[idOp];
     final atrasadas = counts?['atrasadas'] ?? 0;
+    final aplazadas = counts?['aplazadas'] ?? 0;
     final pendientes = counts?['pendientes'] ?? 0;
     final completadas = counts?['completadas'] ?? 0;
-    final total = atrasadas + pendientes + completadas;
+    final total = atrasadas + aplazadas + pendientes + completadas;
     final tieneAlerta = atrasadas > 0;
 
     return Container(
@@ -651,11 +764,17 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                                 Colors.red.shade600,
                                 Colors.red.shade50,
                               ),
+                            if (aplazadas > 0)
+                              _chip(
+                                '$aplazadas aplazada${aplazadas > 1 ? 's' : ''}',
+                                Colors.orange.shade800,
+                                Colors.orange.shade50,
+                              ),
                             if (pendientes > 0)
                               _chip(
                                 '$pendientes pendiente${pendientes > 1 ? 's' : ''}',
-                                Colors.orange.shade700,
-                                Colors.orange.shade50,
+                                Colors.grey.shade700,
+                                Colors.grey.shade100,
                               ),
                             if (completadas > 0)
                               _chip(
@@ -774,21 +893,24 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
+                      _buildFiltroChips(),
                       Expanded(
-                        child: _operadoresFiltrados.isEmpty
+                        child: _operadoresMostrados.isEmpty
                             ? Center(
                                 child: Text(
-                                  'No hay operadores para esta máquina',
+                                  _filtroAlerta != null
+                                      ? 'Ningún operador con tareas ${_filtroAlerta == 'atrasadas' ? 'atrasadas' : 'aplazadas'}'
+                                      : 'No hay operadores para esta máquina',
                                   style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.grey.shade500),
                                 ),
                               )
                             : ListView.builder(
-                                itemCount: _operadoresFiltrados.length,
+                                itemCount: _operadoresMostrados.length,
                                 itemBuilder: (_, i) =>
                                     _buildOperadorCard(
-                                        _operadoresFiltrados[i]),
+                                        _operadoresMostrados[i]),
                               ),
                       ),
                     ],

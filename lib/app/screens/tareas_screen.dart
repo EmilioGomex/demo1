@@ -77,7 +77,7 @@ class _TareasScreenState extends State<TareasScreen> {
       final listaTareas = await SupabaseManager.client
           .from('registro_tareas')
           .select('''
-            id, id_tarea, fecha_periodo, fecha_limite, estado, fecha_completado, parsable_job_id, motivo_bloqueo,
+            id, id_tarea, fecha_periodo, fecha_limite, estado, fecha_completado, parsable_job_id, motivo_bloqueo, veces_aplazada,
             tareas(nombre_tarea, frecuencia, tipo, es_compartida)
           ''')
           .or(filtroOperador)
@@ -432,7 +432,8 @@ class _TareasScreenState extends State<TareasScreen> {
     }
   }
 
-  Widget _motivoChip(String motivo) {
+  Widget _motivoChip(String motivo, int veces) {
+    final label = veces > 1 ? 'Aplazada ×$veces: $motivo' : 'Aplazada: $motivo';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -447,7 +448,7 @@ class _TareasScreenState extends State<TareasScreen> {
           const SizedBox(width: 4),
           Flexible(
             child: Text(
-              'Aplazada: $motivo',
+              label,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.orange.shade800,
@@ -554,7 +555,7 @@ class _TareasScreenState extends State<TareasScreen> {
                         ],
                         if (!completado && motivo != null && motivo.isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          _motivoChip(motivo),
+                          _motivoChip(motivo, (registro['veces_aplazada'] as int?) ?? 1),
                         ],
                       ],
                     ),
@@ -634,14 +635,35 @@ class _TareasScreenState extends State<TareasScreen> {
   }
 
   Map<String, int> get _resumenTareas {
-    int pendientes = 0, atrasadas = 0, completadas = 0;
+    int pendientes = 0, atrasadas = 0, completadas = 0, aplazadas = 0;
+    final hoy = DateTime.now();
+    final hoyInicio = DateTime(hoy.year, hoy.month, hoy.day);
     for (final r in tareasOrdenadas) {
       final estado = (r['estado'] ?? '').toString().toLowerCase();
-      if (estado == 'completado') { completadas++; }
-      else if (estado == 'atrasado') { atrasadas++; }
-      else { pendientes++; }
+      final motivo = r['motivo_bloqueo']?.toString() ?? '';
+      if (estado == 'completado') {
+        completadas++;
+      } else if (estado == 'atrasado') {
+        atrasadas++;
+      } else {
+        bool esAtrasada = false;
+        final fechaStr = r['fecha_limite']?.toString();
+        if (fechaStr != null) {
+          try {
+            final fl = DateTime.parse(fechaStr).toLocal();
+            esAtrasada = DateTime(fl.year, fl.month, fl.day).isBefore(hoyInicio);
+          } catch (_) {}
+        }
+        if (esAtrasada) {
+          atrasadas++;
+        } else if (motivo.isNotEmpty) {
+          aplazadas++;
+        } else {
+          pendientes++;
+        }
+      }
     }
-    return {'pendientes': pendientes, 'atrasadas': atrasadas, 'completadas': completadas};
+    return {'pendientes': pendientes, 'atrasadas': atrasadas, 'completadas': completadas, 'aplazadas': aplazadas};
   }
 
   Widget _buildResumenTareas() {
@@ -655,11 +677,18 @@ class _TareasScreenState extends State<TareasScreen> {
         Colors.red.shade50,
       ));
     }
+    if (r['aplazadas']! > 0) {
+      parts.add(_resumenChip(
+        '${r['aplazadas']} aplazada${r['aplazadas']! > 1 ? 's' : ''}',
+        Colors.orange.shade800,
+        Colors.orange.shade50,
+      ));
+    }
     if (r['pendientes']! > 0) {
       parts.add(_resumenChip(
         '${r['pendientes']} pendiente${r['pendientes']! > 1 ? 's' : ''}',
-        Colors.orange.shade700,
-        Colors.orange.shade50,
+        Colors.grey.shade700,
+        Colors.grey.shade100,
       ));
     }
     if (r['completadas']! > 0) {
