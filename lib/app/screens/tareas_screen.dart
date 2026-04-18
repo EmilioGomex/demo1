@@ -9,7 +9,6 @@ import '../../config/parsable_secrets.dart';
 import 'pasos_tarea_screen.dart';
 import 'bienvenida_screen.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 class TareasScreen extends StatefulWidget {
   final String idOperador;
@@ -202,20 +201,20 @@ class _TareasScreenState extends State<TareasScreen> {
 
     try {
       debugPrint('Parsable: Creando Job "$title"...');
-      final response = await http.post(
-        Uri.parse('${ParsableConfig.apiUrl}/jobs'),
-        headers: ParsableConfig.headers,
-        body: jsonEncode(bodyCreate),
-      ).timeout(const Duration(seconds: 15));
+      final createResp = await SupabaseManager.client.functions
+          .invoke('parsable-proxy', body: bodyCreate)
+          .timeout(const Duration(seconds: 15));
 
-      debugPrint('Parsable create → HTTP ${response.statusCode}: ${response.body}');
+      debugPrint('Parsable create → HTTP ${createResp.status}: ${createResp.data}');
 
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint('Error creando Job (${response.statusCode}): ${response.body}');
+      if ((createResp.status ?? 0) < 200 || (createResp.status ?? 0) >= 300) {
+        debugPrint('Error creando Job (${createResp.status}): ${createResp.data}');
         return null;
       }
 
-      final data = jsonDecode(response.body);
+      final data = createResp.data is String
+          ? jsonDecode(createResp.data as String)
+          : createResp.data;
       final jobId = data['result']?['success']?['id'];
       debugPrint('Job creado ID: $jobId');
 
@@ -252,12 +251,10 @@ class _TareasScreenState extends State<TareasScreen> {
           }
         };
 
-        final stepResponse = await http.post(
-          Uri.parse('${ParsableConfig.apiUrl}/jobs'),
-          headers: ParsableConfig.headers,
-          body: jsonEncode(bodyStep),
-        ).timeout(const Duration(seconds: 15));
-        debugPrint('Parsable sendExecData → HTTP ${stepResponse.statusCode}: ${stepResponse.body}');
+        final stepResponse = await SupabaseManager.client.functions
+            .invoke('parsable-proxy', body: bodyStep)
+            .timeout(const Duration(seconds: 15));
+        debugPrint('Parsable sendExecData → HTTP ${stepResponse.status}: ${stepResponse.data}');
       }
 
       return jobId;
@@ -766,7 +763,7 @@ class _TareasScreenState extends State<TareasScreen> {
             Icon(Icons.star, color: Colors.red.shade400, size: 20),
             const SizedBox(width: 8),
             const Text(
-              'Heineken - ECILT',
+              'E-CILT',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
             ),
           ],
@@ -864,21 +861,10 @@ class _TareasScreenState extends State<TareasScreen> {
 
 // --- CONFIGURACIÓN PARSABLE ---
 class ParsableConfig {
-  static const String apiUrl = "https://api.eu-west-1.parsable.net/api";
   static const String teamId = "a42e72dd-334a-4395-b76a-9d81f0c8d213";
   static const String templateId = "7feea96e-f049-42a3-a652-dedd8c3c34c5";
   static const String stepIdNombre = "6846c276-d7ec-4d69-af72-0eea2a125cad";
   static const String fieldIdNombre = "db5ba0f0-62f1-47e5-9cb2-b27996ede80b";
   static const String jobRoleId = "fc49020e-3c13-48ec-a29a-cd367fc89d18";
-
-  // Credenciales en archivo separado (gitignored)
-  static const String token = ParsableSecrets.token;
   static const String defaultEmail = ParsableSecrets.defaultEmail;
-
-  static const Map<String, String> headers = {
-    "Content-Type": "application/json",
-    "accept": "application/json",
-    "PARSABLE-CUSTOM-TOUCHSTONE": "heineken/heineken",
-    "Authorization": token,
-  };
 }

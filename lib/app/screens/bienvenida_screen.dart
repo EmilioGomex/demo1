@@ -46,11 +46,17 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   String? _fotoOperador;
   String? _nombreOperador;
   bool _accesoDenegado = false;
+  bool _esSupervisor = false;
+  int? _tareasAtrasadas;
+  int? _tareasPendientes;
+  int? _tareasAplazadas;
 
   late RealtimeChannel _rfidChannel;
   bool _isValidando = false;
   bool _selectorAbierto = false;
   String? _nombreMaquina;
+  String _horaDisplay = '';
+  Timer? _clockTimer;
 
   // Pre-carga en segundo plano
   List<Map<String, dynamic>> _operadoresPrecargados = [];
@@ -124,6 +130,11 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     });
     _rfidChannel.subscribe();
 
+    _horaDisplay = _calcularHora();
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() => _horaDisplay = _calcularHora());
+    });
+
     _buscarLecturaPendiente();
     _cargarNombreMaquina();
     _precargarOperadores();
@@ -186,6 +197,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   @override
   void dispose() {
+    _clockTimer?.cancel();
     _pulseController.dispose();
     _scaleController.dispose();
     _progressController.dispose();
@@ -193,6 +205,85 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     _controller.dispose();
     _rfidChannel.unsubscribe();
     super.dispose();
+  }
+
+  String _calcularHora() {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _turnoActual() {
+    final hora = DateTime.now().hour;
+    if (hora >= 6 && hora < 14) return 'Turno Mañana';
+    if (hora >= 14 && hora < 22) return 'Turno Tarde';
+    return 'Turno Noche';
+  }
+
+  Future<void> _cargarResumenBienvenida(String idOp, String idMaquina) async {
+    try {
+      final hoy = DateTime.now();
+      final hoyInicio = DateTime(hoy.year, hoy.month, hoy.day);
+      final inicioHoy = hoyInicio.toUtc().toIso8601String();
+      final finHoy = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999)
+          .toUtc()
+          .toIso8601String();
+
+      final tareas = await SupabaseManager.client
+          .from('registro_tareas')
+          .select('estado, fecha_limite, motivo_bloqueo')
+          .or('id_operador.eq.$idOp,and(id_operador.is.null,id_maquina.eq.$idMaquina)')
+          .or(
+            'estado.in.("Pendiente","Atrasado"),'
+            'and(estado.eq.Completado,fecha_completado.gte.$inicioHoy,fecha_completado.lte.$finHoy)',
+          )
+          .timeout(const Duration(seconds: 5));
+
+      int atrasadas = 0, pendientes = 0, aplazadas = 0;
+      for (final t in tareas as List) {
+        final estado = (t['estado'] ?? '').toString().toLowerCase();
+        final motivo = t['motivo_bloqueo']?.toString() ?? '';
+        if (estado == 'completado') continue;
+        if (motivo.isNotEmpty) {
+          aplazadas++;
+        } else if (estado == 'atrasado') {
+          atrasadas++;
+        } else {
+          bool esAtrasada = false;
+          final fechaStr = t['fecha_limite']?.toString();
+          if (fechaStr != null) {
+            try {
+              final fl = DateTime.parse(fechaStr).toLocal();
+              esAtrasada =
+                  DateTime(fl.year, fl.month, fl.day).isBefore(hoyInicio);
+            } catch (_) {}
+          }
+          if (esAtrasada) { atrasadas++; } else { pendientes++; }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _tareasAtrasadas = atrasadas;
+          _tareasPendientes = pendientes;
+          _tareasAplazadas = aplazadas;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Widget _bienvenidaChip(String label, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
+      ),
+    );
   }
 
   Future<void> _buscarLecturaPendiente() async {
@@ -291,10 +382,18 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
         _operadorValido = true;
         _fotoOperador = response['foto_operador'];
         _nombreOperador = nombre;
+        _esSupervisor = esSupervisor;
+        _tareasAtrasadas = null;
+        _tareasPendientes = null;
+        _tareasAplazadas = null;
       });
 
       _scaleController.forward(from: 0.0);
       _progressController.forward(from: 0.0);
+
+      if (!esSupervisor) {
+        _cargarResumenBienvenida(trimmedId, idMaquinaOperador ?? '');
+      }
 
       await Future.delayed(const Duration(seconds: 3));
 
@@ -342,6 +441,10 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       setState(() {
         _isValidando = false;
         _mensajeEstado = _mensajeInicial;
+        _esSupervisor = false;
+        _tareasAtrasadas = null;
+        _tareasPendientes = null;
+        _tareasAplazadas = null;
       });
     }
   }
@@ -389,57 +492,150 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   }
 
   Widget _buildWelcomeScreen() {
+    final total = (_tareasAtrasadas ?? 0) + (_tareasPendientes ?? 0) + (_tareasAplazadas ?? 0);
+
     return Scaffold(
       backgroundColor: _backgroundColor,
-      body: Center(
+      body: SafeArea(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ScaleTransition(
-              scale: _scaleAnimation,
-              child: Container(
-                height: 250,
-                width: 250,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: _accentGreen.withValues(alpha: 0.25),
-                      blurRadius: 15,
-                      offset: const Offset(0, 6),
+            // Header verde — igual que la pantalla de escaneo
+            Container(
+              decoration: BoxDecoration(
+                color: _accentGreen,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(28),
+                  bottomRight: Radius.circular(28),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _accentGreen.withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(28, 22, 28, 26),
+              child: Row(
+                children: [
+                  const Icon(Icons.star, color: Color(0xFFFF4444), size: 28),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'E-CILT',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 3,
                     ),
-                  ],
-                  border: Border.all(color: _accentGreen, width: 4),
-                ),
-                child: ClipOval(
-                  child: _fotoOperador != null && _fotoOperador!.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: _fotoOperador!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => _avatarBienvenida(),
-                        )
-                      : _avatarBienvenida(),
+                  ),
+                ],
+              ),
+            ),
+
+            const Spacer(),
+
+            // Foto del operador
+            Center(
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Container(
+                  height: 200,
+                  width: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: _accentGreen.withValues(alpha: 0.25),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                    border: Border.all(color: _accentGreen, width: 4),
+                  ),
+                  child: ClipOval(
+                    child: _fotoOperador != null && _fotoOperador!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: _fotoOperador!,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => _avatarBienvenida(),
+                          )
+                        : _avatarBienvenida(),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+
+            const SizedBox(height: 18),
+
             Text(
-              '${_saludo()}, $_nombreOperador',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+              '${_saludo()},',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, color: Colors.black45),
             ),
-            const SizedBox(height: 28),
-            // Barra de progreso + countdown antes de navegar
-            SizedBox(
-              width: 260,
+            Text(
+              _nombreOperador ?? '',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+
+            const SizedBox(height: 22),
+
+            // Resumen de tareas
+            if (_esSupervisor)
+              Center(child: _bienvenidaChip('Modo Supervisor', _accentGreen, _accentGreen.withValues(alpha: 0.08)))
+            else if (_tareasAtrasadas == null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 14, height: 14,
+                    child: CircularProgressIndicator(color: _accentGreen, strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Cargando tus tareas...', style: TextStyle(color: Colors.black38, fontSize: 14)),
+                ],
+              )
+            else if (total == 0)
+              Center(child: _bienvenidaChip('¡Todo al día hoy! ✓', _accentGreen, _accentGreen.withValues(alpha: 0.08)))
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    if ((_tareasAtrasadas ?? 0) > 0)
+                      _bienvenidaChip(
+                        '$_tareasAtrasadas atrasada${_tareasAtrasadas! > 1 ? 's' : ''}',
+                        Colors.red.shade600, Colors.red.shade50,
+                      ),
+                    if ((_tareasAplazadas ?? 0) > 0)
+                      _bienvenidaChip(
+                        '$_tareasAplazadas aplazada${_tareasAplazadas! > 1 ? 's' : ''}',
+                        Colors.orange.shade700, Colors.orange.shade50,
+                      ),
+                    if ((_tareasPendientes ?? 0) > 0)
+                      _bienvenidaChip(
+                        '$_tareasPendientes pendiente${_tareasPendientes! > 1 ? 's' : ''}',
+                        Colors.grey.shade700, Colors.grey.shade100,
+                      ),
+                  ],
+                ),
+              ),
+
+            const Spacer(),
+
+            // Barra de progreso + countdown
+            Padding(
+              padding: const EdgeInsets.fromLTRB(40, 0, 40, 48),
               child: AnimatedBuilder(
                 animation: _progressController,
                 builder: (context, _) {
-                  final segundosRestantes =
-                      (3 - (_progressController.value * 3)).ceil();
+                  final seg = (3 - (_progressController.value * 3)).ceil();
                   return Column(
                     children: [
                       ClipRRect(
@@ -453,11 +649,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Entrando en ${segundosRestantes}s...',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black45,
-                        ),
+                        'Entrando en ${seg}s...',
+                        style: const TextStyle(fontSize: 13, color: Colors.black45),
                       ),
                     ],
                   );
@@ -476,250 +669,275 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     return Scaffold(
       backgroundColor: _backgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 50),
-          child: Column(
-            children: [
-              const Spacer(),
-              GestureDetector(
-                onLongPress: () => Navigator.push(
-                  context,
-                  AppRoutes.slide(const ConfigScreen()),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: _accentGreen.withValues(alpha: 0.25),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Image.asset(
-                    'assets/logo_heineken.png',
-                    height: 100,
-                    fit: BoxFit.contain,
-                    color: _accentGreen.withValues(alpha: 0.85),
-                  ),
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Header verde ─────────────────────────────────────────────
+            GestureDetector(
+              onLongPress: () => Navigator.push(
+                context,
+                AppRoutes.slide(const ConfigScreen()),
               ),
-              const SizedBox(height: 32),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 12,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _accentGreen,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(28),
+                    bottomRight: Radius.circular(28),
                   ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'E-CILT',
-                        style: TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87,
-                          letterSpacing: 4,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Limpieza, Inspección, Lubricación, Apriete',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.black54,
-                          fontStyle: FontStyle.italic,
-                          letterSpacing: 1.0,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (_nombreMaquina != null) ...[
-                        const SizedBox(height: 12),
-                        const Divider(color: Colors.black12, height: 1),
-                        const SizedBox(height: 10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _accentGreen.withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.fromLTRB(28, 22, 28, 28),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Brand
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.precision_manufacturing,
-                                size: 16, color: _accentGreen),
-                            const SizedBox(width: 6),
-                            Text(
-                              _nombreMaquina!,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: _accentGreen,
+                            const Icon(Icons.star, color: Color(0xFFC8102E), size: 28),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'E-CILT',
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 3,
                               ),
                             ),
                           ],
                         ),
+                        if (_nombreMaquina != null) ...[
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              const Icon(Icons.precision_manufacturing,
+                                  size: 13, color: Colors.white70),
+                              const SizedBox(width: 5),
+                              Text(
+                                _nombreMaquina!,
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                    const Spacer(),
+                    // Hora + turno
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _horaDisplay,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _turnoActual(),
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const Spacer(),
+
+            // ── NFC hero ─────────────────────────────────────────────────
+            Center(
+              child: AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  final v1 = _pulseController.value;
+                  final v2 = (_pulseController.value + 0.5) % 1.0;
+                  return SizedBox(
+                    width: 140,
+                    height: 140,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Opacity(
+                          opacity: (1 - v1) * 0.55,
+                          child: Container(
+                            width: 88 + 52 * v1,
+                            height: 88 + 52 * v1,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: statusColor,
+                                  width: 2.0 * (1 - v1) + 0.5),
+                            ),
+                          ),
+                        ),
+                        Opacity(
+                          opacity: (1 - v2) * 0.55,
+                          child: Container(
+                            width: 88 + 52 * v2,
+                            height: 88 + 52 * v2,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: statusColor,
+                                  width: 2.0 * (1 - v2) + 0.5),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: statusColor.withValues(alpha: 0.08),
+                            border: Border.all(color: statusColor, width: 2),
+                          ),
+                          child: Icon(Icons.nfc, color: statusColor, size: 48),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // ── Mensaje de estado ─────────────────────────────────────────
+            Center(
+              child: IntrinsicWidth(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: statusColor, width: 1.8),
+                    borderRadius: BorderRadius.circular(14),
+                    color: _accesoDenegado
+                        ? _accentRed.withValues(alpha: 0.07)
+                        : Colors.white,
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 8,
+                          offset: Offset(0, 3))
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          _mensajeEstado,
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: statusColor),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      if (_isValidando) ...[
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: statusColor, strokeWidth: 3),
+                        ),
+                      ],
+                      if (_accesoDenegado) ...[
+                        const SizedBox(width: 10),
+                        const Icon(Icons.block, color: _accentRed, size: 22),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 30),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Icono NFC con ondas de pulso radial
-                    AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, child) {
-                        final v1 = _pulseController.value;
-                        final v2 = (_pulseController.value + 0.5) % 1.0;
-                        return SizedBox(
-                          width: 90,
-                          height: 90,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // Onda exterior 1
-                              Opacity(
-                                opacity: (1 - v1) * 0.55,
-                                child: Container(
-                                  width: 56 + 34 * v1,
-                                  height: 56 + 34 * v1,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: statusColor,
-                                      width: 2.0 * (1 - v1) + 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // Onda exterior 2 (desfasada 0.5)
-                              Opacity(
-                                opacity: (1 - v2) * 0.55,
-                                child: Container(
-                                  width: 56 + 34 * v2,
-                                  height: 56 + 34 * v2,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: statusColor,
-                                      width: 2.0 * (1 - v2) + 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // Icono NFC central
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: statusColor.withValues(alpha: 0.08),
-                                  border:
-                                      Border.all(color: statusColor, width: 2),
-                                ),
-                                child: Icon(Icons.nfc,
-                                    color: statusColor, size: 30),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    // Caja de mensaje de estado con transición animada
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 28, vertical: 14),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: statusColor, width: 1.8),
-                        borderRadius: BorderRadius.circular(12),
-                        color: _accesoDenegado
-                            ? _accentRed.withValues(alpha: 0.07)
-                            : Colors.white,
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 8,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _mensajeEstado,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: statusColor,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          if (_isValidando) ...[
-                            const SizedBox(width: 12),
-                            SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: statusColor,
-                                strokeWidth: 3,
-                              ),
-                            ),
-                          ],
-                          if (_accesoDenegado) ...[
-                            const SizedBox(width: 10),
-                            const Icon(Icons.block,
-                                color: _accentRed, size: 22),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                Opacity(
-                  opacity: 0,
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    autofocus: true,
-                    onSubmitted: (idOperador) {
-                      _validarOperador(idOperador);
-                      _controller.clear();
-                    },
-                    keyboardType: TextInputType.text,
-                    enableSuggestions: false,
-                    autocorrect: false,
+              ),
+            ),
+
+            const Spacer(),
+
+            // ── Ingresar sin tarjeta ──────────────────────────────────────
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '¿No tienes tu tarjeta?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
                   ),
-                ),
-                const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  onPressed: _abrirSelectorOperador,
-                  icon: const Icon(Icons.person_outline, size: 20),
-                  label: const Text('Ingresar sin tarjeta'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.black45,
-                    backgroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.black26, width: 1.2),
-                    shape: const StadiumBorder(),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    textStyle: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w500),
-                    elevation: 0,
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: _abrirSelectorOperador,
+                    icon: const Icon(Icons.badge_outlined, size: 20),
+                    label: const Text('Ingresar sin tarjeta'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _accentGreen,
+                      backgroundColor: Colors.white,
+                      side: BorderSide(
+                          color: _accentGreen.withValues(alpha: 0.6), width: 1.5),
+                      shape: const StadiumBorder(),
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      textStyle: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
                   ),
+                  const SizedBox(height: 36),
+                ],
+              ),
+            ),
+
+            // TextField invisible para el lector de tarjetas
+            Opacity(
+              opacity: 0,
+              child: SizedBox(
+                height: 1,
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  autofocus: true,
+                  onSubmitted: (idOperador) {
+                    _validarOperador(idOperador);
+                    _controller.clear();
+                  },
+                  keyboardType: TextInputType.text,
+                  enableSuggestions: false,
+                  autocorrect: false,
                 ),
-              const Spacer(),
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -4,10 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../supabase_manager.dart';
-import 'tareas_screen.dart' show ParsableConfig;
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
 
 class PasosTareaScreen extends StatefulWidget {
   final String idRegistro;
@@ -31,8 +29,6 @@ class PasosTareaScreen extends StatefulWidget {
 
 class _PasosTareaScreenState extends State<PasosTareaScreen> {
   static const _verdeHeineken = Color(0xFF007A3D);
-  static const _parsableRpcUrl =
-      "https://api.eu-west-1.parsable.net/api/jobs";
 
   List<dynamic> pasos = [];
   bool cargando = true;
@@ -125,16 +121,14 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     debugPrint('Parsable RPC [$method] → ${jsonEncode(body)}');
 
     try {
-      final response = await http.post(
-        Uri.parse(_parsableRpcUrl),
-        headers: ParsableConfig.headers,
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 10));
+      final response = await SupabaseManager.client.functions
+          .invoke('parsable-proxy', body: body)
+          .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        debugPrint('Parsable [$method] OK: ${response.body}');
+      if (response.status == 200) {
+        debugPrint('Parsable [$method] OK: ${response.data}');
       } else {
-        debugPrint('Parsable [$method] error (${response.statusCode}): ${response.body}');
+        debugPrint('Parsable [$method] error (${response.status}): ${response.data}');
       }
     } catch (e) {
       debugPrint('Parsable [$method] exception: $e');
