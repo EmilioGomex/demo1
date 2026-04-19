@@ -1,0 +1,2415 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eCILT Admin - Heineken</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            50:  '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#1aab57',
+                            500: '#00893D',
+                            600: '#007A36',
+                            700: '#006B31',
+                            800: '#005529',
+                            900: '#003D1C',
+                            950: '#002410',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        /* --- HEINEKEN BRAND --- */
+        :root {
+            --hk-green:       #00893D;
+            --hk-green-dark:  #006B31;
+            --hk-green-light: #1aab57;
+            --hk-star-red:    #C8102E;
+            --hk-bg:          #0d1117;
+            --hk-surface:     #161b22;
+            --hk-surface-2:   #1c2230;
+            --hk-border:      #2d3748;
+        }
+
+        /* Barra de acento superior - firma Heineken */
+        body::before {
+            content: '';
+            display: block;
+            height: 3px;
+            background: linear-gradient(90deg, var(--hk-green-dark) 0%, var(--hk-green) 50%, var(--hk-green-light) 100%);
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+        }
+        body { padding-top: 3px; }
+
+        /* Tipografía corporativa */
+        .hk-wordmark {
+            font-size: 0.65rem;
+            letter-spacing: 0.28em;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #9ca3af;
+        }
+        .hk-system-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: #ffffff;
+            line-height: 1;
+        }
+        .hk-system-badge {
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--hk-green-light);
+            border: 1px solid var(--hk-green-dark);
+            padding: 1px 6px;
+            border-radius: 3px;
+            background: rgba(0,137,61,0.1);
+        }
+
+        /* Header corporativo */
+        .hk-header {
+            background: var(--hk-surface);
+            border-bottom: 1px solid var(--hk-border);
+        }
+        .hk-divider { width: 1px; height: 2rem; background: var(--hk-border); }
+
+        /* Star Heineken */
+        .hk-star { color: var(--hk-star-red); }
+
+        /* --- UTILIDADES --- */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--hk-surface); }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+        /* --- FORMULARIOS --- */
+        .form-input, .form-select { width: 100%; background-color: #374151; border: 1px solid #4b5563; border-radius: 0.375rem; padding: 0.5rem; color: #e5e7eb; font-size: 0.875rem; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: var(--hk-green); box-shadow: 0 0 0 1px var(--hk-green); }
+
+        /* --- CHECKBOX LIST --- */
+        .filter-dropdown-container { position: relative; }
+        .filter-dropdown-btn {
+            width: 100%; text-align: left; background: var(--hk-surface-2); border: 1px solid var(--hk-border);
+            padding: 0.4rem 0.75rem; border-radius: 0.375rem; color: #d1d5db; font-size: 0.8rem;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        .filter-dropdown-btn:hover { border-color: var(--hk-green); }
+        .filter-dropdown-content {
+            display: none; position: absolute; top: 105%; left: 0; width: 100%; max-height: 300px;
+            overflow-y: auto; background: var(--hk-surface); border: 1px solid var(--hk-border); border-radius: 0.375rem;
+            z-index: 50; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.7); padding: 0.5rem;
+        }
+        .filter-dropdown-content.show { display: block; }
+        .filter-option { display: flex; align-items: center; padding: 0.3rem 0; cursor: pointer; }
+        .filter-option:hover { background-color: var(--hk-surface-2); border-radius: 0.25rem; }
+        .filter-checkbox { margin-right: 0.5rem; accent-color: var(--hk-green); width: 1rem; height: 1rem; cursor: pointer; }
+        .filter-label { color: #d1d5db; font-size: 0.8rem; user-select: none; cursor: pointer; width: 100%; }
+
+        /* --- CARDS GENERALES --- */
+        .data-card {
+            background: var(--hk-surface); border: 1px solid var(--hk-border);
+            border-radius: 0.5rem; overflow: hidden; transition: all 0.2s ease;
+        }
+        .data-card:hover { transform: translateY(-2px); border-color: var(--hk-green); box-shadow: 0 8px 20px -5px rgba(0,137,61,0.2); }
+
+        /* Operador Card */
+        .op-grid { display: flex; align-items: center; padding: 1rem; gap: 1rem; }
+        .op-img { width: 3.5rem; height: 3.5rem; border-radius: 50%; object-fit: cover; border: 2px solid var(--hk-green-dark); }
+        .op-role { font-size: 0.7rem; text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 0.25rem; background: rgba(0,137,61,0.2); color: var(--hk-green-light); border: 1px solid var(--hk-green-dark); font-weight: 700; }
+        
+        /* Estados */
+        .badge { padding: 2px 8px; border-radius: 99px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .badge-pending { background: #78350f; color: #fcd34d; border: 1px solid #b45309; }
+        .badge-late { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+        .badge-done { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
+
+        /* --- GTS LAYOUT --- */
+        .gts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+        }
+        .gts-card-fixed {
+            background: var(--hk-surface); border: 1px solid var(--hk-border); border-radius: 0.75rem; cursor: pointer;
+            position: relative; overflow: hidden; height: 200px; display: flex; flex-direction: column;
+            transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+        }
+        .gts-card-fixed:hover { border-color: var(--hk-green); transform: translateY(-3px); box-shadow: 0 12px 20px -5px rgba(0,137,61,0.2); }
+        .gts-header { padding: 0.75rem 1rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .gts-body { padding: 1rem; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+        /* Variantes de color   estilo Heineken */
+        .level-linea .gts-header { background: linear-gradient(135deg, #0a1628, #0f2044); border-bottom: 1px solid #1e3a6e; }
+        .level-maquina .gts-header { background: linear-gradient(135deg, #1a0a2e, #2d1254); border-bottom: 1px solid #4a1a7a; }
+        .level-tarea .gts-header { background: linear-gradient(135deg, var(--hk-green-dark), #004d28); border-bottom: 1px solid var(--hk-green); }
+
+        .gts-body::-webkit-scrollbar { width: 4px; }
+        .gts-body::-webkit-scrollbar-thumb { background: var(--hk-border); border-radius: 2px; }
+
+        /* FORMULARIOS */
+        .form-input, .form-select { width: 100%; background-color: var(--hk-surface-2); border: 1px solid var(--hk-border); border-radius: 0.375rem; padding: 0.5rem; color: #e5e7eb; font-size: 0.875rem; }
+
+        /* --- BOTONES DE ACCI N (edit/delete en cards) --- */
+        .btn-action { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 0.375rem; transition: all 0.15s ease; border: 1px solid transparent; }
+        .btn-action-edit  { color: #9ca3af; background: rgba(255,255,255,0.05); }
+        .btn-action-edit:hover  { color: #fff; background: rgba(0,137,61,0.25); border-color: var(--hk-green-dark); }
+        .btn-action-del   { color: #9ca3af; background: rgba(255,255,255,0.05); }
+        .btn-action-del:hover   { color: #fca5a5; background: rgba(127,29,29,0.4); border-color: #7f1d1d; }
+
+        /* --- TOAST NOTIFICATIONS --- */
+        #toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+        .toast { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 500; min-width: 280px; max-width: 400px; pointer-events: all; border: 1px solid; box-shadow: 0 8px 24px rgba(0,0,0,0.5); animation: toast-in 0.25s ease; }
+        .toast-success { background: #021a0e; border-color: var(--hk-green-dark); color: #6ee7b7; }
+        .toast-error   { background: #1c0505; border-color: #7f1d1d; color: #fca5a5; }
+        .toast-info    { background: #0a1628; border-color: #1e3a8a; color: #93c5fd; }
+        @keyframes toast-in { from { opacity: 0; transform: translateX(0.75rem); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body class="h-full text-gray-200 font-sans antialiased flex flex-col" style="background-color: var(--hk-bg)">
+
+    <!-- HEADER CORPORATIVO HEINEKEN -->
+    <header class="flex-shrink-0 hk-header h-16 flex items-center px-6 shadow-xl z-20">
+        <div class="flex items-center gap-4 flex-grow min-w-0">
+
+            <!-- Logotipo: Estrella + Wordmark -->
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <!-- Estrella Heineken (SVG) -->
+                <svg class="h-8 w-8 hk-star flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="12,2 14.6,8.5 21.5,9.3 16.5,14 18.2,21 12,17.4 5.8,21 7.5,14 2.5,9.3 9.4,8.5" />
+                </svg>
+                <div>
+                    <div class="hk-wordmark">Heineken</div>
+                    <div class="hk-system-name">eCILT <span class="hk-system-badge ml-1.5">Admin</span></div>
+                </div>
+            </div>
+
+            <!-- Divisor -->
+            <div class="hk-divider mx-1 hidden md:block flex-shrink-0"></div>
+
+            <!-- Subtítulo del sistema -->
+            <div class="text-xs text-gray-500 hidden lg:block leading-tight">
+                Control Integrado de Limpieza,<br>Lubricación &amp; Tightening
+            </div>
+        </div>
+
+        <!-- Fecha actual -->
+        <div class="flex items-center gap-3 flex-shrink-0">
+            <div class="text-right hidden sm:block">
+                <div id="hk-clock" class="text-xs font-mono text-gray-400"></div>
+                <div id="hk-date" class="text-xs text-gray-600"></div>
+            </div>
+            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Conectado a Supabase"></div>
+        </div>
+    </header>
+
+    <div class="flex-shrink-0 px-5 py-3 border-b flex flex-wrap items-center gap-4 z-10" style="background:var(--hk-surface); border-color:var(--hk-border)">
+        <div class="flex items-center gap-2">
+            <span class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Vista</span>
+            <select id="view-selector" class="text-sm rounded px-3 py-1.5 font-medium focus:outline-none transition-colors" style="background:var(--hk-surface-2); border:1px solid var(--hk-border); color:#e5e7eb;"></select>
+        </div>
+
+        <button id="add-row-btn" class="hidden px-4 py-1.5 text-white rounded text-sm font-semibold transition-all flex items-center shadow-lg" style="background:var(--hk-green); box-shadow: 0 4px 14px rgba(0,137,61,0.35);" onmouseover="this.style.background='var(--hk-green-light)'" onmouseout="this.style.background='var(--hk-green)'">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span id="add-row-btn-text">Nuevo</span>
+        </button>
+
+        <div id="app-loading" class="ml-auto hidden flex items-center gap-2 text-emerald-400 text-sm font-medium">
+            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Procesando...
+        </div>
+    </div>
+
+    <div id="filters-container" class="hidden flex-shrink-0 px-5 py-3 border-b flex flex-wrap gap-4 items-end" style="background:var(--hk-surface-2); border-color:var(--hk-border)">
+        <div class="w-full text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2" style="color:var(--hk-green)">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/></svg>
+            Filtros de Reporte
+        </div>
+        <div><label class="block text-xs text-gray-400 mb-1">Desde</label><input type="date" id="filter-date-start" class="form-input py-1 h-8 text-xs"></div>
+        <div><label class="block text-xs text-gray-400 mb-1">Hasta</label><input type="date" id="filter-date-end" class="form-input py-1 h-8 text-xs"></div>
+        <div class="w-32"><label class="block text-xs text-gray-400 mb-1">Línea</label><select id="filter-area" class="form-select py-1 h-8 text-xs"><option value="">Todas</option></select></div>
+        <div class="w-32"><label class="block text-xs text-gray-400 mb-1">Tipo CILT</label><select id="filter-tipo" class="form-select py-1 h-8 text-xs"><option value="">Todas</option><option value="Limpieza">Limpieza</option><option value="Lubricación">Lubricación</option><option value="Ajuste">Ajuste</option><option value="Inspección">Inspección</option></select></div>
+
+        <div class="w-48 filter-dropdown-container">
+            <label class="block text-xs text-gray-400 mb-1">Operadores</label>
+            <div class="filter-dropdown-btn" onclick="toggleFilter('ops')">
+                <span id="label-ops">Seleccionar...</span>
+                <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            <div id="dropdown-ops" class="filter-dropdown-content">
+                <div class="text-xs text-gray-500 p-2">Cargando...</div>
+            </div>
+        </div>
+
+        <div class="w-48 filter-dropdown-container">
+            <label class="block text-xs text-gray-400 mb-1">Máquinas</label>
+            <div class="filter-dropdown-btn" onclick="toggleFilter('maqs')">
+                <span id="label-maqs">Seleccionar...</span>
+                <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            <div id="dropdown-maqs" class="filter-dropdown-content">
+                <div class="text-xs text-gray-500 p-2">Cargando...</div>
+            </div>
+        </div>
+
+        <div class="ml-auto flex gap-2 items-center">
+            <button id="filter-apply-btn" class="px-4 py-1.5 text-white rounded text-xs font-bold uppercase tracking-widest transition-all" style="background:var(--hk-green);" onmouseover="this.style.background='var(--hk-green-light)'" onmouseout="this.style.background='var(--hk-green)'">Filtrar</button>
+            <button id="filter-clear-btn" class="px-3 py-1.5 text-xs rounded transition-colors" style="color:#6b7280; border:1px solid var(--hk-border);" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">Limpiar</button>
+            <button id="export-excel-btn" onclick="exportHistorico()" class="px-3 py-1.5 text-xs rounded font-semibold flex items-center gap-1.5 transition-all" style="background:#166534; border:1px solid #15803d; color:#86efac" onmouseover="this.style.background='#14532d'" onmouseout="this.style.background='#166534'" title="Exportar resultados a Excel">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Excel
+            </button>
+        </div>
+    </div>
+
+    <main class="flex-grow overflow-hidden relative flex flex-col" style="background:var(--hk-bg)">
+        <div id="card-view" class="flex-grow overflow-y-auto hidden p-4">
+            <div id="card-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4"></div>
+        </div>
+        
+        <div id="pagination-controls" class="hidden flex-shrink-0 p-2 flex justify-between items-center px-4 border-t" style="background:var(--hk-surface); border-color:var(--hk-border)">
+             <div class="text-xs text-gray-500 font-mono" id="pagination-info">Mostrando 0 registros</div>
+             <div class="flex gap-2 items-center">
+                 <button id="btn-prev" class="px-3 py-1 rounded text-xs text-white disabled:opacity-30 transition-colors" style="background:var(--hk-surface-2); border:1px solid var(--hk-border)">  Anterior</button>
+                 <span id="page-display" class="px-3 py-1 text-xs font-mono rounded flex items-center font-bold" style="background:var(--hk-green-dark); color:#fff; border:1px solid var(--hk-green)">1</span>
+                 <button id="btn-next" class="px-3 py-1 rounded text-xs text-white disabled:opacity-30 transition-colors" style="background:var(--hk-surface-2); border:1px solid var(--hk-border)">Siguiente →</button>
+             </div>
+        </div>
+
+        <div id="gts-view" class="absolute inset-0 flex flex-col hidden" style="background:var(--hk-bg)">
+            <div class="p-3 border-b flex justify-between items-center shadow-md" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <button id="gts-back" class="text-gray-500 hover:text-white flex items-center text-sm font-medium transition-colors gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        Atrás
+                    </button>
+                    <div class="w-px h-5" style="background:var(--hk-border)"></div>
+                    <div id="gts-breadcrumbs" class="flex items-center text-sm text-gray-400 gap-2 whitespace-nowrap">
+                        <span class="font-bold" style="color:var(--hk-green)">Áreas</span>
+                    </div>
+                </div>
+                <div class="flex gap-2 flex-shrink-0 items-center">
+                    <!-- Buscador rápido -->
+                    <div class="relative hidden" id="gts-search-wrapper">
+                        <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style="color:#6b7280" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
+                        <input id="gts-search" type="text" placeholder="Buscar..." class="pl-7 pr-3 py-1 text-xs rounded focus:outline-none transition-colors" style="background:var(--hk-surface-2); border:1px solid var(--hk-border); color:#e5e7eb; width:160px" oninput="filterGTSCards(this.value)">
+                    </div>
+                    <div id="gts-excel-container" class="flex gap-2"></div>
+                    <button id="btn-create-gts" class="hidden px-4 py-1.5 text-white rounded text-sm font-semibold transition-all flex items-center gap-1" style="background:var(--hk-green); box-shadow:0 4px 14px rgba(0,137,61,0.35)" onmouseover="this.style.background='var(--hk-green-light)'" onmouseout="this.style.background='var(--hk-green)'">
+                        <span class="text-lg leading-none">+</span> Nuevo
+                    </button>
+                </div>
+            </div>
+
+            <div id="gts-container" class="flex-grow overflow-y-auto gts-grid content-start"></div>
+
+            <div id="gts-pagination" class="hidden flex-shrink-0 p-2 flex justify-center gap-4 text-xs border-t" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                <button id="gts-prev" class="text-gray-400 hover:text-white disabled:opacity-30 transition-colors">← Anterior</button>
+                <span id="gts-page-info" class="font-mono px-3 py-0.5 rounded" style="background:var(--hk-surface-2); color:#9ca3af; border:1px solid var(--hk-border)">Página 1</span>
+                <button id="gts-next" class="text-gray-400 hover:text-white disabled:opacity-30 transition-colors">Siguiente →</button>
+            </div>
+        </div>
+
+        <!-- VISTA CARGA DE HORARIOS -->
+        <div id="horarios-view" class="absolute inset-0 flex flex-col hidden overflow-y-auto" style="background:var(--hk-bg)">
+            <!-- Tabs -->
+            <div class="flex-shrink-0 px-5 pt-4 pb-0 flex gap-1 border-b" style="border-color:var(--hk-border); background:var(--hk-surface)">
+                <button id="tab-excel-btn" onclick="switchHorarioTab('excel')" class="px-5 py-2 text-sm font-semibold rounded-t-lg transition-all" style="background:var(--hk-green); color:#fff; border:1px solid var(--hk-green); border-bottom:none; margin-bottom:-1px;">
+                    📋 Cargar Excel
+                </button>
+                <button id="tab-manual-btn" onclick="switchHorarioTab('manual')" class="px-5 py-2 text-sm font-semibold rounded-t-lg transition-all" style="background:var(--hk-surface-2); color:#9ca3af; border:1px solid var(--hk-border); border-bottom:none; margin-bottom:-1px;">
+                    ✏️ Manual
+                </button>
+                <button id="tab-semana-btn" onclick="switchHorarioTab('semana')" class="px-5 py-2 text-sm font-semibold rounded-t-lg transition-all" style="background:var(--hk-surface-2); color:#9ca3af; border:1px solid var(--hk-border); border-bottom:none; margin-bottom:-1px;">
+                    📅 Ver Semana Actual
+                </button>
+            </div>
+
+            <!-- TAB EXCEL -->
+            <div id="tab-excel" class="flex-grow p-5">
+                <div class="max-w-4xl mx-auto space-y-5">
+                    <!-- Info banner -->
+                    <div class="rounded-lg p-4 flex items-start gap-3" style="background:rgba(0,137,61,0.1); border:1px solid rgba(0,137,61,0.3)">
+                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" style="color:var(--hk-green)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="text-sm" style="color:#86efac">
+                            <p class="font-semibold mb-1">Sube el horario semanal cada sábado</p>
+                            <p class="text-xs opacity-80">El sistema extrae automáticamente las hojas <strong>Horario linea de latas</strong> y <strong>Horario linea de Botellas</strong>. Los turnos se cargan a <code>turnos_semana</code> y las tareas se generan automáticamente el lunes.</p>
+                        </div>
+                    </div>
+
+                    <!-- Drop zone -->
+                    <div id="excel-dropzone" class="rounded-xl border-2 border-dashed p-10 text-center cursor-pointer transition-all" style="border-color:var(--hk-border); background:var(--hk-surface)" onclick="document.getElementById('horario-excel-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--hk-green)'" ondragleave="this.style.borderColor='var(--hk-border)'" ondrop="handleHorarioDrop(event)">
+                        <svg class="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <p class="text-gray-400 font-semibold mb-1">Arrastra el Excel aquí o haz clic</p>
+                        <p class="text-gray-600 text-xs">Horarios_2025_Act.xlsx → Hojas: Latas y Botellas</p>
+                    </div>
+                    <input type="file" id="horario-excel-input" accept=".xlsx,.xls,.xlsm" class="hidden" onchange="processHorarioExcel(this.files[0])">
+
+                    <!-- Semana detectada -->
+                    <div id="semana-detectada" class="hidden rounded-lg p-3 text-sm" style="background:var(--hk-surface-2); border:1px solid var(--hk-border)">
+                        <span class="text-gray-400">Semana detectada:</span>
+                        <span id="semana-rango" class="text-white font-semibold ml-2"></span>
+                        <span class="text-gray-500 text-xs ml-3" id="semana-aviso"></span>
+                    </div>
+
+                    <!-- Preview tabla -->
+                    <div id="horario-preview" class="hidden">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-white font-semibold text-sm">Vista previa de registros a importar</h3>
+                            <div class="flex items-center gap-3">
+                                <span id="preview-count" class="text-xs font-mono px-2 py-1 rounded" style="background:var(--hk-surface-2); color:#86efac; border:1px solid var(--hk-border)"></span>
+                                <button onclick="clearHorarioPreview()" class="text-xs text-gray-500 hover:text-white transition-colors">S" Limpiar</button>
+                            </div>
+                        </div>
+                        <div class="rounded-lg overflow-hidden border" style="border-color:var(--hk-border)">
+                            <div class="overflow-x-auto max-h-72">
+                                <table class="w-full text-xs">
+                                    <thead style="background:var(--hk-surface); position:sticky; top:0">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-gray-400 font-semibold">Operador</th>
+                                            <th class="px-3 py-2 text-left text-gray-400 font-semibold">Cédula</th>
+                                            <th class="px-3 py-2 text-left text-gray-400 font-semibold">Línea</th>
+                                            <th class="px-3 py-2 text-left text-gray-400 font-semibold">Máquina</th>
+                                            <th class="px-3 py-2 text-left text-gray-400 font-semibold">Fecha</th>
+                                            <th class="px-3 py-2 text-left text-gray-400 font-semibold">Turno</th>
+                                            <th class="px-3 py-2 text-left text-gray-400 font-semibold">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="preview-tbody" style="background:var(--hk-surface-2)"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Errores / advertencias -->
+                        <div id="preview-warnings" class="mt-3 space-y-1 hidden"></div>
+                        <!-- Botón importar -->
+                        <div class="mt-4 flex justify-end gap-3">
+                            <button onclick="clearHorarioPreview()" class="px-4 py-2 text-sm rounded text-gray-400 hover:text-white transition-colors border" style="border-color:var(--hk-border)">Cancelar</button>
+                            <button id="btn-importar-horario" onclick="importarHorario()" class="px-6 py-2 text-white text-sm font-semibold rounded transition-all flex items-center gap-2" style="background:var(--hk-green); box-shadow:0 4px 14px rgba(0,137,61,0.35)" onmouseover="this.style.background='var(--hk-green-light)'" onmouseout="this.style.background='var(--hk-green)'">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                Importar a Supabase
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB MANUAL -->
+            <div id="tab-manual" class="hidden flex-grow p-5">
+                <div class="max-w-2xl mx-auto space-y-5">
+                    <div class="rounded-xl p-5 border" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                        <h3 class="text-white font-semibold mb-4 text-sm">Agregar turno manualmente</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Operador</label>
+                                <select id="manual-operador" class="form-select text-xs">
+                                    <option value="">Cargando...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Máquina</label>
+                                <select id="manual-maquina" class="form-select text-xs">
+                                    <option value="">Cargando...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Fecha</label>
+                                <input type="date" id="manual-fecha" class="form-input text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Turno</label>
+                                <select id="manual-turno" class="form-select text-xs">
+                                    <option value="Mañana">Mañana (07:30 - 16:30)</option>
+                                    <option value="Tarde">Tarde (15:30 - 00:30)</option>
+                                    <option value="Noche">Noche (19:30 - 08:30 / 23:30 - 08:30)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <button onclick="guardarTurnoManual()" class="px-6 py-2 text-white text-sm font-semibold rounded transition-all" style="background:var(--hk-green)" onmouseover="this.style.background='var(--hk-green-light)'" onmouseout="this.style.background='var(--hk-green)'">
+                                Guardar Turno
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Registros recientes manual -->
+                    <div>
+                        <h3 class="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-2">altimos turnos cargados manualmente</h3>
+                        <div id="manual-recientes" class="rounded-lg overflow-hidden border text-xs" style="border-color:var(--hk-border)">
+                            <p class="p-4 text-gray-500">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB VER SEMANA -->
+            <div id="tab-semana" class="hidden flex-grow p-5">
+                <div class="max-w-6xl mx-auto">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div>
+                            <label class="text-xs text-gray-400 mr-2">Ver semana del:</label>
+                            <input type="date" id="semana-inicio-view" class="form-input text-xs" style="width:auto; display:inline-block" onchange="cargarVistaSemana()">
+                        </div>
+                        <button onclick="cargarVistaSemana()" class="px-4 py-1.5 text-xs font-semibold text-white rounded" style="background:var(--hk-green)">Ver</button>
+                        <button onclick="borrarSemana()" class="px-4 py-1.5 text-xs font-semibold rounded" style="background:#7f1d1d; color:#fca5a5; border:1px solid #991b1b">🗑️ Borrar semana</button>
+                    </div>
+                    <div id="semana-grid" class="overflow-x-auto">
+                        <p class="text-gray-500 text-sm">Selecciona una fecha para ver el horario.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <input type="file" id="excel-upload" accept=".xlsx, .xls, .xlsm" class="hidden" />
+
+    <!-- MODAL EDITOR -->
+    <div id="modal-editor" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+        <div class="rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] border" style="background:var(--hk-surface); border-color:var(--hk-border)">
+            <div class="p-4 border-b flex justify-between items-center" style="border-color:var(--hk-border)">
+                <div class="flex items-center gap-3">
+                    <div class="w-1 h-6 rounded-full" style="background:var(--hk-green)"></div>
+                    <h3 id="modal-title" class="text-base font-bold text-white tracking-wide">Editor</h3>
+                </div>
+                <button onclick="toggleClass('modal-editor', 'hidden', true)" class="text-gray-600 hover:text-white transition-colors text-lg leading-none">S"</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow"><form id="dynamic-form" class="space-y-5"></form></div>
+            <div class="p-4 border-t flex justify-end gap-3" style="border-color:var(--hk-border)">
+                <button id="modal-close" class="px-4 py-2 text-gray-400 hover:text-white rounded text-sm transition-colors border" style="border-color:var(--hk-border)">Cancelar</button>
+                <button id="modal-save" class="px-5 py-2 text-white rounded text-sm font-semibold transition-all shadow-lg" style="background:var(--hk-green); box-shadow:0 4px 14px rgba(0,137,61,0.35)" onmouseover="this.style.background='var(--hk-green-light)'" onmouseout="this.style.background='var(--hk-green)'">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ELIMINAR -->
+    <div id="modal-delete" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm">
+        <div class="rounded-xl p-6 max-w-sm w-full border shadow-2xl" style="background:var(--hk-surface); border-color:#7f1d1d">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-red-900/40 border border-red-800 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-white">¿Eliminar registro?</h3>
+                    <p class="text-gray-500 text-xs mt-0.5">Esta acción no se puede deshacer.</p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="del-cancel" class="px-4 py-2 text-sm text-gray-400 hover:text-white rounded transition-colors border" style="border-color:var(--hk-border)">Cancelar</button>
+                <button id="del-confirm" class="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded text-sm font-semibold transition-colors">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+        // --- CONFIGURACI N ---
+        const SUPABASE_URL = 'https://czxyfzxjwzaykwoxyjah.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eHlmenhqd3pheWt3b3h5amFoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDQyODMwMCwiZXhwIjoyMDY2MDA0MzAwfQ.4An36Hs_o_aiTGfqpRC85L4jMfhfWgbAthypB0QL0yU';
+        const VIEWS = ['Histórico de CILTs', 'Gestión de Tareas y Pasos', 'Gestión de Operadores', 'Carga de Horarios'];
+        const LINEAS = ['Latas', 'Botellas', 'Utilidades', 'Cocimiento', 'Filtracion', 'Fermentacion', 'Logistica', 'Ingenieria'];
+        const FRECUENCIAS_VALIDAS = ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Semestral', 'Tres años'];
+        
+        const PAGE_SIZE = 24;      // Paginación Principal
+        const GTS_PAGE_SIZE = 20;  // Paginación para Tareas/Pasos
+
+        let supabase, currentView, currentTable, editingId, deleteId;
+        let currentPage = 1, totalCount = 0;
+        
+        // Estado del Navegador GTS
+        let gtsState = { level: 'lines', line: null, machine: null, task: null, machineName: '', taskName: '' };
+        let gtsPage = 1; // Pagina interna del GTS
+
+        // DOM SHORTCUTS
+        const el = (id) => document.getElementById(id);
+        const toggleClass = (id, cls, condition) => condition ? el(id).classList.add(cls) : el(id).classList.remove(cls);
+        window.toggleClass = toggleClass;
+
+        // Escapa valores para usarlos como atributos HTML (evita que comillas rompan el markup)
+        const esc = s => String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        // Navegación GTS desde data-attributes (evita el bug de comillas en onclick)
+        window.navGTSCard = (cardEl) => {
+            const level = cardEl.dataset.level;
+            const id    = cardEl.dataset.id;
+            const name  = cardEl.dataset.name;
+            navGTS(level, id, null, name);
+        };
+
+        // --- BIBLIOTECA DE ICONOS SVG ---
+        const ICON = {
+            edit:  `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`,
+            trash: `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
+            plant: `<svg class="w-10 h-10 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`,
+            gear:  `<svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
+            task:  `<svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`,
+            user:  `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`,
+            line:  `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/></svg>`,
+            cycle: `<svg class="w-3 h-3 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>`,
+            arrow: `<svg class="w-3.5 h-3.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>`,
+            image: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
+            check: `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`,
+            xmark: `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
+            info:  `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+        };
+
+        // --- TOAST NOTIFICATIONS (reemplaza alert()) ---
+        function showToast(message, type = 'success', duration = 3500) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                document.body.appendChild(container);
+            }
+            const iconMap = { success: ICON.check, error: ICON.xmark, info: ICON.info };
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `${iconMap[type] || ICON.info}<span class="flex-grow">${message}</span><button onclick="this.parentElement.remove()" class="ml-3 opacity-50 hover:opacity-100 leading-none text-base">S"</button>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.3s, transform 0.3s';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(0.5rem)';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // --- RELOJ CORPORATIVO ---
+        function updateClock() {
+            const now = new Date();
+            const clockEl = document.getElementById('hk-clock');
+            const dateEl  = document.getElementById('hk-date');
+            if (clockEl) clockEl.textContent = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            if (dateEl)  dateEl.textContent  = now.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // --- INICIO ---
+        (async () => {
+            supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+            window.supabase = supabase;
+
+            el('view-selector').innerHTML = VIEWS.map(v => `<option value="${v}">${v}</option>`).join('');
+            el('view-selector').addEventListener('change', () => { currentPage = 1; changeView(); });
+            el('filter-area').innerHTML = '<option value="">Todas</option>' + LINEAS.map(l => `<option value="${l}">${l}</option>`).join('');
+
+            // Eventos Globales
+            el('add-row-btn').onclick = () => openEditor();
+            el('filter-apply-btn').onclick = () => { currentPage = 1; applyFilters(); };
+            el('filter-clear-btn').onclick = clearFilters;
+            el('modal-close').onclick = () => toggleClass('modal-editor', 'hidden', true);
+            el('modal-save').onclick = () => window.saveData();
+            el('del-cancel').onclick = () => toggleClass('modal-delete', 'hidden', true);
+            el('del-confirm').onclick = () => window.deleteData();
+            
+            // LISTENER DE EXCEL
+            el('excel-upload').addEventListener('change', (e) => window.handleExcelUpload(e));
+
+            // Paginación Principal
+            el('btn-prev').onclick = () => { if(currentPage > 1) { currentPage--; applyFilters(); }};
+            el('btn-next').onclick = () => { if(currentPage * PAGE_SIZE < totalCount) { currentPage++; applyFilters(); }};
+
+            // Eventos GTS (Navegador)
+            el('gts-back').onclick = () => window.gtsGoBack();
+            el('btn-create-gts').onclick = () => openEditorGTS();
+            el('gts-prev').onclick = () => { if(gtsPage > 1) { gtsPage--; renderGTS(gtsState.level, null, true); } };
+            el('gts-next').onclick = () => { gtsPage++; renderGTS(gtsState.level, null, true); }; 
+
+            // Dropdowns Filtros
+            window.onclick = (e) => {
+                if (!e.target.closest('.filter-dropdown-container')) {
+                    document.querySelectorAll('.filter-dropdown-content').forEach(d => d.classList.remove('show'));
+                }
+            };
+
+            // Atajos de teclado globales
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (!el('modal-editor').classList.contains('hidden')) toggleClass('modal-editor', 'hidden', true);
+                    if (!el('modal-delete').classList.contains('hidden')) toggleClass('modal-delete', 'hidden', true);
+                }
+                // Ctrl+Enter guarda el formulario cuando el modal editor está abierto
+                if (e.ctrlKey && e.key === 'Enter') {
+                    if (!el('modal-editor').classList.contains('hidden')) saveData();
+                }
+            });
+
+            // Carga inicial
+            changeView(); 
+            loadFilterOptions();
+        })();
+
+        // --- CONTROL DE VISTAS ---
+        function changeView() {
+            currentView = el('view-selector').value;
+            
+            toggleClass('filters-container', 'hidden', true);
+            toggleClass('card-view', 'hidden', true);
+            toggleClass('gts-view', 'hidden', true);
+            toggleClass('horarios-view', 'hidden', true);
+            toggleClass('add-row-btn', 'hidden', true);
+            toggleClass('pagination-controls', 'hidden', true);
+
+            if (currentView === 'Histórico de CILTs') {
+                currentTable = 'registro_tareas';
+                toggleClass('filters-container', 'hidden', false);
+                toggleClass('card-view', 'hidden', false);
+                toggleClass('pagination-controls', 'hidden', false);
+                applyFilters(); 
+            } 
+            else if (currentView === 'Gestión de Operadores') {
+                currentTable = 'operadores';
+                toggleClass('card-view', 'hidden', false);
+                toggleClass('add-row-btn', 'hidden', false);
+                toggleClass('pagination-controls', 'hidden', false);
+                el('add-row-btn-text').textContent = 'Nuevo Operador';
+                fetchData();
+            }
+            else if (currentView === 'Carga de Horarios') {
+                toggleClass('horarios-view', 'hidden', false);
+                initHorariosView();
+            }
+            else { // GTS
+                toggleClass('gts-view', 'hidden', false);
+                gtsState = { level: 'lines', line: null, machine: null, task: null, machineName: '', taskName: '' };
+                renderGTS('lines');
+            }
+        }
+
+        // --- SISTEMA GTS (NAVEGADOR MEJORADO) ---
+        async function renderGTS(level, param = null, isPagination = false, extraName = '') {
+            if (!isPagination) gtsPage = 1; // Resetear página al cambiar de nivel
+            gtsState.level = level;
+
+            // Actualizar estado para Breadcrumbs
+            if(level === 'machines' && param) { gtsState.line = param; }
+            if(level === 'tasks' && param) { gtsState.machine = param; if(extraName) gtsState.machineName = extraName; }
+            if(level === 'steps' && param) { gtsState.task = param; if(extraName) gtsState.taskName = extraName; }
+
+            const container = el('gts-container');
+            const breadcrumbs = el('gts-breadcrumbs');
+            const addBtn = el('btn-create-gts');
+            const gtsPag = el('gts-pagination');
+            const excelContainer = el('gts-excel-container');
+            
+            toggleClass('app-loading', 'hidden', false);
+            toggleClass('gts-pagination', 'hidden', true);
+            if(excelContainer) excelContainer.innerHTML = '';
+            // Buscador: mostrar solo cuando hay items listables, limpiar al navegar
+            const searchWrapper = el('gts-search-wrapper');
+            const searchInput   = el('gts-search');
+            if (!isPagination && searchInput) searchInput.value = '';
+            if (searchWrapper) toggleClass('gts-search-wrapper', 'hidden', level === 'lines');
+
+            // Construir Breadcrumbs (Migas de pan)
+            let bcHtml = '<button type="button" data-level="lines" onclick="navGTSCard(this)" class="cursor-pointer hover:text-white">?reas</button>';
+            if (level !== 'lines') bcHtml += ` <span class="text-gray-600">/</span> <button type="button" data-level="machines" data-id="${esc(gtsState.line)}" onclick="navGTSCard(this)" class="cursor-pointer hover:text-white ${level==='machines'?'text-emerald-400 font-bold':''}">${esc(gtsState.line)}</button>`;
+            if (level === 'tasks' || level === 'steps') bcHtml += ` <span class="text-gray-600">/</span> <button type="button" data-level="tasks" data-id="${esc(gtsState.machine)}" data-name="${esc(gtsState.machineName)}" onclick="navGTSCard(this)" class="cursor-pointer hover:text-white ${level==='tasks'?'text-emerald-400 font-bold':''}">${esc(gtsState.machineName || gtsState.machine)}</button>`;
+            if (level === 'steps') bcHtml += ` <span class="text-gray-600">/</span> <span class="text-emerald-400 font-bold">${esc(gtsState.taskName || 'Tarea')}</span>`;
+            breadcrumbs.innerHTML = bcHtml;
+
+            toggleClass('gts-back', 'hidden', level === 'lines');
+            toggleClass('btn-create-gts', 'hidden', level === 'lines');
+
+            // --- CARGA DE DATOS ---
+            const from = (gtsPage - 1) * GTS_PAGE_SIZE;
+            const to = from + GTS_PAGE_SIZE - 1;
+            let data = [], error = null, count = 0;
+
+            // 1. LINEAS
+            if (level === 'lines') {
+                container.innerHTML = LINEAS.map(l => `
+                    <div class="gts-card-fixed level-linea group" onclick="navGTS('machines', '${l}')">
+                        <div class="gts-header text-blue-200">
+                            <span class="text-xs font-bold tracking-widest uppercase opacity-70">Área de Producción</span>
+                            <svg class="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>
+                        <div class="gts-body justify-center items-center text-center">
+                            <div class="mb-3 text-blue-300">${ICON.plant}</div>
+                            <div class="text-lg font-bold text-white tracking-wide">${l}</div>
+                            <div class="mt-2 flex items-center justify-center gap-3">
+                                <span class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:rgba(30,58,138,0.4); color:#93c5fd" data-count-maq="${esc(l)}">···</span>
+                                <span class="text-xs text-blue-300/60 flex items-center gap-1">Ver ${ICON.arrow}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+            }
+            // 2. MAQUINAS
+            else if (level === 'machines') {
+                addBtn.textContent = 'Nueva Máquina';
+                currentTable = 'maquinas';
+                
+                const res = await supabase.from('maquinas').select('*', { count: 'exact' }).eq('linea', gtsState.line).range(from, to);
+                data = res.data; count = res.count; error = res.error;
+                
+                handleGTSPagination(count);
+
+                container.innerHTML = (!data || !data.length) ? emptyState('No hay máquinas registradas en esta línea.') : data.map(m => `
+                    <div class="gts-card-fixed level-maquina group"
+                         data-level="tasks" data-id="${esc(m.id_maquina)}" data-name="${esc(m.nombre)}"
+                         onclick="navGTSCard(this)">
+                        <div class="gts-header text-purple-200">
+                            <span class="text-xs font-mono opacity-70 tracking-wider">${m.id_maquina}</span>
+                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button class="btn-action btn-action-edit" onclick="event.stopPropagation(); editItem('${m.id}')" title="Editar">${ICON.edit}</button>
+                                <button class="btn-action btn-action-del" onclick="event.stopPropagation(); askDelete('${m.id}')" title="Eliminar">${ICON.trash}</button>
+                            </div>
+                        </div>
+                        <div class="gts-body">
+                            <div class="text-purple-200/40 mb-2">${ICON.gear}</div>
+                            <div class="text-base font-bold text-white leading-tight">${m.nombre}</div>
+                            <div class="mt-auto flex items-center justify-between">
+                                <span class="text-xs text-purple-300/70 flex items-center gap-1">Ver tareas ${ICON.arrow}</span>
+                                <span class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:rgba(139,92,246,0.15); color:#c4b5fd" data-count-tasks="${esc(m.id_maquina)}">···</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            // 3. TAREAS
+            else if (level === 'tasks') {
+                addBtn.textContent = 'Nueva Tarea';
+                currentTable = 'tareas';
+                
+                // --- INYECTAR BOTONES DE EXCEL ---
+                if(excelContainer) {
+                    excelContainer.innerHTML = `
+                        <button onclick="downloadTemplate()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm shadow-lg flex items-center transition-colors">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Plantilla
+                        </button>
+                        <button onclick="document.getElementById('excel-upload').click()" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm shadow-lg flex items-center transition-colors">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Cargar Excel
+                        </button>
+                    `;
+                }
+
+                const res = await supabase.from('tareas').select('*', { count: 'exact' }).eq('id_maquina', gtsState.machine).order('nombre_tarea').range(from, to);
+                data = res.data; count = res.count; error = res.error;
+                
+                handleGTSPagination(count);
+
+                container.innerHTML = (!data || !data.length) ? emptyState('No hay tareas creadas para esta máquina.') : data.map(t => `
+                    <div class="gts-card-fixed level-tarea group"
+                         data-level="steps" data-id="${esc(t.id_tarea)}" data-name="${esc(t.nombre_tarea)}"
+                         onclick="navGTSCard(this)">
+                        <div class="gts-header text-emerald-200">
+                            <span class="text-[10px] uppercase border border-emerald-700/60 px-1.5 py-0.5 rounded-sm font-bold tracking-wider" style="background:rgba(0,137,61,0.15)">${t.tipo || 'General'}</span>
+                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button class="btn-action btn-action-edit" onclick="event.stopPropagation(); editItem('${t.id}')" title="Editar">${ICON.edit}</button>
+                                <button class="btn-action btn-action-del" onclick="event.stopPropagation(); askDelete('${t.id}')" title="Eliminar">${ICON.trash}</button>
+                            </div>
+                        </div>
+                        <div class="gts-body">
+                            <div class="text-emerald-200/30 mb-2">${ICON.task}</div>
+                            <div class="font-bold text-white text-sm leading-snug">${t.nombre_tarea}</div>
+                            <div class="mt-auto flex justify-between items-end border-t pt-2" style="border-color:rgba(255,255,255,0.07)">
+                                <div class="text-xs text-blue-300/80 flex items-center gap-1">${ICON.cycle} ${t.frecuencia}</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:rgba(0,137,61,0.15); color:#6ee7b7" data-count-steps="${esc(t.id_tarea)}">···</span>
+                                    <span class="text-xs font-semibold flex items-center gap-1" style="color:var(--hk-green-light)">Pasos ${ICON.arrow}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            // 4. PASOS
+            else if (level === 'steps') {
+                addBtn.textContent = 'Nuevo Paso';
+                currentTable = 'pasos_tarea';
+
+                // Usamos gtsState.task (que ahora contiene id_tarea TEXTO) para filtrar
+                const res = await supabase.from('pasos_tarea').select('*', { count: 'exact' }).eq('id_tarea', gtsState.task).order('numeropaso').range(from, to);
+                data = res.data; count = res.count; error = res.error;
+                handleGTSPagination(count);
+
+                container.innerHTML = (!data || !data.length) ? '<div class="col-span-full text-center text-gray-500 mt-10">No hay pasos definidos.</div>' : data.map(s => `
+                    <div class="border rounded-lg p-3 flex gap-3 group transition-all h-32 overflow-hidden relative" style="background:var(--hk-surface); border-color:var(--hk-border);" onmouseover="this.style.borderColor='var(--hk-green)'" onmouseout="this.style.borderColor='var(--hk-border)'">
+                        ${s.imagenurl
+                            ? `<img src="${s.imagenurl}" class="w-24 h-full object-cover rounded cursor-pointer flex-shrink-0" style="background:var(--hk-bg)" onclick="event.stopPropagation(); window.open('${s.imagenurl}')" title="Ver imagen completa">`
+                            : `<div class="w-24 h-full rounded flex flex-col items-center justify-center gap-1 flex-shrink-0" style="background:var(--hk-bg); color:#4b5563">${ICON.image}<span class="text-[10px]">Sin imagen</span></div>`}
+                        <div class="flex-grow overflow-y-auto pr-1">
+                            <div class="flex items-center gap-2 mb-1.5 sticky top-0 pb-1" style="background:var(--hk-surface)">
+                                <span class="text-white font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs flex-shrink-0" style="background:var(--hk-green)">${s.numeropaso}</span>
+                                <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--hk-green-light)">Instrucción</span>
+                            </div>
+                            <p class="text-sm text-gray-300 leading-relaxed">${s.descripcion}</p>
+                        </div>
+                        <div class="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity rounded p-0.5" style="background:rgba(13,17,23,0.85)">
+                            <button class="btn-action btn-action-edit" onclick="event.stopPropagation(); editItem('${s.id}')" title="Editar">${ICON.edit}</button>
+                            <button class="btn-action btn-action-del" onclick="event.stopPropagation(); askDelete('${s.id}')" title="Eliminar">${ICON.trash}</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            if (error) { console.error(error); showToast('Error al cargar datos: ' + error.message, 'error'); }
+
+            // --- CONTADORES ASÍNCRONOS ---
+            if (level === 'lines') {
+                const { data: mc } = await supabase.from('maquinas').select('linea');
+                const lineCount = {};
+                (mc || []).forEach(m => lineCount[m.linea] = (lineCount[m.linea] || 0) + 1);
+                document.querySelectorAll('[data-count-maq]').forEach(el => {
+                    const n = lineCount[el.dataset.countMaq] || 0;
+                    el.textContent = `${n} máq.`;
+                });
+            }
+            if (level === 'machines' && data && data.length) {
+                const ids = data.map(m => m.id_maquina);
+                const { data: tc } = await supabase.from('tareas').select('id_maquina').in('id_maquina', ids);
+                const taskCount = {};
+                (tc || []).forEach(t => taskCount[t.id_maquina] = (taskCount[t.id_maquina] || 0) + 1);
+                document.querySelectorAll('[data-count-tasks]').forEach(el => {
+                    const n = taskCount[el.dataset.countTasks] || 0;
+                    el.textContent = `${n} tareas`;
+                });
+            }
+            if (level === 'tasks' && data && data.length) {
+                const ids = data.map(t => t.id_tarea);
+                const { data: sc } = await supabase.from('pasos_tarea').select('id_tarea').in('id_tarea', ids);
+                const stepCount = {};
+                (sc || []).forEach(s => stepCount[s.id_tarea] = (stepCount[s.id_tarea] || 0) + 1);
+                document.querySelectorAll('[data-count-steps]').forEach(el => {
+                    const n = stepCount[el.dataset.countSteps] || 0;
+                    el.textContent = n > 0 ? `${n} pasos` : 'Sin pasos';
+                    if (n === 0) el.style.color = '#f87171';
+                });
+            }
+
+            toggleClass('app-loading', 'hidden', true);
+        }
+
+        // Empty state reutilizable
+        function emptyState(msg) {
+            return `<div class="col-span-full flex flex-col items-center justify-center mt-16 gap-3 text-center">
+                <svg class="w-12 h-12 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <p class="text-gray-600 text-sm">${msg}</p>
+            </div>`;
+        }
+
+        // Helper para paginación interna de GTS
+        function handleGTSPagination(count) {
+            const gtsPag = el('gts-pagination');
+            if (count > GTS_PAGE_SIZE) {
+                toggleClass('gts-pagination', 'hidden', false);
+                el('gts-page-info').textContent = `Pág ${gtsPage} de ${Math.ceil(count/GTS_PAGE_SIZE)}`;
+                el('gts-prev').disabled = gtsPage === 1;
+                el('gts-next').disabled = gtsPage >= Math.ceil(count/GTS_PAGE_SIZE);
+            } else {
+                toggleClass('gts-pagination', 'hidden', true);
+            }
+        }
+
+        // Filtro rápido de cards GTS
+        window.filterGTSCards = (q) => {
+            const term = q.toLowerCase().trim();
+            document.querySelectorAll('#gts-container .gts-card-fixed, #gts-container > div').forEach(card => {
+                card.style.display = !term || card.textContent.toLowerCase().includes(term) ? '' : 'none';
+            });
+        };
+
+        // p1 = natural text ID, _dbId = UUID row id (not needed for navigation)
+        window.renderGTS = renderGTS;
+        window.navGTS = (level, p1, _dbId, name) => renderGTS(level, p1, false, name);
+        
+        window.gtsGoBack = () => {
+            if (gtsState.level === 'machines') renderGTS('lines');
+            else if (gtsState.level === 'tasks') renderGTS('machines', gtsState.line);
+            else if (gtsState.level === 'steps') renderGTS('tasks', gtsState.machine, false, gtsState.machineName);
+        };
+
+        // --- FUNCIONES EXCEL (NUEVO) ---
+        window.downloadTemplate = () => {
+            const link = document.createElement('a');
+            link.href = 'https://czxyfzxjwzaykwoxyjah.supabase.co/storage/v1/object/public/pasosimagen/Carga-CILT.xlsm';
+            link.download = 'Carga-CILT.xlsm'; link.target = '_blank';
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        };
+
+        window.handleExcelUpload = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            toggleClass('app-loading', 'hidden', false);
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    await processComplexExcel(workbook);
+                } catch (error) { console.error(error); showToast("Error al procesar el archivo: " + error.message, 'error', 6000); }
+                finally { toggleClass('app-loading', 'hidden', true); e.target.value = ''; }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        function sanitizeSheetName(name) { return name.replace(/[:\\/?*\[\]]/g, '').substring(0, 31).trim(); }
+
+        async function processComplexExcel(workbook) {
+            if (!gtsState.machine) { showToast("Selecciona una máquina antes de cargar tareas.", 'error'); return; }
+
+            // 1. Encontrar Hoja Maestra. Logica robusta
+            let masterSheetName = workbook.SheetNames.find(n => n.toLowerCase().includes("tareas")) || workbook.SheetNames[0];
+            const masterSheet = workbook.Sheets[masterSheetName];
+            
+            // Fila 1 (Index 0): Logo. Fila 2 (Index 1): Headers. Fila 3 (Index 2): Datos.
+            const masterData = XLSX.utils.sheet_to_json(masterSheet, { header: 1, range: 2 });
+            let createdCount = 0; let errors = [];
+
+            for (let i = 0; i < masterData.length; i++) {
+                const row = masterData[i];
+                // MAPEO EXACTO: A=0(Nombre), C=2(Tipo), D=3(Frecuencia)
+                const rawNombre = row[0];
+                let rawTipo = row[2];
+                let rawFrec = row[3];
+
+                if (!rawNombre) continue; 
+
+                // Validar Frecuencia Estricta
+                let validFrec = 'Diario'; 
+                if (rawFrec) {
+                    const cleanFrec = rawFrec.toString().trim();
+                    const formatted = cleanFrec.charAt(0).toUpperCase() + cleanFrec.slice(1).toLowerCase();
+                    if (FRECUENCIAS_VALIDAS.includes(cleanFrec)) validFrec = cleanFrec;
+                    else if (FRECUENCIAS_VALIDAS.includes(formatted)) validFrec = formatted;
+                    else if (cleanFrec === '3 años') validFrec = 'Tres años';
+                }
+
+                // Generar ID_TAREA anico (Texto)
+                const generatedIdTarea = `${gtsState.machine}-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+
+                // A. Insertar Tarea
+                const { error: errTarea } = await supabase.from('tareas').insert([{
+                    id_maquina: gtsState.machine, id_tarea: generatedIdTarea,
+                    nombre_tarea: rawNombre, frecuencia: validFrec, tipo: rawTipo || 'General', es_compartida: false
+                }]);
+
+                if (errTarea) {
+                    console.error(`Error tarea "${rawNombre}":`, errTarea);
+                    errors.push(rawNombre); continue;
+                }
+
+                // B. Buscar Pasos en Hoja de Detalle
+                const possibleSheetName = sanitizeSheetName(rawNombre);
+                const foundSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === possibleSheetName.toLowerCase());
+                
+                if (foundSheetName) {
+                    const detailSheet = workbook.Sheets[foundSheetName];
+                    const detailData = XLSX.utils.sheet_to_json(detailSheet, { header: 1, range: 3 });
+                    const pasosToInsert = [];
+
+                    detailData.forEach(stepRow => {
+                        const numPaso = stepRow[0];
+                        const descPaso = stepRow[1];
+                        const rawImage = stepRow[2];
+                        const imageUrl = rawImage ? rawImage.toString().trim() : null;
+                        if (numPaso && descPaso) {
+                            pasosToInsert.push({
+                                id_tarea: generatedIdTarea, numeropaso: parseInt(numPaso)||0,
+                                descripcion: descPaso, imagenurl: imageUrl || null
+                            });
+                        }
+                    });
+
+                    if (pasosToInsert.length > 0) await supabase.from('pasos_tarea').insert(pasosToInsert);
+                }
+                createdCount++;
+            }
+            if (errors.length) {
+                showToast(`${createdCount} tareas creadas. Errores en: ${errors.join(', ')}`, 'info', 7000);
+            } else {
+                showToast(`${createdCount} tareas creadas correctamente desde Excel.`, 'success');
+            }
+            renderGTS('tasks', gtsState.machine, false, gtsState.machineName);
+        }
+
+        // --- FILTROS Y DATOS GENERALES ---
+        window.toggleFilter = (id) => {
+            const dropdown = el('dropdown-' + id);
+            const isShown = dropdown.classList.contains('show');
+            document.querySelectorAll('.filter-dropdown-content').forEach(d => d.classList.remove('show'));
+            if (!isShown) dropdown.classList.add('show');
+        };
+
+        async function loadFilterOptions() {
+            try {
+                const { data: ops } = await supabase.from('operadores').select('id_operador, nombreoperador');
+                renderCheckboxList('dropdown-ops', ops || [], 'id_operador', 'nombreoperador', 'label-ops');
+                const { data: maqs } = await supabase.from('maquinas').select('id_maquina, nombre');
+                renderCheckboxList('dropdown-maqs', maqs || [], 'id_maquina', 'nombre', 'label-maqs');
+            } catch (err) { console.error("Error filters", err); }
+        }
+
+        function renderCheckboxList(containerId, data, valKey, labelKey, labelDisplayId) {
+            const container = el(containerId);
+            if (!data.length) { container.innerHTML = '<div class="text-xs p-2">Sin datos</div>'; return; }
+            container.innerHTML = data.map(item => `
+                <label class="filter-option">
+                    <input type="checkbox" class="filter-checkbox" value="${item[valKey]}" onchange="updateLabel('${containerId}', '${labelDisplayId}')">
+                    <span class="filter-label">${item[labelKey]}</span>
+                </label>`).join('');
+        }
+
+        window.updateLabel = (cId, lId) => {
+            const n = el(cId).querySelectorAll('input:checked').length;
+            el(lId).textContent = n > 0 ? `${n} Seleccionados` : 'Seleccionar...';
+            el(lId).classList.toggle('text-white', n > 0);
+        };
+
+        function getCheckedValues(id) { return Array.from(el(id).querySelectorAll('input:checked')).map(cb => cb.value); }
+
+        function buildHistoricoQuery(filters = {}) {
+            let tJoin = 'tareas(nombre_tarea, frecuencia, tipo)';
+            let oJoin = 'operadores(nombreoperador, linea)';
+            if (filters.tipo) tJoin = 'tareas!inner(nombre_tarea, frecuencia, tipo)';
+            if (filters.area) oJoin = 'operadores!inner(nombreoperador, linea)';
+            let q = supabase.from('registro_tareas').select(`*, ${tJoin}, ${oJoin}`);
+            if (filters.start) q = q.gte('fecha_limite', filters.start);
+            if (filters.end)   q = q.lte('fecha_limite', filters.end + 'T23:59:59');
+            if (filters.ops  && filters.ops.length)  q = q.in('id_operador', filters.ops);
+            if (filters.maqs && filters.maqs.length) q = q.in('id_maquina',  filters.maqs);
+            if (filters.area)  q = q.eq('operadores.linea', filters.area);
+            if (filters.tipo)  q = q.eq('tareas.tipo',      filters.tipo);
+            return q.order('fecha_limite', { ascending: false });
+        }
+
+        window.exportHistorico = async () => {
+            const filters = {
+                start: el('filter-date-start').value,
+                end:   el('filter-date-end').value,
+                area:  el('filter-area').value,
+                tipo:  el('filter-tipo').value,
+                ops:   getCheckedValues('dropdown-ops'),
+                maqs:  getCheckedValues('dropdown-maqs'),
+            };
+            showToast('Preparando exportación...', 'info', 2000);
+            toggleClass('app-loading', 'hidden', false);
+            const { data, error } = await buildHistoricoQuery(filters);
+            toggleClass('app-loading', 'hidden', true);
+            if (error) { showToast('Error al exportar: ' + error.message, 'error'); return; }
+            if (!data || !data.length) { showToast('No hay datos para exportar.', 'info'); return; }
+
+            const rows = data.map(item => ({
+                'Tarea':             item.tareas?.nombre_tarea   || '',
+                'Tipo':              item.tareas?.tipo           || '',
+                'Frecuencia':        item.tareas?.frecuencia     || '',
+                'Operador':          item.operadores?.nombreoperador || '',
+                'Línea':             item.operadores?.linea      || '',
+                'Estado':            item.estado                 || '',
+                'Fecha Límite':      item.fecha_limite     ? new Date(item.fecha_limite).toLocaleDateString('es-MX')     : '',
+                'Fecha Completado':  item.fecha_completado ? new Date(item.fecha_completado).toLocaleDateString('es-MX') : '',
+                'Autogenerado':      item.fue_autogenerado ? 'Sí' : 'No',
+            }));
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [30,15,15,30,15,12,15,15,12].map(w => ({ wch: w }));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Histórico CILTs');
+            XLSX.writeFile(wb, `CILT-Historico-${new Date().toISOString().slice(0,10)}.xlsx`);
+            showToast(`${data.length} registros exportados a Excel.`, 'success');
+        };
+
+        async function applyFilters() {
+            const filters = {
+                start: el('filter-date-start').value,
+                end: el('filter-date-end').value,
+                area: el('filter-area').value,
+                tipo: el('filter-tipo').value,
+                ops: getCheckedValues('dropdown-ops'),
+                maqs: getCheckedValues('dropdown-maqs')
+            };
+            fetchData(filters);
+        }
+
+        function clearFilters() {
+            el('filter-date-start').value = '';
+            el('filter-date-end').value = '';
+            el('filter-area').value = '';
+            el('filter-tipo').value = '';
+            document.querySelectorAll('.filter-checkbox').forEach(c => c.checked = false);
+            updateLabel('dropdown-ops', 'label-ops');
+            updateLabel('dropdown-maqs', 'label-maqs');
+            currentPage = 1;
+            applyFilters();
+        }
+
+        async function fetchData(filters = {}) {
+            toggleClass('app-loading', 'hidden', false);
+            el('card-grid').innerHTML = '';
+            const from = (currentPage - 1) * PAGE_SIZE;
+            const to = from + PAGE_SIZE - 1;
+
+            let query;
+            if (currentTable === 'registro_tareas') {
+                query = buildHistoricoQuery(filters).select('*', { count: 'exact', head: false });
+                // Re-construimos con count:exact (buildHistoricoQuery no lo incluye)
+                let tJoin = 'tareas(nombre_tarea, frecuencia, tipo)';
+                let oJoin = 'operadores(nombreoperador, linea)';
+                if (filters.tipo) tJoin = 'tareas!inner(nombre_tarea, frecuencia, tipo)';
+                if (filters.area) oJoin = 'operadores!inner(nombreoperador, linea)';
+                query = supabase.from('registro_tareas').select(`*, ${tJoin}, ${oJoin}`, { count: 'exact' });
+                if (filters.start) query = query.gte('fecha_limite', filters.start);
+                if (filters.end)   query = query.lte('fecha_limite', filters.end + 'T23:59:59');
+                if (filters.ops  && filters.ops.length)  query = query.in('id_operador', filters.ops);
+                if (filters.maqs && filters.maqs.length) query = query.in('id_maquina',  filters.maqs);
+                if (filters.area)  query = query.eq('operadores.linea', filters.area);
+                if (filters.tipo)  query = query.eq('tareas.tipo',      filters.tipo);
+                query = query.order('fecha_limite', { ascending: false });
+            } else {
+                query = supabase.from(currentTable).select('*', { count: 'exact' }).order('nombreoperador');
+            }
+
+            const { data, count, error } = await query.range(from, to);
+            toggleClass('app-loading', 'hidden', true);
+
+            if (error) { showToast("Error al cargar datos: " + error.message, 'error'); return; }
+            totalCount = count || 0;
+            updatePaginationUI();
+            if (!data || !data.length) {
+                el('card-grid').innerHTML = emptyState('No se encontraron datos con los filtros aplicados.');
+                return;
+            }
+            renderCards(data);
+        }
+
+        function updatePaginationUI() {
+            el('page-display').textContent = currentPage;
+            const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+            el('pagination-info').textContent = `Total: ${totalCount} | Pág ${currentPage} de ${totalPages || 1}`;
+            el('btn-prev').disabled = currentPage === 1;
+            el('btn-next').disabled = currentPage >= totalPages || totalPages === 0;
+        }
+
+        function renderCards(data) {
+            el('card-grid').innerHTML = data.map(item => {
+                if (currentTable === 'operadores') {
+                    const img = item.foto_operador || `https://ui-avatars.com/api/?name=${item.nombreoperador}&background=random`;
+                    return `
+                    <div class="data-card relative group">
+                        <div class="op-grid">
+                            <img src="${img}" class="op-img">
+                            <div>
+                                <div class="font-bold text-white leading-tight">${item.nombreoperador}</div>
+                                <span class="op-role mt-1 inline-block">${item.tipo || 'Operador'}</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 p-3 flex justify-between text-xs text-gray-400 border-t border-gray-700">
+                            <div>LINEA: <span class="text-emerald-400">${item.linea || '-'}</span></div>
+                            <div>ID: ${item.id_operador}</div>
+                        </div>
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button class="btn-action btn-action-edit" onclick="editItem('${item.id}')" title="Editar">${ICON.edit}</button>
+                            <button class="btn-action btn-action-del" onclick="askDelete('${item.id}')" title="Eliminar">${ICON.trash}</button>
+                        </div>
+                    </div>`;
+                } else {
+                    const t = item.tareas || {};
+                    const o = item.operadores || {};
+                    const st = item.estado || 'Pendiente';
+                    let cls = st === 'Completado' ? 'badge-done' : (st === 'Atrasado' ? 'badge-late' : 'badge-pending');
+                    return `
+                    <div class="data-card p-4 flex flex-col gap-3">
+                        <div class="flex justify-between items-start">
+                            <span class="badge ${cls}">${st}</span>
+                            <span class="text-xs font-mono text-gray-500">${new Date(item.fecha_limite).toLocaleDateString('es-MX')}</span>
+                        </div>
+                        <div class="font-bold text-white text-base leading-snug">${t.nombre_tarea || 'Tarea Desconocida'}</div>
+                        <div class="flex gap-2 flex-wrap">
+                            <span class="text-[10px] border px-1.5 py-0.5 rounded" style="border-color:var(--hk-border); color:#9ca3af">${t.tipo || 'General'}</span>
+                            <span class="text-[10px] border border-blue-800 text-blue-300 px-1.5 py-0.5 rounded flex items-center gap-1">${ICON.cycle} ${t.frecuencia || '-'}</span>
+                        </div>
+                        <div class="mt-auto pt-2 border-t text-xs text-gray-500 space-y-1" style="border-color:var(--hk-border)">
+                            <div class="flex items-center gap-1.5">${ICON.user} <span class="text-gray-200 truncate">${o.nombreoperador || 'Sin asignar'}</span></div>
+                            <div class="flex items-center gap-1.5">${ICON.line} <span class="text-gray-300">${o.linea || '-'}</span></div>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        // --- EDITOR GENERICO ---
+        window.openEditor = () => openEditorGTS();
+        window.openEditorGTS = async () => {
+            editingId = null;
+            el('modal-title').textContent = 'Crear Nuevo';
+            el('dynamic-form').innerHTML = await buildForm();
+            toggleClass('modal-editor', 'hidden', false);
+        };
+        window.editItem = async (id) => {
+            editingId = id;
+            toggleClass('app-loading', 'hidden', false);
+            const { data } = await supabase.from(currentTable).select('*').eq('id', id).single();
+            el('modal-title').textContent = 'Editar';
+            el('dynamic-form').innerHTML = await buildForm(data);
+            toggleClass('app-loading', 'hidden', true);
+            toggleClass('modal-editor', 'hidden', false);
+        };
+        function refreshCurrentView() {
+            if (currentView.includes('GTS')) {
+                const gtsParam = gtsState.level === 'tasks' ? gtsState.machine
+                               : gtsState.level === 'steps' ? gtsState.task
+                               : gtsState.line;
+                renderGTS(gtsState.level, gtsParam, true);
+            } else {
+                fetchData();
+            }
+        }
+
+        window.saveData = async () => {
+            const formData = new FormData(el('dynamic-form'));
+            const payload = Object.fromEntries(formData);
+            
+            // Handle es_compartida boolean conversion from string
+            if (currentTable === 'tareas') {
+                if (payload.es_compartida === 'true') payload.es_compartida = true;
+                else if (payload.es_compartida === 'false') payload.es_compartida = false;
+                else if (payload.es_compartida === undefined) payload.es_compartida = false;
+            }
+
+            // Convert empty strings to null to avoid unique constraint errors (e.g. cedula)
+            for (let key in payload) {
+                if (payload[key] === '') payload[key] = null;
+            }
+
+            const { error } = editingId
+                ? await supabase.from(currentTable).update(payload).eq('id', editingId)
+                : await supabase.from(currentTable).insert([payload]);
+
+            if (error) { showToast(error.message, 'error'); return; }
+            toggleClass('modal-editor', 'hidden', true);
+            showToast(editingId ? 'Registro actualizado correctamente.' : 'Registro creado correctamente.', 'success');
+            refreshCurrentView();
+        };
+        window.askDelete = (id) => { deleteId = id; toggleClass('modal-delete', 'hidden', false); };
+        window.deleteData = async () => {
+            const { error } = await supabase.from(currentTable).delete().eq('id', deleteId);
+            toggleClass('modal-delete', 'hidden', true);
+            if (error) { showToast('Error al eliminar: ' + error.message, 'error'); return; }
+            showToast('Registro eliminado.', 'info');
+            refreshCurrentView();
+        };
+
+        // --- FORM BUILDER ---
+        async function buildForm(data = {}) {
+            let fields = [];
+            if (currentTable === 'operadores') {
+                fields = [
+                    { name: 'id_operador', label: 'ID RFID', type: 'text' },
+                    { name: 'nombreoperador', label: 'Nombre Completo', type: 'text' },
+                    { name: 'cedula', label: 'Cédula', type: 'text' },
+                    { name: 'linea', label: 'Línea', type: 'select', options: LINEAS },
+                    { name: 'tipo', label: 'Rol', type: 'select', options: ['operador', 'supervisor'] },
+                    { name: 'foto_operador', label: 'URL Foto', type: 'text' }
+                ];
+            } else if (currentTable === 'maquinas') {
+                fields = [
+                    { name: 'id_maquina', label: 'ID Máquina', type: 'text', value: data.id_maquina || 'MAQ-' + Math.floor(Math.random()*9999) },
+                    { name: 'nombre', label: 'Nombre', type: 'text' },
+                    { name: 'linea', label: 'Línea', type: 'select', options: LINEAS }
+                ];
+            } else if (currentTable === 'tareas') {
+                fields = [
+                    { name: 'id_maquina', type: 'hidden', value: gtsState.machine },
+                    { name: 'id_tarea', label: 'ID Tarea (Texto anico)', type: 'text', value: data.id_tarea || `${gtsState.machine}-${Date.now()}` },
+                    { name: 'nombre_tarea', label: 'Nombre Tarea', type: 'text' },
+                    { name: 'frecuencia', label: 'Frecuencia', type: 'select', options: FRECUENCIAS_VALIDAS },
+                    { name: 'tipo', label: 'Tipo', type: 'select', options: ['Limpieza','Lubricación','Inspección','Ajuste'] },
+                    { name: 'es_compartida', label: 'Es Compartida', type: 'select', options: ['false', 'true'], value: data.es_compartida ? 'true' : 'false' }
+                ];
+            } else if (currentTable === 'pasos_tarea') {
+                fields = [
+                    { name: 'id_tarea', type: 'hidden', value: gtsState.task },
+                    { name: 'numeropaso', label: 'Número Paso', type: 'number' },
+                    { name: 'descripcion', label: 'Instrucción', type: 'textarea' },
+                    { name: 'imagenurl', label: 'URL Imagen', type: 'text' }
+                ];
+            }
+            return fields.map(f => {
+                const val = data[f.name] !== undefined ? data[f.name] : (f.value || '');
+                if (f.type === 'hidden') return `<input type="hidden" name="${f.name}" value="${val}">`;
+                if (f.type === 'select') return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><select name="${f.name}" class="form-select">${f.options.map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
+                if (f.type === 'textarea') return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><textarea name="${f.name}" class="form-input h-24">${val}</textarea></div>`;
+                return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><input type="${f.type}" name="${f.name}" value="${val}" class="form-input"></div>`;
+            }).join('');
+        }
+
+        // """""""""""""""""""""""""""""""""""""""""""""""""""""""
+        // CARGA DE HORARIOS   Lógica completa
+        // """""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+        // Mapeo fijo: nombre en Excel -> id_maquina(s) en Supabase
+        // Cuando un nombre mapea a varias máquinas, se genera un registro por cada una
+        // ─── Latas: clave Excel → máquina(s) ──────────────────────────────────────
+        // fallback:true = solo se usa si esa máquina no tiene asignación explícita ese (fecha,turno)
+        const MAQUINAS_LATAS_MAP = {
+            'modulfill':  [{ id: '9994',     nombre: 'Modulfill' },
+                           { id: '10003',    nombre: 'Pasteurizador Latas', fallback: true }],
+            'varioline':  [{ id: '9992',     nombre: 'Varioline' },
+                           { id: '9991',     nombre: 'Variopac',            fallback: true }],
+            'variopac':   [{ id: '9991',     nombre: 'Variopac' }],
+            'pressant':   [{ id: 'MAQ-5357', nombre: 'Pressant' },
+                           { id: 'MAQ-9758', nombre: 'Modulpal', fallback: true }],
+            'modulpal':   [{ id: 'MAQ-9758', nombre: 'Modulpal' },
+                           { id: 'MAQ-5357', nombre: 'Pressant', fallback: true }],
+            'pz':         [{ id: '10003',    nombre: 'Pasteurizador Latas' }],
+        };
+
+        // ─── Botellas: clave Excel → máquina(s) ────────────────────────────────────
+        // fallback:true = solo si esa máquina no tiene asignación explícita ese (fecha,turno)
+        const MAQUINAS_BOTELLAS_MAP = {
+            // Llenadora → Inspector siempre (sin fallback)
+            'llenadora':       [{ id: '9998',  nombre: 'Llenadora' },
+                                { id: '10000', nombre: 'Inspector Botellas Vacias' }],
+            // Etiquetadora → Pasteurizador solo si no hay PZ/BT4 explícito
+            'etiquetadora':    [{ id: '9999',  nombre: 'Etiquetadora' },
+                                { id: '9993',  nombre: 'Pasteurizador Botellas', fallback: true }],
+            'lavadora':        [{ id: '10001', nombre: 'Lavadora' }],
+            'pasteurizador':   [{ id: '9993',  nombre: 'Pasteurizador Botellas' }],
+            'encajonadora':    [{ id: '9997',  nombre: 'Encajonadora' }],
+            'desencajonadora': [{ id: '10004', nombre: 'Desencajonadora' }],
+            'despaletizadora': [{ id: '9996',  nombre: 'Despaletizadora' }],
+            'paletizadora':    [{ id: '9995',  nombre: 'Paletizadora' }],
+            'pz':              [{ id: '9993',  nombre: 'Pasteurizador Botellas' }],
+            'depa/pale':       [{ id: '9996',  nombre: 'Despaletizadora' },
+                                { id: '9995',  nombre: 'Paletizadora' }],
+            'enca/desenca':    [{ id: '9997',  nombre: 'Encajonadora' },
+                                { id: '10004', nombre: 'Desencajonadora' },
+                                { id: '10002', nombre: 'Lavadora de Cajas' }],
+            'bt4':             [{ id: '9993',  nombre: 'Pasteurizador Botellas' }],
+            'bt5':             [{ id: '9999',  nombre: 'Etiquetadora' }],
+        };
+
+        // Resuelve nombre de máquina del Excel a lista de {id, nombre}
+        // Usa el mapa de la línea correspondiente; fallback fuzzy contra catálogo Supabase.
+        function esMarcadorNoLaboral(valor) {
+            if (valor === null || valor === undefined) return false;
+            const s = String(valor).trim().toLowerCase();
+            if (!s) return false;
+            return [
+                'descanso',
+                'vacaciones',
+                'vacacion',
+                'libre',
+                'permiso',
+                'incapacidad',
+                'licencia',
+                'reposo',
+                'feriado',
+                'no labora',
+                'no trabaja',
+                'no data',
+            ].some(token => s.includes(token));
+        }
+
+        function normalizarTextoComparacion(valor) {
+            return String(valor || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function tokensNombre(valor) {
+            return normalizarTextoComparacion(valor)
+                .split(' ')
+                .map(t => t.trim())
+                .filter(t => t.length >= 3);
+        }
+
+        function resolverOperadorPorNombre(nombreExcel) {
+            const nombreNorm = normalizarTextoComparacion(nombreExcel);
+            if (!nombreNorm) return null;
+
+            const tokensExcel = tokensNombre(nombreNorm);
+            if (!tokensExcel.length) return null;
+
+            const candidatos = operadoresCatalogo
+                .map(op => {
+                    const nombreOpNorm = normalizarTextoComparacion(op.nombreoperador);
+                    const tokensOp = tokensNombre(nombreOpNorm);
+                    const coincidencias = tokensOp.filter(token => tokensExcel.includes(token));
+                    const score = coincidencias.length;
+                    return {
+                        op,
+                        score,
+                        nombreOpNorm,
+                        tokensOp,
+                        coincidencias,
+                    };
+                })
+                .filter(item => item.score > 0)
+                .sort((a, b) => b.score - a.score || b.nombreOpNorm.length - a.nombreOpNorm.length);
+
+            if (!candidatos.length) return null;
+
+            const mejor = candidatos[0];
+            const empate = candidatos.filter(c => c.score === mejor.score);
+
+            if (mejor.nombreOpNorm === nombreNorm) return mejor.op;
+            if (tokensExcel.length >= 2 && mejor.score >= 2 && empate.length === 1) return mejor.op;
+            if (tokensExcel.length === 1 && mejor.score === 1 && empate.length === 1 && mejor.tokensOp.length === 1) return mejor.op;
+
+            return null;
+        }
+
+        function resolverOperadorCasoEspecial(nombreExcel) {
+            const nombreNorm = normalizarTextoComparacion(nombreExcel);
+            if (!nombreNorm) return null;
+
+            if (nombreNorm.includes('lindsay') && nombreNorm.includes('lecaro')) {
+                return operadoresCatalogo.find(o => normalizarTextoComparacion(o.nombreoperador) === 'lindsay lecaro') || null;
+            }
+
+            if (nombreNorm.includes('edison') && nombreNorm.includes('asencio')) {
+                return operadoresCatalogo.find(o => normalizarTextoComparacion(o.nombreoperador) === 'edison asencio') || null;
+            }
+
+            return null;
+        }
+
+        function resolverMaquinas(equipoStr, linea) {
+            if (!equipoStr) return [];
+            const key = equipoStr.trim().toLowerCase();
+            if (esMarcadorNoLaboral(key)) return [];
+            const mapa = linea === 'Latas' ? MAQUINAS_LATAS_MAP : MAQUINAS_BOTELLAS_MAP;
+            // 1. Mapa fijo de la línea
+            if (mapa[key]) return mapa[key];
+            // 2. Fuzzy contra catálogo Supabase (filtrado por línea si es posible)
+            const catalogo = maquinasCatalogo.filter(m => !m.linea || m.linea === linea || linea === '');
+            const match = catalogo.find(m =>
+                m.nombre && (
+                    m.nombre.toLowerCase() === key ||
+                    m.nombre.toLowerCase().includes(key) ||
+                    key.includes(m.nombre.toLowerCase())
+                )
+            );
+            return match ? [{ id: match.id_maquina, nombre: match.nombre }] : [];
+        }
+
+        // Mapeo nombre equipo en Excel    id_maquina en BD (se carga dinámicamente)
+        let maquinasCatalogo = []; // [{id_maquina, nombre, linea}]
+        let operadoresCatalogo = []; // [{id_operador, nombreoperador, linea}]
+        let horarioPreviewData = []; // registros parseados listos para insertar
+
+        async function initHorariosView() {
+            // Cargar catálogos si no están cargados
+            if (!maquinasCatalogo.length) {
+                const { data } = await supabase.from('maquinas').select('id_maquina, nombre, linea');
+                maquinasCatalogo = data || [];
+            }
+            if (!operadoresCatalogo.length) {
+                const { data } = await supabase.from('operadores').select('id_operador, cedula, nombreoperador, linea');
+                operadoresCatalogo = data || [];
+            }
+            // Poblar selectores manuales
+            el('manual-operador').innerHTML = '<option value="">Seleccionar operador...</option>' +
+                operadoresCatalogo.map(o => `<option value="${o.id_operador}">${o.nombreoperador}</option>`).join('');
+            el('manual-maquina').innerHTML = '<option value="">Seleccionar máquina...</option>' +
+                maquinasCatalogo.map(m => `<option value="${m.id_maquina}">${m.nombre} (${m.linea})</option>`).join('');
+            // Fecha default = lunes próximo
+            el('manual-fecha').value = getLunesProximo();
+            el('semana-inicio-view').value = getLunesProximo();
+            // Cargar recientes
+            cargarTurnosRecientes();
+        }
+
+        // Devuelve fecha YYYY-MM-DD del lunes más próximo (en hora local, sin desfase UTC)
+        // Si hoy ES lunes, devuelve hoy. Para el Excel se usa getLunesSiguiente().
+        function getLunesProximo() {
+            const hoy = new Date();
+            const dia = hoy.getDay(); // 0=dom, 1=lun...6=sab
+            const diff = dia === 0 ? 1 : dia === 1 ? 0 : (8 - dia);
+            const lunes = new Date(hoy);
+            lunes.setDate(hoy.getDate() + diff);
+            return _fechaLocal(lunes);
+        }
+
+        // Devuelve el lunes de la SIGUIENTE semana (para carga de horario Excel)
+        // Válido subir desde viernes, sábado o domingo (días previos al lunes siguiente)
+        function getLunesSiguiente() {
+            const hoy = new Date();
+            const dia = hoy.getDay(); // 0=dom, 1=lun...6=sab
+            // Viernes(5), Sábado(6), Domingo(0) → próximo lunes
+            // Lunes-Jueves → lunes de la semana siguiente (7 días + ajuste)
+            let diff;
+            if (dia === 0) diff = 1;           // domingo → +1
+            else if (dia <= 4) diff = 8 - dia; // lun-jue → siguiente semana
+            else diff = 8 - dia;               // vie(3), sáb(2)
+            const lunes = new Date(hoy);
+            lunes.setDate(hoy.getDate() + diff);
+            return _fechaLocal(lunes);
+        }
+
+        // Helper: YYYY-MM-DD en hora local (sin conversión UTC)
+        function _fechaLocal(d) {
+            return d.getFullYear() + '-'
+                + String(d.getMonth() + 1).padStart(2, '0') + '-'
+                + String(d.getDate()).padStart(2, '0');
+        }
+
+        function switchHorarioTab(tab) {
+            ['excel','manual','semana'].forEach(t => {
+                el(`tab-${t}`).classList.toggle('hidden', t !== tab);
+                const btn = el(`tab-${t}-btn`);
+                if (t === tab) {
+                    btn.style.background = 'var(--hk-green)';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = 'var(--hk-green)';
+                } else {
+                    btn.style.background = 'var(--hk-surface-2)';
+                    btn.style.color = '#9ca3af';
+                    btn.style.borderColor = 'var(--hk-border)';
+                }
+            });
+            if (tab === 'semana') cargarVistaSemana();
+        }
+
+        //     PARSEO DEL EXCEL                                    
+
+        function handleHorarioDrop(e) {
+            e.preventDefault();
+            el('excel-dropzone').style.borderColor = 'var(--hk-border)';
+            const file = e.dataTransfer.files[0];
+            if (file) processHorarioExcel(file);
+        }
+
+        async function processHorarioExcel(file) {
+            if (!file) return;
+            showToast('Procesando Excel...', 'info', 2000);
+            toggleClass('app-loading', 'hidden', false);
+
+            try {
+                const buffer = await file.arrayBuffer();
+                // raw:true lee valores calculados (no strings de fórmula), cellDates para fechas
+                const wb = XLSX.read(buffer, { type: 'array', cellDates: true, raw: true });
+
+                const hojasConfig = [
+                    { keywords: ['lata'],    linea: 'Latas' },
+                    { keywords: ['botella'], linea: 'Botellas' },
+                ];
+                const registros = [];
+                const warnings = [];
+                let algunaHojaEncontrada = false;
+
+                // Mostrar hojas disponibles en consola para diagnóstico
+                console.log('Hojas en el Excel:', wb.SheetNames);
+
+                for (const { keywords, linea } of hojasConfig) {
+                    const hojaReal = wb.SheetNames.find(n =>
+                        keywords.some(kw => n.toLowerCase().includes(kw))
+                    );
+                    if (!hojaReal) {
+                        warnings.push(`ℹ️ No se encontró hoja de ${linea} (palabras buscadas: ${keywords.join(', ')}) — hojas disponibles: ${wb.SheetNames.join(', ')}`);
+                        continue;
+                    }
+                    algunaHojaEncontrada = true;
+                    const ws = wb.Sheets[hojaReal];
+                    const filas = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+                    parsearHoja(filas, linea, registros, warnings);
+                }
+
+                if (!algunaHojaEncontrada) {
+                    showToast('No se encontró ninguna hoja de horario en el Excel.', 'error');
+                    return;
+                }
+
+                // Post-proceso: quitar registros fallback cuando ya hay asignación
+                // explícita para ese (fecha, turno, id_maquina)
+                const explicitKeys = new Set(
+                    registros
+                        .filter(r => !r.is_fallback && r.id_maquina)
+                        .map(r => `${r.fecha}|${r.turno}|${r.id_maquina}`)
+                );
+                const registrosFinal = registros.filter(r =>
+                    !r.is_fallback || !explicitKeys.has(`${r.fecha}|${r.turno}|${r.id_maquina}`)
+                );
+
+                horarioPreviewData = registrosFinal;
+                mostrarPreview(registrosFinal, warnings);
+            } catch (err) {
+                showToast('Error al procesar el Excel: ' + err.message, 'error');
+                console.error(err);
+            } finally {
+                toggleClass('app-loading', 'hidden', true);
+            }
+        }
+
+        function parsearHoja(filas, linea, registros, warnings) {
+            if (linea === 'Latas') return parsearHojaLatas(filas, registros, warnings);
+            if (linea === 'Botellas') return parsearHojaBotellas(filas, registros, warnings);
+
+            // Detectar si es Latas o Botellas por la fila de fechas
+            // Latas: fila 6 (idx 5), fechas en cols pares empezando en 6
+            // Botellas: fila 4 (idx 3), fechas en cols 5,8,11...
+            // Estrategia: buscar la primera fila que contenga objetos Date en las primeras 10 filas
+
+            let filaFechasIdx = -1;
+            let fechas = []; // [{col, fecha: Date}]
+
+            for (let r = 0; r < Math.min(10, filas.length); r++) {
+                const fila = filas[r];
+                if (!fila) continue;
+                const candidatos = [];
+                for (let c = 0; c < fila.length; c++) {
+                    const v = fila[c];
+                    if (v instanceof Date) {
+                        candidatos.push({ col: c, fecha: v });
+                    }
+                }
+                if (candidatos.length > 3) { // tiene varias fechas = es la fila correcta
+                    filaFechasIdx = r;
+                    fechas = candidatos;
+                    break;
+                }
+            }
+
+            if (filaFechasIdx < 0 || fechas.length === 0) {
+                warnings.push(`⚠️ Hoja ${linea}: no se encontró la fila de fechas.`);
+                console.warn(`[${linea}] No se encontró fila de fechas. Primeras 5 filas:`, filas.slice(0, 5));
+                return;
+            }
+            console.log(`[${linea}] Fila de fechas: idx=${filaFechasIdx}, fechas encontradas=${fechas.length}`, fechas.map(f => f.fecha?.toISOString?.()?.slice(0,10)));
+
+            // Filtrar solo la semana próxima
+            const lunesStr = getLunesSiguiente();
+            const [ly, lm, ld] = lunesStr.split('-').map(Number);
+            const lunesDate = new Date(ly, lm - 1, ld);
+            const domingoDate = new Date(ly, lm - 1, ld + 6);
+            domingoDate.setHours(23, 59, 59);
+
+            const fechasSemana = fechas.filter(({ fecha }) => {
+                const d = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+                return d >= lunesDate && d <= domingoDate;
+            });
+
+            if (fechasSemana.length === 0) {
+                warnings.push(`⚠️ Hoja ${linea}: no hay fechas para la semana del ${lunesStr}. Se usan las primeras 7 fechas disponibles.`);
+                fechasSemana.push(...fechas.slice(0, 7));
+            }
+
+            // Mostrar rango detectado en UI
+            if (fechasSemana.length > 0) {
+                const fmt = { day: '2-digit', month: 'short', year: 'numeric' };
+                const desde = fechasSemana[0].fecha.toLocaleDateString('es-EC', fmt);
+                const hasta = fechasSemana[fechasSemana.length - 1].fecha.toLocaleDateString('es-EC', fmt);
+                el('semana-rango').textContent = `${desde} → ${hasta}`;
+                el('semana-aviso').textContent = `(${fechasSemana.length} días, hoja ${linea})`;
+                el('semana-detectada').classList.remove('hidden');
+            }
+
+            // Detectar fila de header (Cedula) y col de cédula
+            // Buscar entre filaFechasIdx-3 y filaFechasIdx+2
+            let colCedula = -1;
+            let filaHeaderIdx = -1;
+            for (let r = Math.max(0, filaFechasIdx - 3); r < Math.min(filas.length, filaFechasIdx + 3); r++) {
+                const fila = filas[r];
+                if (!fila) continue;
+                for (let c = 0; c < fila.length; c++) {
+                    const v = String(fila[c] || '').toLowerCase();
+                    if (v.includes('cedula') || v.includes('cédula')) {
+                        colCedula = c;
+                        filaHeaderIdx = r;
+                        break;
+                    }
+                }
+                if (colCedula >= 0) break;
+            }
+
+            if (colCedula < 0) {
+                warnings.push(`⚠️ Hoja ${linea}: no se encontró columna de Cédula.`);
+                console.warn(`[${linea}] No se encontró columna Cédula. Fila buscada cerca de idx=${filaFechasIdx}. Contenido de filas candidatas:`,
+                    filas.slice(Math.max(0, filaFechasIdx-3), filaFechasIdx+3));
+                return;
+            }
+            console.log(`[${linea}] Cédula en col=${colCedula}, header en fila idx=${filaHeaderIdx}`);
+
+            // Patrón de columnas por línea conocida; fallback dinámico para otras.
+            // Latas:    [maquina@fc, ?, horario@fc+2]  => {codigo:2,  maquina:0}
+            // Botellas: [horario@fc-2, ?, maquina@fc]  => {codigo:-2, maquina:0}
+            const primeraFila = filas[filaHeaderIdx + 1];
+            let colOffset;
+            if (linea === 'Latas') {
+                colOffset = { horario: -1, codigo: 1, maquina: 0 };
+            } else if (linea === 'Botellas') {
+                colOffset = { horario: -2, codigo: -2, maquina: 0 };
+            } else {
+                // Detección dinámica para otras líneas
+                const colFecha0 = fechas[0].col;
+                colOffset = { horario: -2, codigo: -2, maquina: 0 }; // default
+                if (primeraFila) {
+                    const esCodigo = v => v != null && !isNaN(parseFloat(String(v).trim()));
+                    const v_m1 = primeraFila[colFecha0 - 1];
+                    const v_0  = primeraFila[colFecha0];
+                    if (esCodigo(v_m1) && !esCodigo(v_0)) {
+                        colOffset = { horario: -1, codigo: -1, maquina: 1 };
+                    } else if (esCodigo(v_0)) {
+                        colOffset = { horario: 0, codigo: 0, maquina: 2 };
+                    }
+                }
+            }
+
+            console.log(`[${linea}] colOffset detectado:`, colOffset, '| fechasSemana:', fechasSemana.length);
+            // Iterar operadores
+            let contadorRegistros = 0;
+            for (let r = filaHeaderIdx + 1; r < filas.length; r++) {
+                // Debug: mostrar primeras 3 filas de datos
+                if (r <= filaHeaderIdx + 3 && fechasSemana.length > 0) {
+                    const fc = fechasSemana[0].col;
+                    console.log(
+                        `[${linea}] Fila ${r}: cedula@${colCedula}=${JSON.stringify(filas[r]?.[colCedula])}, ` +
+                        `nombre@${colCedula+2}=${JSON.stringify(filas[r]?.[colCedula+2])}, ` +
+                        `horario@${fc + colOffset.horario}=${JSON.stringify(filas[r]?.[fc + colOffset.horario])}, ` +
+                        `maquina@${fc + colOffset.maquina}=${JSON.stringify(filas[r]?.[fc + colOffset.maquina])}, ` +
+                        `codigo@${fc + colOffset.codigo}=${JSON.stringify(filas[r]?.[fc + colOffset.codigo])}`
+                    );
+                }
+                const fila = filas[r];
+                if (!fila) continue;
+
+                const cedulaRaw = fila[colCedula];
+                const cedula = cedulaRaw ? String(cedulaRaw).trim().replace(/\.0$/, '') : '';
+                // Leer nombre del operador del Excel para desambiguar
+                const colNombreExcel = colCedula + 2; // Nombre suele estar 2 cols despues de Cedula
+                const nombreExcelRaw = fila[colNombreExcel];
+                const nombreExcel = nombreExcelRaw ? String(nombreExcelRaw).trim().toUpperCase() : '';
+
+                // Si no hay cedula NI nombre, saltar fila
+                if (!cedula && !nombreExcel) continue;
+                // Si hay cedula debe tener al menos 5 digitos y ser numerica
+                if (cedula && (cedula.length < 5 || isNaN(cedula))) continue;
+
+                // Funcion de coincidencia de nombre: cada palabra del nombre BD aparece en el Excel
+                const nombreCoincide = (nombreBD, nombreExc) => {
+                    if (!nombreBD || !nombreExc) return false;
+                    const palabras = nombreBD.toLowerCase().split(' ').filter(p => p.length > 3);
+                    return palabras.length > 0 && palabras.some(p => nombreExc.toLowerCase().includes(p));
+                };
+
+                let operador = null;
+                if (cedula) {
+                    // 1. Match por cedula verificando nombre (evita colision cuando dos operadores
+                    //    tienen la misma cedula por error en el Excel)
+                    const porCedula = operadoresCatalogo.filter(o => o.cedula === cedula);
+                    if (porCedula.length === 1) {
+                        operador = porCedula[0];
+                    } else if (porCedula.length > 1) {
+                        // Cedula duplicada: desambiguar por nombre
+                        operador = porCedula.find(o => nombreCoincide(o.nombreoperador, nombreExcel)) || null;
+                    }
+                    // 2. Fallback: match por id_operador (RFID = cedula)
+                    if (!operador) {
+                        operador = operadoresCatalogo.find(o => o.id_operador === cedula) || null;
+                    }
+                }
+                // 3. Fallback final: match por nombre (para operadores sin cedula registrada)
+                if (!operador && nombreExcel) {
+                    operador = operadoresCatalogo.find(o => nombreCoincide(o.nombreoperador, nombreExcel)) || null;
+                }
+
+                for (const { col: colFecha, fecha } of fechasSemana) {
+                    const colHorario = colFecha + colOffset.horario;
+                    const colCodigo  = colFecha + colOffset.codigo;
+                    const colMaquina = colFecha + colOffset.maquina;
+
+                    const horarioRaw = colHorario >= 0 ? fila[colHorario] : null;
+                    const codigoRaw  = colCodigo >= 0 ? fila[colCodigo] : null;
+                    const maquinaRaw = colMaquina < fila.length ? fila[colMaquina] : null;
+                    if (esMarcadorNoLaboral(horarioRaw) || esMarcadorNoLaboral(codigoRaw) || esMarcadorNoLaboral(maquinaRaw)) continue;
+
+                    const turno = horarioATurno(horarioRaw) || horarioATurno(codigoRaw);
+                    if (!turno) continue; // no trabaja ese día
+
+                    const equipoStr = maquinaRaw ? String(maquinaRaw).trim() : '';
+
+                    // Fecha en hora local
+                    const fechaStr = fecha.getFullYear() + '-'
+                        + String(fecha.getMonth() + 1).padStart(2, '0') + '-'
+                        + String(fecha.getDate()).padStart(2, '0');
+
+                    // Resolver maquina(s) - puede ser 1 o varias (Depa/Pale, Enca/desenca)
+                    const maquinasResueltas = resolverMaquinas(equipoStr, linea);
+
+                    // id_operador a guardar: el RFID real del operador (no la cedula del Excel)
+                    const idOperadorFinal = operador ? operador.id_operador : cedula;
+
+                    if (maquinasResueltas.length === 0) {
+                        contadorRegistros++;
+                        // Sin maquina conocida - advertencia si el operador existe
+                        if (operador) {
+                            registros.push({
+                                id_operador:    idOperadorFinal,
+                                cedula_excel:   cedula,
+                                nombre_operador: operador.nombreoperador,
+                                id_maquina:     null,
+                                nombre_maquina: equipoStr || '?',
+                                fecha:          fechaStr,
+                                turno:          turno,
+                                linea:          linea,
+                                ok:             false,
+                                warn_op:        false,
+                                warn_maq:       true,
+                            });
+                        }
+                    } else {
+                        contadorRegistros++;
+                        // Generar un registro por cada maquina resuelta
+                        for (const maq of maquinasResueltas) {
+                            registros.push({
+                                id_operador:    idOperadorFinal,
+                                cedula_excel:   cedula,
+                                nombre_operador: operador ? operador.nombreoperador : cedula,
+                                id_maquina:     maq.id,
+                                nombre_maquina: maq.nombre,
+                                fecha:          fechaStr,
+                                turno:          turno,
+                                linea:          linea,
+                                ok:             !!operador,
+                                warn_op:        !operador,
+                                warn_maq:       false,
+                                is_fallback:    !!maq.fallback,
+                            });
+                        }
+                    }
+                }
+            }
+            console.log(`[${linea}] Parseo terminado. Registros generados: ${contadorRegistros} (total acumulado: ${registros.length})`);
+        }
+
+        // Convierte código numérico o string de horario a nombre de turno
+        function parsearHojaLatas(filas, registros, warnings) {
+            return parsearHojaPorLinea(filas, 'Latas', registros, warnings, { horario: -1, codigo: 1, maquina: 0 });
+        }
+
+        function parsearHojaBotellas(filas, registros, warnings) {
+            return parsearHojaPorLinea(filas, 'Botellas', registros, warnings, { horario: -2, codigo: -2, maquina: 0 });
+        }
+
+        function parsearHojaPorLinea(filas, linea, registros, warnings, colOffset) {
+            let filaFechasIdx = -1;
+            let fechas = [];
+
+            for (let r = 0; r < Math.min(10, filas.length); r++) {
+                const fila = filas[r];
+                if (!fila) continue;
+                const candidatos = [];
+                for (let c = 0; c < fila.length; c++) {
+                    const v = fila[c];
+                    if (v instanceof Date) candidatos.push({ col: c, fecha: v });
+                }
+                if (candidatos.length > 3) {
+                    filaFechasIdx = r;
+                    fechas = candidatos;
+                    break;
+                }
+            }
+
+            if (filaFechasIdx < 0 || fechas.length === 0) {
+                warnings.push(`âš ï¸ Hoja ${linea}: no se encontrÃ³ la fila de fechas.`);
+                console.warn(`[${linea}] No se encontrÃ³ fila de fechas. Primeras 5 filas:`, filas.slice(0, 5));
+                return;
+            }
+            console.log(`[${linea}] Fila de fechas: idx=${filaFechasIdx}, fechas encontradas=${fechas.length}`, fechas.map(f => f.fecha?.toISOString?.()?.slice(0,10)));
+
+            const lunesStr = getLunesSiguiente();
+            const [ly, lm, ld] = lunesStr.split('-').map(Number);
+            const lunesDate = new Date(ly, lm - 1, ld);
+            const domingoDate = new Date(ly, lm - 1, ld + 6);
+            domingoDate.setHours(23, 59, 59);
+
+            const fechasSemana = fechas.filter(({ fecha }) => {
+                const d = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+                return d >= lunesDate && d <= domingoDate;
+            });
+
+            if (fechasSemana.length === 0) {
+                warnings.push(`âš ï¸ Hoja ${linea}: no hay fechas para la semana del ${lunesStr}. Se usan las primeras 7 fechas disponibles.`);
+                fechasSemana.push(...fechas.slice(0, 7));
+            }
+
+            if (fechasSemana.length > 0) {
+                const fmt = { day: '2-digit', month: 'short', year: 'numeric' };
+                const desde = fechasSemana[0].fecha.toLocaleDateString('es-EC', fmt);
+                const hasta = fechasSemana[fechasSemana.length - 1].fecha.toLocaleDateString('es-EC', fmt);
+                el('semana-rango').textContent = `${desde} â†’ ${hasta}`;
+                el('semana-aviso').textContent = `(${fechasSemana.length} dÃ­as, hoja ${linea})`;
+                el('semana-detectada').classList.remove('hidden');
+            }
+
+            let colCedula = -1;
+            let filaHeaderIdx = -1;
+            for (let r = Math.max(0, filaFechasIdx - 3); r < Math.min(filas.length, filaFechasIdx + 3); r++) {
+                const fila = filas[r];
+                if (!fila) continue;
+                for (let c = 0; c < fila.length; c++) {
+                    const v = String(fila[c] || '').toLowerCase();
+                    if (v.includes('cedula') || v.includes('cÃ©dula')) {
+                        colCedula = c;
+                        filaHeaderIdx = r;
+                        break;
+                    }
+                }
+                if (colCedula >= 0) break;
+            }
+
+            if (colCedula < 0) {
+                warnings.push(`âš ï¸ Hoja ${linea}: no se encontrÃ³ columna de CÃ©dula.`);
+                console.warn(`[${linea}] No se encontrÃ³ columna CÃ©dula. Fila buscada cerca de idx=${filaFechasIdx}. Contenido de filas candidatas:`,
+                    filas.slice(Math.max(0, filaFechasIdx-3), filaFechasIdx+3));
+                return;
+            }
+            console.log(`[${linea}] CÃ©dula en col=${colCedula}, header en fila idx=${filaHeaderIdx}`);
+            console.log(`[${linea}] evaluaciÃ³n separada con offsets:`, colOffset, '| fechasSemana:', fechasSemana.length);
+
+            let contadorRegistros = 0;
+            for (let r = filaHeaderIdx + 1; r < filas.length; r++) {
+                if (r <= filaHeaderIdx + 3 && fechasSemana.length > 0) {
+                    const fc = fechasSemana[0].col;
+                    console.log(
+                        `[${linea}] Fila ${r}: cedula@${colCedula}=${JSON.stringify(filas[r]?.[colCedula])}, ` +
+                        `nombre@${colCedula+2}=${JSON.stringify(filas[r]?.[colCedula+2])}, ` +
+                        `horario@${fc + colOffset.horario}=${JSON.stringify(filas[r]?.[fc + colOffset.horario])}, ` +
+                        `maquina@${fc + colOffset.maquina}=${JSON.stringify(filas[r]?.[fc + colOffset.maquina])}, ` +
+                        `codigo@${fc + colOffset.codigo}=${JSON.stringify(filas[r]?.[fc + colOffset.codigo])}`
+                    );
+                }
+
+                const fila = filas[r];
+                if (!fila) continue;
+
+                const cedulaRaw = fila[colCedula];
+                const cedula = cedulaRaw ? String(cedulaRaw).trim().replace(/\.0$/, '') : '';
+                const colNombreExcel = colCedula + 2;
+                const nombreExcelRaw = fila[colNombreExcel];
+                const nombreExcel = nombreExcelRaw ? String(nombreExcelRaw).trim().toUpperCase() : '';
+
+                if (!cedula && !nombreExcel) continue;
+                if (cedula && (cedula.length < 5 || isNaN(cedula))) continue;
+
+                let operador = null;
+                const operadorEspecial = resolverOperadorCasoEspecial(nombreExcel);
+                if (operadorEspecial) {
+                    operador = operadorEspecial;
+                }
+                if (cedula) {
+                    const porCedula = operadoresCatalogo.filter(o => o.cedula === cedula);
+                    if (!operador && porCedula.length === 1) {
+                        operador = porCedula[0];
+                    } else if (!operador && porCedula.length > 1) {
+                        operador = resolverOperadorPorNombre(nombreExcel) || null;
+                    }
+                    if (!operador) {
+                        operador = operadoresCatalogo.find(o => o.id_operador === cedula) || null;
+                    }
+                }
+                if (!operador && nombreExcel) {
+                    operador = resolverOperadorPorNombre(nombreExcel) || null;
+                }
+
+                for (const { col: colFecha, fecha } of fechasSemana) {
+                    const colHorario = colFecha + colOffset.horario;
+                    const colCodigo  = colFecha + colOffset.codigo;
+                    const colMaquina = colFecha + colOffset.maquina;
+
+                    const horarioRaw = colHorario >= 0 ? fila[colHorario] : null;
+                    const codigoRaw  = colCodigo >= 0 ? fila[colCodigo] : null;
+                    const maquinaRaw = colMaquina < fila.length ? fila[colMaquina] : null;
+                    if (esMarcadorNoLaboral(horarioRaw) || esMarcadorNoLaboral(codigoRaw) || esMarcadorNoLaboral(maquinaRaw)) continue;
+
+                    const turno = horarioATurno(horarioRaw) || horarioATurno(codigoRaw);
+                    if (!turno) continue;
+
+                    const equipoStr = maquinaRaw ? String(maquinaRaw).trim() : '';
+                    const fechaStr = fecha.getFullYear() + '-'
+                        + String(fecha.getMonth() + 1).padStart(2, '0') + '-'
+                        + String(fecha.getDate()).padStart(2, '0');
+                    const maquinasResueltas = resolverMaquinas(equipoStr, linea);
+                    const idOperadorFinal = operador ? operador.id_operador : cedula;
+
+                    if (maquinasResueltas.length === 0) {
+                        contadorRegistros++;
+                        if (operador) {
+                            registros.push({
+                                id_operador:    idOperadorFinal,
+                                cedula_excel:   cedula,
+                                nombre_operador: operador.nombreoperador,
+                                id_maquina:     null,
+                                nombre_maquina: equipoStr || '?',
+                                fecha:          fechaStr,
+                                turno:          turno,
+                                linea:          linea,
+                                ok:             false,
+                                warn_op:        false,
+                                warn_maq:       true,
+                            });
+                        }
+                    } else {
+                        contadorRegistros++;
+                        for (const maq of maquinasResueltas) {
+                            registros.push({
+                                id_operador:    idOperadorFinal,
+                                cedula_excel:   cedula,
+                                nombre_operador: operador ? operador.nombreoperador : cedula,
+                                id_maquina:     maq.id,
+                                nombre_maquina: maq.nombre,
+                                fecha:          fechaStr,
+                                turno:          turno,
+                                linea:          linea,
+                                ok:             !!operador,
+                                warn_op:        !operador,
+                                warn_maq:       false,
+                                is_fallback:    !!maq.fallback,
+                            });
+                        }
+                    }
+                }
+            }
+
+            console.log(`[${linea}] Parseo separado terminado. Registros generados: ${contadorRegistros} (total acumulado: ${registros.length})`);
+        }
+
+        function horarioATurno(valor) {
+            if (valor === null || valor === undefined || valor === '') return null;
+            const s = String(valor).trim();
+            // String de horario (valores calculados de la fórmula VLOOKUP)
+            if (s.includes('07:30') || s.includes('06:00')) return 'Mañana';
+            if (s.includes('15:30') || s.includes('14:00') || s.includes('16:00')) return 'Tarde';
+            if (s.includes('19:30') || s.includes('23:30') || s.includes('22:00')) return 'Noche';
+            // Valores como 'Descanso', 'Vacaciones', 'NO DATA', etc. = no trabaja
+            if (isNaN(parseFloat(s))) return null;
+            // Código numérico
+            const c = parseFloat(s);
+            if ([1, 4, 14].includes(c)) return 'Mañana';
+            if ([5, 15].includes(c)) return 'Tarde';
+            if ([7, 9].includes(c)) return 'Noche';
+            return null; // 0, 6, 8, 10, 11, 12, 13, 25... no trabaja
+        }
+
+        function mostrarPreview(registros, warnings) {
+            if (!registros.length) {
+                showToast('No se encontraron registros de turnos para importar.', 'error');
+                return;
+            }
+
+            el('preview-count').textContent = `${registros.length} registros`;
+            const tbody = el('preview-tbody');
+            tbody.innerHTML = registros.map(r => `
+                <tr style="border-top:1px solid var(--hk-border)">
+                    <td class="px-3 py-1.5 text-gray-300">${r.nombre_operador}</td>
+                    <td class="px-3 py-1.5 font-mono" style="color:${r.warn_op ? '#f87171' : '#9ca3af'}">${r.cedula_excel}</td>
+                    <td class="px-3 py-1.5"><span class="px-1.5 py-0.5 rounded text-xs font-bold" style="background:${r.linea==='Latas'?'rgba(234,179,8,0.15)':'rgba(99,102,241,0.15)'}; color:${r.linea==='Latas'?'#fde047':'#a5b4fc'}">${r.linea}</span></td>
+                    <td class="px-3 py-1.5" style="color:${r.warn_maq ? '#f87171' : '#d1d5db'}">${r.nombre_maquina}${r.id_maquina ? '' : ' ⚠️'}</td>
+                    <td class="px-3 py-1.5 font-mono text-gray-400">${r.fecha}</td>
+                    <td class="px-3 py-1.5"><span class="px-2 py-0.5 rounded text-xs font-semibold" style="background:${r.turno==='Mañana'?'rgba(234,179,8,0.2)':r.turno==='Tarde'?'rgba(249,115,22,0.2)':'rgba(99,102,241,0.2)'}; color:${r.turno==='Mañana'?'#fde047':r.turno==='Tarde'?'#fb923c':'#a5b4fc'}">${r.turno}</span></td>
+                    <td class="px-3 py-1.5">${r.ok ? '<span style="color:#4ade80">✅ OK</span>' : '<span style="color:#f87171">⚠️ Revisar</span>'}</td>
+                </tr>
+            `).join('');
+
+
+            // Warnings
+            const warnDiv = el('preview-warnings');
+            const allWarnings = [...warnings];
+            const sinOp = registros.filter(r => r.warn_op).length;
+            const sinMaq = registros.filter(r => r.warn_maq).length;
+            if (sinOp > 0) allWarnings.push(`a️ ${sinOp} registros con operador no encontrado en BD (se omitirán al importar)`);
+            if (sinMaq > 0) allWarnings.push(`a️ ${sinMaq} registros con máquina no encontrada en BD (se omitirán al importar)`);
+
+            if (allWarnings.length) {
+                warnDiv.innerHTML = allWarnings.map(w => `<div class="text-xs px-3 py-1.5 rounded" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:#fcd34d">${w}</div>`).join('');
+                warnDiv.classList.remove('hidden');
+            } else {
+                warnDiv.classList.add('hidden');
+            }
+
+            el('horario-preview').classList.remove('hidden');
+        }
+
+        function clearHorarioPreview() {
+            horarioPreviewData = [];
+            el('horario-preview').classList.add('hidden');
+            el('semana-detectada').classList.add('hidden');
+            el('horario-excel-input').value = '';
+        }
+
+        async function importarHorario() {
+            const validos = horarioPreviewData.filter(r => r.ok);
+            if (!validos.length) {
+                showToast('No hay registros válidos para importar (operador y máquina deben existir en BD).', 'error');
+                return;
+            }
+
+            const btn = el('btn-importar-horario');
+            btn.disabled = true;
+            btn.textContent = 'Importando...';
+            toggleClass('app-loading', 'hidden', false);
+
+            try {
+                // Primero borrar registros de la semana detectada para esas fechas (insert limpio)
+                const fechas = [...new Set(validos.map(r => r.fecha))];
+                await supabase.from('turnos_semana').delete().in('fecha', fechas);
+
+                // Insertar en lotes de 200 (deduplicado por clave única)
+                const seen = new Set();
+                const payload = validos.reduce((acc, r) => {
+                    const key = `${r.id_operador}|${r.id_maquina}|${r.fecha}|${r.turno}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        acc.push({ id_operador: r.id_operador, id_maquina: r.id_maquina, fecha: r.fecha, turno: r.turno });
+                    }
+                    return acc;
+                }, []);
+
+                const BATCH = 200;
+                let errores = 0;
+                const errDetail = [];
+                for (let i = 0; i < payload.length; i += BATCH) {
+                    const { error } = await supabase.from('turnos_semana')
+                        .insert(payload.slice(i, i + BATCH));
+                    if (error) {
+                        errores++;
+                        errDetail.push(error.message);
+                        console.error('Batch error:', error);
+                    }
+                }
+
+                if (errores === 0) {
+                    showToast(`S& ${validos.length} turnos importados correctamente.`, 'success');
+                    clearHorarioPreview();
+                    switchHorarioTab('semana');
+                    cargarVistaSemana();
+                } else {
+                    showToast(`Importación parcial: ${errores} lotes con error. ${errDetail[0] || ''}`, 'error');
+                }
+            } catch (err) {
+                showToast('Error en importación: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Importar a Supabase';
+                toggleClass('app-loading', 'hidden', true);
+            }
+        }
+
+        //     MANUAL                                             
+
+        async function guardarTurnoManual() {
+            const id_operador = el('manual-operador').value;
+            const id_maquina = el('manual-maquina').value;
+            const fecha = el('manual-fecha').value;
+            const turno = el('manual-turno').value;
+
+            if (!id_operador || !id_maquina || !fecha || !turno) {
+                showToast('Completa todos los campos.', 'error'); return;
+            }
+
+            const { error } = await supabase.from('turnos_semana').upsert(
+                [{ id_operador, id_maquina, fecha, turno }],
+                { onConflict: 'id_operador,fecha,turno,id_maquina' }
+            );
+
+            if (error) { showToast('Error: ' + error.message, 'error'); return; }
+            showToast('Turno guardado correctamente.', 'success');
+            cargarTurnosRecientes();
+        }
+
+        async function cargarTurnosRecientes() {
+            const { data } = await supabase
+                .from('turnos_semana')
+                .select('id, id_operador, id_maquina, fecha, turno, created_at, operadores(nombreoperador), maquinas(nombre)')
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            const div = el('manual-recientes');
+            if (!data || !data.length) {
+                div.innerHTML = '<p class="p-4 text-gray-500 text-xs">Sin turnos cargados aún.</p>';
+                return;
+            }
+
+            div.innerHTML = `<table class="w-full text-xs">
+                <thead style="background:var(--hk-surface)">
+                    <tr>
+                        <th class="px-3 py-2 text-left text-gray-400">Operador</th>
+                        <th class="px-3 py-2 text-left text-gray-400">Máquina</th>
+                        <th class="px-3 py-2 text-left text-gray-400">Fecha</th>
+                        <th class="px-3 py-2 text-left text-gray-400">Turno</th>
+                        <th class="px-3 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody style="background:var(--hk-surface-2)">
+                ${data.map(t => `
+                    <tr style="border-top:1px solid var(--hk-border)">
+                        <td class="px-3 py-1.5 text-gray-300">${t.operadores?.nombreoperador || t.id_operador}</td>
+                        <td class="px-3 py-1.5 text-gray-300">${t.maquinas?.nombre || t.id_maquina}</td>
+                        <td class="px-3 py-1.5 text-gray-400">${t.fecha}</td>
+                        <td class="px-3 py-1.5 text-gray-400">${t.turno}</td>
+                        <td class="px-3 py-1.5"><button onclick="borrarTurno('${t.id}')" class="text-red-400 hover:text-red-300 text-xs">S"</button></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+        }
+
+        async function borrarTurno(id) {
+            const { error } = await supabase.from('turnos_semana').delete().eq('id', id);
+            if (error) { showToast('Error: ' + error.message, 'error'); return; }
+            showToast('Turno eliminado.', 'info');
+            cargarTurnosRecientes();
+        }
+
+        //     VER SEMANA                                          
+
+        async function cargarVistaSemana() {
+            const fechaInicio = el('semana-inicio-view').value || getLunesProximo();
+            // Calcular fin con componentes locales (evita desfase UTC)
+            const [_vy, _vm, _vd] = fechaInicio.split('-').map(Number);
+            const finStr = _fechaLocal(new Date(_vy, _vm - 1, _vd + 6));
+
+            toggleClass('app-loading', 'hidden', false);
+
+            const { data } = await supabase
+                .from('turnos_semana')
+                .select('id_operador, id_maquina, fecha, turno, operadores(nombreoperador), maquinas(nombre, linea)')
+                .gte('fecha', fechaInicio)
+                .lte('fecha', finStr)
+                .order('fecha')
+                .order('id_maquina');
+
+            toggleClass('app-loading', 'hidden', true);
+
+            const div = el('semana-grid');
+            if (!data || !data.length) {
+                div.innerHTML = '<p class="text-gray-500 text-sm p-4">No hay turnos cargados para esta semana.</p>';
+                return;
+            }
+
+            // Generar días con componentes locales (sin desfase UTC)
+            const dias = [];
+            for (let i = 0; i <= 6; i++) {
+                const dObj = new Date(_vy, _vm - 1, _vd + i);
+                dias.push({ str: _fechaLocal(dObj), label: dObj.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric', month: 'short' }) });
+            }
+
+            const turnos = ['Mañana', 'Tarde', 'Noche'];
+            const turnoColors     = { Mañana: '#854d0e', Tarde: '#7c2d12', Noche: '#312e81' };
+            const turnoTextColors = { Mañana: '#fde047', Tarde: '#fb923c', Noche: '#a5b4fc' };
+
+            // Agrupar por linea → maquina → fecha_turno → operadores
+            const porLinea = {};
+            const nombreMaquina = {};
+            for (const t of data) {
+                const linea    = t.maquinas?.linea || 'Otras';
+                const maqNombre = t.maquinas?.nombre || t.id_maquina;
+                nombreMaquina[t.id_maquina] = maqNombre;
+                if (!porLinea[linea]) porLinea[linea] = {};
+                if (!porLinea[linea][t.id_maquina]) porLinea[linea][t.id_maquina] = {};
+                const key = `${t.fecha}_${t.turno}`;
+                if (!porLinea[linea][t.id_maquina][key]) porLinea[linea][t.id_maquina][key] = [];
+                porLinea[linea][t.id_maquina][key].push(t.operadores?.nombreoperador || t.id_operador);
+            }
+
+            const lineaColors = {
+                Latas:    { bg: 'rgba(234,179,8,0.12)',  border: 'rgba(234,179,8,0.4)',  text: '#fde047' },
+                Botellas: { bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.4)', text: '#a5b4fc' },
+            };
+
+            const renderTabla = (linea, porMaquina) => {
+                const lc = lineaColors[linea] || { bg: 'rgba(255,255,255,0.05)', border: 'var(--hk-border)', text: '#e5e7eb' };
+                return `
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 mb-2 px-1">
+                        <span class="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded" style="background:${lc.bg}; border:1px solid ${lc.border}; color:${lc.text}">
+                            Línea de ${linea}
+                        </span>
+                        <span class="text-xs text-gray-600">${Object.keys(porMaquina).length} máquinas</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                    <table class="text-xs border-collapse w-full" style="min-width:700px">
+                        <thead>
+                            <tr style="background:var(--hk-surface)">
+                                <th class="px-3 py-2 text-left text-gray-400 border" style="border-color:var(--hk-border)">Máquina</th>
+                                <th class="px-3 py-2 text-left text-gray-400 border" style="border-color:var(--hk-border)">Turno</th>
+                                ${dias.map(d => `<th class="px-3 py-2 text-center text-gray-400 border" style="border-color:var(--hk-border); min-width:100px">${d.label}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                        ${Object.entries(porMaquina).map(([maqId, slots]) =>
+                            turnos.map((turno, ti) => `
+                            <tr style="border-top:1px solid var(--hk-border); background:${ti%2===0?'var(--hk-surface-2)':'var(--hk-surface)'}">
+                                ${ti === 0 ? `<td class="px-3 py-1.5 font-semibold text-white border" style="border-color:var(--hk-border); vertical-align:middle" rowspan="3">${nombreMaquina[maqId]}</td>` : ''}
+                                <td class="px-2 py-1 border" style="border-color:var(--hk-border); background:${turnoColors[turno]}20">
+                                    <span style="color:${turnoTextColors[turno]}" class="font-semibold">${turno}</span>
+                                </td>
+                                ${dias.map(d => {
+                                    const key = `${d.str}_${turno}`;
+                                    const ops = slots[key] || [];
+                                    return `<td class="px-2 py-1 border" style="border-color:var(--hk-border)">
+                                        ${ops.length ? ops.map(op => `<div style="color:#86efac; font-size:10px; white-space:nowrap">${op}</div>`).join('') : '<span style="color:#374151">—</span>'}
+                                    </td>`;
+                                }).join('')}
+                            </tr>`
+                        ).join('')).join('')}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>`;
+            };
+
+            // Renderizar Latas primero, luego Botellas, luego Otras
+            const ordenLineas = ['Latas', 'Botellas', ...Object.keys(porLinea).filter(l => l !== 'Latas' && l !== 'Botellas')];
+            div.innerHTML = ordenLineas
+                .filter(l => porLinea[l])
+                .map(l => renderTabla(l, porLinea[l]))
+                .join('') +
+                `<p class="text-gray-600 text-xs mt-1">Total: ${data.length} turnos</p>`;
+        }
+
+        async function borrarSemana() {
+            const fechaInicio = el('semana-inicio-view').value || getLunesProximo();
+            // Calcular fin con componentes locales (evita desfase UTC)
+            const [_by, _bm, _bd] = fechaInicio.split('-').map(Number);
+            const finStr = _fechaLocal(new Date(_by, _bm - 1, _bd + 6));
+
+            if (!confirm(`¿Borrar todos los turnos del ${fechaInicio} al ${finStr}? Esta acción no se puede deshacer.`)) return;
+
+            const { error } = await supabase.from('turnos_semana').delete().gte('fecha', fechaInicio).lte('fecha', finStr);
+            if (error) { showToast('Error: ' + error.message, 'error'); return; }
+            showToast('Semana eliminada correctamente.', 'info');
+            cargarVistaSemana();
+        }
+
+        //    Exponer funciones del módulo al scope global (requerido por onclick inline)   
+        window.switchHorarioTab   = switchHorarioTab;
+        window.handleHorarioDrop  = handleHorarioDrop;
+        window.processHorarioExcel = processHorarioExcel;
+        window.clearHorarioPreview = clearHorarioPreview;
+        window.importarHorario    = importarHorario;
+        window.guardarTurnoManual = guardarTurnoManual;
+        window.borrarTurno        = borrarTurno;
+        window.cargarVistaSemana  = cargarVistaSemana;
+        window.borrarSemana       = borrarSemana;
+
+    </script>
+</body>
+</html>
