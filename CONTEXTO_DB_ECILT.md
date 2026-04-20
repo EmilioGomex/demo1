@@ -35,9 +35,24 @@ Usuarios del sistema.
 
 ### `maquinas`
 Equipos de la planta.
-*   `id_maquina` (UUID, Primary Key)
+*   `id` (UUID, Primary Key)
+*   `id_maquina` (Text, Unique): Código corto de la máquina (ej. `9991`, `MAQ-5357`).
 *   `nombre` (Text)
-*   `semaforo_maquina` (Text): Estado de salud del equipo (`Verde`, `Amarillo`, `Rojo`). Se calcula mediante Triggers.
+*   `linea` (Text): `Latas`, `Botellas`, `Utilidades`, etc.
+*   `area` (Text, GENERATED): Calculado automáticamente a partir de `linea`.
+*   `implementado` (Boolean): Indica si la máquina está activa en el sistema.
+
+### `semaforo_maquina`
+Registro histórico del estado de salud de cada máquina **por turno y período**. Hay una fila por combinación única `(id_maquina, turno, fecha_periodo)`.
+*   `id` (UUID, Primary Key)
+*   `id_maquina` (Text, FK → `maquinas.id_maquina`)
+*   `estado` (Text): `Verde`, `Amarillo` o `Rojo`.
+*   `fecha_actualizacion` (Timestamptz): Última actualización del registro.
+*   `turno` (Text): `Mañana`, `Tarde` o `Noche`.
+*   `fecha_periodo` (Date): Fecha del período (default: `hoy_ec()`).
+*   `total_tareas`, `completadas`, `pendientes`, `atrasadas` (Integer): Contadores del estado de tareas.
+
+> ⚠️ **IMPORTANTE para la RPi:** Para leer el estado actual del semáforo desde `supabase_realtime_to_mqtt.py`, se debe filtrar por `id_maquina`, el `turno` activo en Ecuador y la `fecha_periodo` de hoy. El uso de `.single()` falla porque hay múltiples filas por máquina.
 
 ### `turnos_semana`
 Tabla de configuración de turnos semanales, utilizada por la App en Flutter para filtrar qué operadores deben aparecer en el carrusel de inicio de sesión según el día de la semana y la hora (Mañana, Tarde, Noche).
@@ -59,8 +74,9 @@ Esta es la función principal o "motor" que se encarga de instanciar los registr
     *   `Semestral`: Se genera únicamente el 1 de enero y el 1 de julio.
 *   **Prevención de Duplicados:** Usa sentencias `NOT EXISTS` comparando el `id_tarea` y la `v_fecha_periodo` para asegurarse de no insertar la misma tarea dos veces para el mismo ciclo.
 
-### Triggers y Semáforos
-*   Existe un trigger asociado a los cambios en `registro_tareas` que, al actualizarse el `estado` de una tarea (ej. pasar a `Atrasado`), dispara un cálculo que actualiza automáticamente la columna `semaforo_maquina` en la tabla `maquinas`.
+### Triggers y Función de Semáforo
+*   Existe la función `evaluar_todos_semaforos()` que recalcula el `estado` en la tabla `semaforo_maquina` para todas las máquinas. Se ejecuta vía `pg_cron` (Jobs 7, 8, 9) en los tres turnos del día.
+*   El estado se determina según el porcentaje de tareas pendientes/atrasadas para el turno y fecha actuales.
 
 ---
 
@@ -93,3 +109,115 @@ El sistema eCILT es estrictamente dependiente del tiempo para validar turnos, ve
 *   **Capa App Flutter (`TimeManager`):** En `app_operadores`, todos los módulos leen la hora a través del objeto singleton `TimeManager.now()`.
     *   Este archivo utilitario (`lib/app/utils/time_manager.dart`) obtiene la hora local del dispositivo (que por geografía de las tablets será `UTC-5`).
     *   Permite a los desarrolladores insertar **simulaciones temporales** reasignando la variable `_simulatedTime`. Esto propaga al instante viajes en el tiempo (pasado/futuro) a toda la lógica de presentación de "Vence Hoy/Mañana", turnos y estados visuales para debuggear toda la aplicación sin tocar el código fuente interno.
+
+---
+
+## 6. Módulo `rpi_app` — reComputer (ECILT-VARIOPACK)
+
+### Hardware
+- **Dispositivo:** Seeed reComputer R100x corriendo Raspbian (Raspberry Pi OS)
+- **Hostname:** `reComputer-R100x`
+- **Usuario principal:** `recomputer`
+
+### Arquitectura de la reComputer
+
+```
+Lector RFID (tty1)
+    └── rfid_to_supabase.py  ──────────────────→  Supabase (tabla: lecturas_rfid)
+                                                         ↓
+Supabase Realtime  ←───── supabase_realtime_to_mqtt.py
+                                    ↓
+                            MQTT Broker (Mosquitto :1883)
+                                    ↓
+                            Node-RED (flows.json)
+                                    ↓
+                    Semáforo RS-485 (Modbus RTU /dev/ttyAMA3)
+                    Relé (Modbus RTU /dev/ttyAMA2)
+
+ngrok_start.sh  →  Túnel HTTP (puerto 1880 Node-RED)  →  Power Automate (URL notificada)
+monitor_internet.py  →  Ping 8.8.8.8 cada 10s  →  reboot si 6 fallos consecutivos
+```
+
+### Scripts (`rpi_app/scripts/`)
+
+| Script | Descripción |
+|--------|-------------|
+| `rfid_to_supabase.py` | Lee tarjetas RFID desde `stdin` (modo `--mode input`), inserta registros en `lecturas_rfid` vía Supabase REST con reintentos. Soporta también modo serial y publicación MQTT opcional. |
+| `supabase_realtime_to_mqtt.py` | Se suscribe a cambios en `semaforo_maquina` (máquina `9991`) vía Supabase Realtime. Publica el estado (`Verde/Amarillo/Rojo`) al topic MQTT `maquina/9991/estado`. Guarda estado local en `estado_semaforo.json` como respaldo. Reconexión automática cada 10 min. |
+| `monitor_internet.py` | Watchdog de conectividad. Hace ping a `8.8.8.8` cada 10 segundos. Si hay 6 fallos consecutivos (1 minuto sin internet) ejecuta `reboot`. |
+| `ngrok_start.sh` | Levanta ngrok apuntando al puerto 1880 (Node-RED). Detecta la URL pública y la envía vía POST a un endpoint de Power Automate. Monitorea cada 5s si la URL cambia y la actualiza automáticamente. |
+
+### Servicios systemd (`rpi_app/services/`)
+
+| Servicio | Script | Detalles |
+|----------|--------|---------|
+| `rfid.service` | `rfid_to_supabase.py` | `User=recomputer`, `StandardInput=tty`, `TTYPath=/dev/tty1`, carga variables desde `.env`, `RestartSec=3` |
+| `supabase_mqtt.service` | `supabase_realtime_to_mqtt.py` | `User=recomputer`, `After=network-online.target`, `RestartSec=5` |
+| `ngrok.service` | `ngrok_start.sh` | `User=recomputer`, `Type=simple`, `Restart=on-failure`, `RestartSec=5` |
+| `monitor_internet.service` | `monitor_internet.py` | `User=root` (necesita permisos para reboot), `After=network-online.target` |
+
+### Node-RED (`rpi_app/nodered/flows.json`)
+
+Tabs configurados:
+- **Relé** — Lectura/escritura de 8 relés vía Modbus (`/dev/ttyAMA2`)
+- **Semáforo Fijo** — Control directo del semáforo (registro Modbus `194`)
+- **Semáforo Parpadeo** — Modo parpadeo del semáforo
+- **Lector RFID** — Escucha topic `rfid/access`, inserta en Supabase vía HTTP request
+- **MQTT Semáforo** — Escucha `maquina/9991/estado`, convierte estado a valor Modbus y escribe en semáforo + sonido (registro `3`)
+- **Semáforo Modbus sonido** — Control de pista de audio vía Modbus
+- **RPI to Automate** — Endpoints HTTP `/data` y `/send` para integración con Power Automate
+
+Clientes Modbus configurados:
+- `PRUEBA`: `/dev/ttyAMA2` (relé), RTU 9600 bps
+- `Semaforo-rs485`: `/dev/ttyAMA3` (semáforo), RTU 9600 bps
+
+### Variables de entorno (`.env`)
+Cargado automáticamente por `rfid.service` desde `/home/recomputer/.env`. Incluye:
+- `SUPABASE_URL` / `SUPABASE_KEY` — Credenciales Supabase
+- `MQTT_BROKER`, `MQTT_PORT`, `MQTT_TOPIC`
+- `SERIAL_DEVICE` (default: `/dev/ttyUSB0`)
+- Configuración de reintentos HTTP
+
+---
+
+## 7. Bugs Corregidos — Integración Semáforo RPi (2026-04-19)
+
+Durante la sesión del 19 de abril de 2026 se identificaron y corrigieron los siguientes problemas en la cadena Supabase → MQTT → Node-RED → Semáforo físico:
+
+### Bug 1: Consulta con `.single()` fallaba (tabla `semaforo_maquina`)
+- **Causa:** `supabase_realtime_to_mqtt.py` consultaba `.single()` sin filtrar por turno ni fecha. La tabla tiene **múltiples filas por máquina** (una por `turno` × `fecha_periodo`), por lo que `.single()` lanzaba excepción.
+- **Fix:** La consulta ahora filtra por `id_maquina`, `turno` y `fecha_periodo` del día actual. Usa `.limit(1)`.
+
+### Bug 2: Script no sabía qué turno consultar
+- **Causa:** No existía lógica para determinar el turno activo (Mañana/Tarde/Noche).
+- **Fix:** Se agregó `get_turno_actual()` que calcula el turno según hora Ecuador (`UTC-5`): Mañana=06-14h, Tarde=14-22h, Noche=22-06h.
+
+### Bug 3: Payload MQTT era un dict Python stringificado (inválido)
+- **Causa:** El script publicaba `str({'maquina': '9991', 'estado': 'Verde'})` — comillas simples, no es JSON válido.
+- **Fix:** Ahora publica `json.dumps({"maquina": "9991", "estado": "Verde"})` — JSON válido.
+
+### Bug 4: Nodo MQTT de Node-RED con `auto-detect` rompía `function 3`
+- **Causa:** El nodo `mqtt in` del tab "MQTT Semáforo" tenía `"datatype": "auto-detect"`. Al recibir JSON válido, Node-RED lo parseaba a objeto JS antes de llegar a `function 3`, que intentaba `.replace()` sobre un objeto → `TypeError`.
+- **Fix:** Cambiado a `"datatype": "utf8"` en el nodo `433a5d4825c835d3` del `flows.json`. El payload llega como string y el flujo `function 3 → json node → function 2` funciona correctamente.
+
+### Flujo correcto final
+```
+supabase_realtime_to_mqtt.py
+  → publica: {"maquina": "9991", "estado": "Verde"}
+      ↓
+Node-RED mqtt in (utf8) → string
+      ↓
+function 3: replace(' → ") → no-op (ya es JSON válido)
+      ↓
+json node: parsea a objeto JS
+      ↓
+function 2: estado Verde → Modbus 19
+      ↓
+Semáforo RS-485 registro 194 = 19 🟢
+```
+
+### Nota sobre logs del servicio
+El servicio corre Python sin `PYTHONUNBUFFERED=1`, por lo que `print()` no aparecen en `journalctl`. Para ver output completo, ejecutar manualmente:
+```bash
+python3 /home/recomputer/supabase_realtime_to_mqtt.py
+```

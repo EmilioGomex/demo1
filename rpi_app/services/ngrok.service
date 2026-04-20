@@ -1,0 +1,13 @@
+[Unit]
+Description=Ngrok Tunnel for Node-RED
+After=network.target
+
+[Service]
+Type=simple
+User=recomputer
+ExecStart=/home/recomputer/ngrok_start.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
