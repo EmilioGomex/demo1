@@ -83,9 +83,12 @@ Esta es la función principal o "motor" que se encarga de instanciar los registr
 ## 3. Automatización (pg_cron)
 
 El sistema utiliza la extensión `pg_cron` de Supabase para la automatización, ejecutando scripts periódicos críticos:
-*   **Evaluación de Semáforos:** Funciones programadas (ej. Job IDs 7, 8, 9) que ejecutan `select evaluar_todos_semaforos()` en los turnos Mañana, Tarde y Noche para garantizar que el estado de salud de las máquinas sea correcto.
-*   **Marcado de Atrasos:** Función que se ejecuta a medianoche para cambiar las tareas pendientes vencidas a estado `Atrasado`.
-*   **Generación de Registros:** `generar_registros_diarios` se dispara automáticamente en diferentes momentos del día (Job IDs 13, 14, 15) pasando como parámetro el turno correspondiente (`Mañana`, `Tarde`, `Noche`).
+*   **Generación de Registros:** `generar_registros_diarios` se dispara automáticamente en los siguientes horarios de Ecuador (Job IDs 13, 14, 15):
+    *   **Mañana:** 06:00 AM
+    *   **Tarde:** 02:00 PM (14:00)
+    *   **Noche:** 10:00 PM (22:00)
+*   **Marcado de Atrasos:** Función que se ejecuta a medianoche (00:00 AM) para cambiar las tareas pendientes vencidas a estado `Atrasado`.
+*   **Evaluación de Semáforos:** Funciones programadas (ej. Job IDs 7, 8, 9) que ejecutan `select evaluar_todos_semaforos()` en los tres turnos para garantizar que el estado de salud de las máquinas sea correcto.
 
 ---
 
@@ -109,6 +112,17 @@ El sistema eCILT es estrictamente dependiente del tiempo para validar turnos, ve
 *   **Capa App Flutter (`TimeManager`):** En `app_operadores`, todos los módulos leen la hora a través del objeto singleton `TimeManager.now()`.
     *   Este archivo utilitario (`lib/app/utils/time_manager.dart`) obtiene la hora local del dispositivo (que por geografía de las tablets será `UTC-5`).
     *   Permite a los desarrolladores insertar **simulaciones temporales** reasignando la variable `_simulatedTime`. Esto propaga al instante viajes en el tiempo (pasado/futuro) a toda la lógica de presentación de "Vence Hoy/Mañana", turnos y estados visuales para debuggear toda la aplicación sin tocar el código fuente interno.
+
+---
+
+## 5.1. Despliegue Web (Netlify)
+
+El módulo `app_operadores` se despliega como una aplicación web estática en Netlify.
+
+*   **Build:** `flutter build web --release`.
+*   **Persistencia de Configuración:** La selección de máquinas se almacena en el **LocalStorage** del navegador (vía `shared_preferences`). Esto permite que la configuración persista entre reinicios de la tablet.
+*   **Manejo de Rutas (SPA):** Se requiere un archivo `_redirects` con el contenido `/* /index.html 200` para evitar errores 404 al refrescar páginas.
+*   **PWA:** La aplicación está configurada como PWA, permitiendo ser instalada en la pantalla de inicio de tablets iOS/Android para una experiencia de pantalla completa.
 
 ---
 
