@@ -81,3 +81,15 @@ Función serverless en Deno/TypeScript alojada en `supabase/functions/parsable-p
 *   **Endpoints conocidos:** 
     1.  `createModular`: Crea un Job en Parsable con atributos predefinidos, equipo, plantilla y usuarios.
     2.  `sendExecDataWithResult`: Completa automáticamente pasos dentro del Job de Parsable enviando datos capturados desde eCILT (por ejemplo, el nombre del operador que lo ejecuta).
+
+---
+
+## 5. Arquitectura del Tiempo (Ecuador UTC-5)
+
+El sistema eCILT es estrictamente dependiente del tiempo para validar turnos, vencimientos y cálculos. Se ha consolidado una directriz global para usar exclusivamente la hora de Ecuador (`America/Guayaquil` / `UTC-5`) en todas las capas del sistema:
+
+*   **Capa Base de Datos (Supabase):** Se utiliza `public.hoy_ec()` en cálculos para forzar el huso horario sin importar la configuración del servidor, permitiendo conversiones absolutas desde Timestamptz.
+*   **Capa Panel Admin (JS/HTML):** Para no sufrir desfases por los husos horarios del administrador que entra al sitio, toda la visualización de fechas fuerza el parámetro `{ timeZone: 'America/Guayaquil' }`. Adicionalmente, las peticiones hacia los endpoints PostgREST anexan el offset temporal de Ecuador explícitamente al filtrar los Timestamptz (ej. `T23:59:59-05:00`).
+*   **Capa App Flutter (`TimeManager`):** En `app_operadores`, todos los módulos leen la hora a través del objeto singleton `TimeManager.now()`.
+    *   Este archivo utilitario (`lib/app/utils/time_manager.dart`) obtiene la hora local del dispositivo (que por geografía de las tablets será `UTC-5`).
+    *   Permite a los desarrolladores insertar **simulaciones temporales** reasignando la variable `_simulatedTime`. Esto propaga al instante viajes en el tiempo (pasado/futuro) a toda la lógica de presentación de "Vence Hoy/Mañana", turnos y estados visuales para debuggear toda la aplicación sin tocar el código fuente interno.

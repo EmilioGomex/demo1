@@ -9,9 +9,11 @@ import '../../config/parsable_secrets.dart';
 import 'pasos_tarea_screen.dart';
 import 'bienvenida_screen.dart';
 import 'dart:convert';
+import 'package:shimmer/shimmer.dart';
+import '../utils/time_manager.dart';
 
-// Retorna la fecha actual del dispositivo. Como las tablets estarán en Ecuador, esto será hora Ecuador.
-DateTime get mockNow => DateTime.now();
+// Retorna la fecha actual del dispositivo controlada por TimeManager
+DateTime get mockNow => TimeManager.now();
 
 class TareasScreen extends StatefulWidget {
   final String idOperador;
@@ -390,6 +392,8 @@ class _TareasScreenState extends State<TareasScreen> {
           idRegistro: registro['id'],
           idTarea: registro['id_tarea'],
           nombreTarea: nombreTarea,
+          tipo: tipo,
+          frecuencia: frecuencia,
           parsableJobId: parsableJobId,
           estaCompletado: estaCompletado,
         )),
@@ -555,13 +559,16 @@ class _TareasScreenState extends State<TareasScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
+                Hero(
+                  tag: 'hero_icon_${registro['id']}',
+                  child: CircleAvatar(
                     radius: 26,
                     backgroundColor: completado
                         ? Colors.grey.shade300
                         : _colorFrecuencia(frecuencia),
                     child: _iconoTipoTarea(tipo),
                   ),
+                ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -859,7 +866,7 @@ class _TareasScreenState extends State<TareasScreen> {
         centerTitle: true,
       ),
       body: cargando
-          ? const Center(child: CircularProgressIndicator(color: _accentGreen))
+          ? _buildShimmerLoading()
           : error != null
               ? Center(
                   child: Column(
@@ -951,6 +958,46 @@ class _TareasScreenState extends State<TareasScreen> {
                     ],
                   ),
                 ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerLoading() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(height: 20, width: 150, color: Colors.white),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: ListView.builder(
+              itemCount: 4,
+              itemBuilder: (_, __) => Shimmer.fromColors(
+                baseColor: Colors.grey.shade300,
+                highlightColor: Colors.grey.shade100,
+                child: Container(
+                  height: 90,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../utils/app_routes.dart';
 import '../widgets/inactivity_wrapper.dart';
 import 'tareas_screen.dart';
 import 'bienvenida_screen.dart';
+import '../utils/time_manager.dart';
 
 class SupervisorScreen extends StatefulWidget {
   final String nombreSupervisor;
@@ -98,7 +99,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
 
     try {
       final ids = ops.map((o) => o['id_operador'].toString()).toList();
-      final hoy = DateTime.now();
+      final hoy = TimeManager.now();
       final hoyInicio = DateTime(hoy.year, hoy.month, hoy.day);
       final inicioHoy = hoyInicio.toUtc().toIso8601String();
       final finHoy = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999)
@@ -199,7 +200,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
 
     try {
       final ids = ops.map((o) => o['id_operador'].toString()).toList();
-      final hoy = DateTime.now();
+      final hoy = TimeManager.now();
       final hace7 = DateTime(hoy.year, hoy.month, hoy.day)
           .subtract(const Duration(days: 6))
           .toUtc()

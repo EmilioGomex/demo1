@@ -9,9 +9,10 @@ import 'tareas_screen.dart';
 import 'supervisor_screen.dart';
 
 import 'dart:convert';
+import '../utils/time_manager.dart';
 
-// Retorna la fecha actual del dispositivo. Como las tablets estarán en Ecuador, esto será hora Ecuador.
-DateTime get mockNow => DateTime.now();
+// Retorna la fecha actual del dispositivo controlada por TimeManager
+DateTime get mockNow => TimeManager.now();
 
 class BienvenidaScreen extends StatefulWidget {
   final String idMaquinaLocal;

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../supabase_manager.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import '../utils/time_manager.dart';
 
 class PasosTareaScreen extends StatefulWidget {
   final String idRegistro;
@@ -13,12 +14,16 @@ class PasosTareaScreen extends StatefulWidget {
   final String nombreTarea;
   final String? parsableJobId;
   final bool estaCompletado;
+  final String tipo;
+  final String frecuencia;
 
   const PasosTareaScreen({
     super.key,
     required this.idRegistro,
     required this.idTarea,
     required this.nombreTarea,
+    required this.tipo,
+    required this.frecuencia,
     this.parsableJobId,
     this.estaCompletado = false,
   });
@@ -154,7 +159,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     if (_fotoEvidencia == null || _fotoBytes == null) return null;
     try {
       final nombre =
-          '${widget.idRegistro}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          '${widget.idRegistro}_${TimeManager.now().millisecondsSinceEpoch}.jpg';
       await SupabaseManager.client.storage
           .from('evidencias')
           .uploadBinary(
@@ -282,7 +287,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     setState(() { cargando = true; _procesando = true; });
 
     try {
-      final hoy = DateTime.now();
+      final hoy = TimeManager.now();
       final nuevaFecha = DateTime(hoy.year, hoy.month, hoy.day)
           .add(Duration(days: diasExtension));
 
@@ -336,7 +341,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
           .from('registro_tareas')
           .update({
             'estado': 'Completado',
-            'fecha_completado': DateTime.now().toUtc().toIso8601String(),
+            'fecha_completado': TimeManager.now().toUtc().toIso8601String(),
             if (fotoUrl != null) 'foto_evidencia': fotoUrl,
           })
           .eq('id', widget.idRegistro);
@@ -426,13 +431,52 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     );
   }
 
+  Color _colorFrecuencia(String f) {
+    switch (f.toLowerCase()) {
+      case 'diario': return Colors.orange.shade100;
+      case 'semanal': return Colors.blue.shade100;
+      case 'quincenal': return Colors.purple.shade100;
+      case 'mensual': return Colors.green.shade100;
+      case 'semestral': return Colors.brown.shade100;
+      case 'anual': return Colors.red.shade100;
+      default: return Colors.grey.shade200;
+    }
+  }
+
+  Icon _iconoTipoTarea(String tipo, {double size = 20}) {
+    switch (tipo.toLowerCase()) {
+      case 'limpieza': return Icon(Icons.cleaning_services, color: Colors.blue.shade700, size: size);
+      case 'inspección': return Icon(Icons.search, color: Colors.purple.shade700, size: size);
+      case 'lubricación': return Icon(Icons.water_drop, color: Colors.orange.shade700, size: size);
+      case 'ajuste': return Icon(Icons.build, color: Colors.grey.shade800, size: size);
+      default: return Icon(Icons.assignment, color: Colors.black54, size: size);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.nombreTarea,
-          style: const TextStyle(color: Colors.white),
+        title: Row(
+          children: [
+            Hero(
+              tag: 'hero_icon_${widget.idRegistro}',
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: widget.estaCompletado
+                    ? Colors.grey.shade300
+                    : _colorFrecuencia(widget.frecuencia),
+                child: _iconoTipoTarea(widget.tipo, size: 18),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                widget.nombreTarea,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+          ],
         ),
         backgroundColor: _verdeHeineken,
         iconTheme: const IconThemeData(color: Colors.white),
