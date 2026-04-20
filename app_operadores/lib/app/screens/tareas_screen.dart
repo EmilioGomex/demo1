@@ -372,6 +372,7 @@ class _TareasScreenState extends State<TareasScreen> {
     final linea = operador?['linea'] ?? 'General';
     final tipo = tarea?['tipo'] ?? 'Tarea';
     final nombreTarea = tarea?['nombre_tarea'] ?? 'Tarea sin nombre';
+    final frecuencia = tarea?['frecuencia'] ?? 'Otro';
 
     String? parsableJobId = registro['parsable_job_id'];
 
