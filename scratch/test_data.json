@@ -1,0 +1,8 @@
+{
+  "id_maquina": "9992",
+  "id_tarea": "TEST-123",
+  "nombre_tarea": "Test Task",
+  "frecuencia": "Diario",
+  "tipo": "General",
+  "es_compartida": false
+}

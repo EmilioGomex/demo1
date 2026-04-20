@@ -992,11 +992,11 @@
                 const rawNombre = row[0] ? row[0].toString().trim() : null;
                 if (!rawNombre) continue; 
 
-                let rawTipo = row[2] ? row[2].toString().trim() : 'General';
+                let rawTipo = row[2] ? row[2].toString().trim() : 'Inspección';
                 // Validar Tipo Estricto
-                let validTipo = 'General';
+                let validTipo = 'Inspección';
                 const formattedTipo = rawTipo.charAt(0).toUpperCase() + rawTipo.slice(1).toLowerCase();
-                const TIPOS_VALIDOS = ['Limpieza', 'Lubricación', 'Inspección', 'Ajuste', 'General'];
+                const TIPOS_VALIDOS = ['Limpieza', 'Lubricación', 'Inspección', 'Ajuste'];
                 if (TIPOS_VALIDOS.includes(rawTipo)) validTipo = rawTipo;
                 else if (TIPOS_VALIDOS.includes(formattedTipo)) validTipo = formattedTipo;
                 else if (formattedTipo === 'Lubricacion') validTipo = 'Lubricación';
@@ -1056,7 +1056,7 @@
                     const { error: errTareas } = await supabase.from('tareas').insert(chunk);
                     if (errTareas) {
                         console.error("Error batch tareas:", errTareas);
-                        errors.push("Lote Tareas " + (Math.floor(i/BATCH_TAREAS) + 1));
+                        errors.push(`Lote Tareas ${Math.floor(i/BATCH_TAREAS) + 1}: ${errTareas.message}`);
                     }
                 }
             }
@@ -1069,13 +1069,28 @@
                     const { error: errPasos } = await supabase.from('pasos_tarea').insert(chunk);
                     if (errPasos) {
                         console.error("Error batch pasos:", errPasos);
-                        errors.push("Lote Pasos " + (Math.floor(i/BATCH_PASOS) + 1));
+                        errors.push(`Lote Pasos ${Math.floor(i/BATCH_PASOS) + 1}: ${errPasos.message}`);
                     }
                 }
             }
 
             if (errors.length) {
-                showToast(`${createdCount} tareas procesadas. Errores en: ${errors.join(', ')}`, 'info', 7000);
+                showToast(`Se encontraron errores al procesar el archivo.`, 'error', 10000);
+                const errorMsg = errors.join('<br>');
+                // Inyectar detalle de errores en el contenedor de GTS para visibilidad
+                if (el('gts-container')) {
+                    el('gts-container').innerHTML = `
+                        <div class="col-span-full p-4 bg-red-900/20 border border-red-800 rounded-lg text-red-200 text-sm">
+                            <div class="font-bold mb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                Detalle de errores en la carga:
+                            </div>
+                            <ul class="list-disc list-inside space-y-1">
+                                ${errors.map(e => `<li>${e}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
             } else {
                 showToast(`${createdCount} tareas creadas correctamente desde Excel.`, 'success');
             }

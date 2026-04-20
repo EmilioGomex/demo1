@@ -528,16 +528,43 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                       ],
                     ),
                     child: pasos.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.info_outline, size: 80, color: Colors.grey),
-                                SizedBox(height: 16),
-                                Text(
-                                  'No hay pasos para mostrar.',
-                                  style: TextStyle(fontSize: 20, color: Colors.grey),
-                                  textAlign: TextAlign.center,
+                                Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: _verdeHeineken.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.task_alt,
+                                    size: 80,
+                                    color: _verdeHeineken,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                const Text(
+                                  'Tarea sin pasos detallados',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 40),
+                                  child: Text(
+                                    'Esta tarea se puede completar directamente. No requiere seguir una secuencia de pasos.',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.black54,
+                                      height: 1.4,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
                               ],
                             ),
@@ -578,7 +605,9 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                   child: Column(
                     children: [
                       Text(
-                        '¿Completaste todos los pasos?',
+                        pasos.isEmpty
+                            ? '¿Completaste esta tarea?'
+                            : '¿Completaste todos los pasos?',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -651,16 +680,8 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 24, vertical: 12),
                             ),
-                            onPressed: (_procesando ||
-                                    (pasos.length > 1 &&
-                                        paginaActual < pasos.length - 1))
-                                ? null
-                                : _confirmarTarea,
-                            child: Text(
-                              pasos.length > 1 && paginaActual < pasos.length - 1
-                                  ? 'Ver todos los pasos'
-                                  : 'Sí, Confirmar',
-                            ),
+                            onPressed: _procesando ? null : _confirmarTarea,
+                            child: const Text('Completar Tarea'),
                           ),
                         ],
                       ),

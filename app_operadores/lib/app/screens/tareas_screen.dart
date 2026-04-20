@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
@@ -337,6 +338,7 @@ class _TareasScreenState extends State<TareasScreen> {
       ),
     );
     if (confirmar == true && mounted) {
+      HapticFeedback.mediumImpact();
       _procesarYNavigar(registro, tarea, estaCompletado: true);
     }
   }
@@ -550,9 +552,14 @@ class _TareasScreenState extends State<TareasScreen> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-                onTap: completado
-                    ? () => _confirmarReapertura(registro, tarea)
-                    : () => _procesarYNavigar(registro, tarea),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    if (completado) {
+                      _confirmarReapertura(registro, tarea);
+                    } else {
+                      _procesarYNavigar(registro, tarea);
+                    }
+                  },
                 child: Opacity(
                   opacity: opacidadBase,
                   child: Padding(
@@ -788,6 +795,74 @@ class _TareasScreenState extends State<TareasScreen> {
     );
   }
 
+  Widget _buildProgressBar() {
+    final r = _resumenTareas;
+    final completadas = r['completadas'] ?? 0;
+    final total = completadas + (r['pendientes'] ?? 0) + (r['atrasadas'] ?? 0) + (r['aplazadas'] ?? 0);
+
+    if (total == 0) return const SizedBox.shrink();
+
+    final porcentaje = completadas / total;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Progreso de la jornada',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              Text(
+                '${(porcentaje * 100).toInt()}%',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: _accentGreen,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: porcentaje,
+              minHeight: 12,
+              backgroundColor: Colors.grey.shade100,
+              valueColor: const AlwaysStoppedAnimation<Color>(_accentGreen),
+            ),
+          ),
+          if (porcentaje == 1.0) ...[
+            const SizedBox(height: 8),
+            const Row(
+              children: [
+                Icon(Icons.celebration, size: 14, color: Colors.orange),
+                SizedBox(width: 6),
+                Text(
+                  '¡Excelente! Has completado todas tus tareas.',
+                  style: TextStyle(fontSize: 12, color: _accentGreen, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _sinTareasWidget() {
     return Center(
       child: Column(
@@ -896,7 +971,9 @@ class _TareasScreenState extends State<TareasScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildInfoCard(),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
+                      _buildProgressBar(),
+                      const SizedBox(height: 12),
                       Expanded(
                         child: (tareasHoy.isEmpty && tareasFuturas.isEmpty && tareasCompletadas.isEmpty)
                             ? RefreshIndicator(
@@ -969,37 +1046,112 @@ class _TareasScreenState extends State<TareasScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
+          // Info Card Shimmer
+          _shimmerWrapper(
             child: Container(
-              height: 120,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 20, width: 180, color: Colors.white),
+                        const SizedBox(height: 8),
+                        Container(height: 14, width: 120, color: Colors.white),
+                        const SizedBox(height: 12),
+                        Container(
+                          height: 24,
+                          width: 100,
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: Container(height: 20, width: 150, color: Colors.white),
+          const SizedBox(height: 16),
+          // Progress Bar Shimmer
+          _shimmerWrapper(
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 24),
+          // Section Title Shimmer
+          _shimmerWrapper(
+            child: Container(height: 20, width: 120, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          // Task Cards Shimmer
           Expanded(
             child: ListView.builder(
               itemCount: 4,
-              itemBuilder: (_, __) => Shimmer.fromColors(
-                baseColor: Colors.grey.shade300,
-                highlightColor: Colors.grey.shade100,
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (_, __) => _shimmerWrapper(
                 child: Container(
-                  height: 90,
                   margin: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(height: 18, width: double.infinity, color: Colors.white),
+                            const SizedBox(height: 8),
+                            Container(height: 13, width: 120, color: Colors.white),
+                            const SizedBox(height: 6),
+                            Container(height: 13, width: 180, color: Colors.white),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(width: 24, height: 24, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _shimmerWrapper({required Widget child}) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade200,
+      highlightColor: Colors.white,
+      period: const Duration(milliseconds: 1500),
+      child: child,
     );
   }
 }

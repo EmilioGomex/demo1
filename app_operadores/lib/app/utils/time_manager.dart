@@ -7,7 +7,7 @@ class TimeManager {
   // y pon la fecha deseada. Ejemplo: DateTime(2026, 4, 20, 7, 45)
   // ----------------------------------------------------------------------
   
-  static final DateTime? _simulatedTime = DateTime(2026, 4, 20, 7, 45); // DateTime(2026, 4, 20, 7, 45);
+  static final DateTime? _simulatedTime = null; // DateTime(2026, 4, 20, 7, 45);
 
   /// Retorna la hora actual o la hora simulada si está configurada.
   static DateTime now() {

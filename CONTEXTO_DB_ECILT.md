@@ -221,3 +221,57 @@ El servicio corre Python sin `PYTHONUNBUFFERED=1`, por lo que `print()` no apare
 ```bash
 python3 /home/recomputer/supabase_realtime_to_mqtt.py
 ```
+
+---
+
+## 8. Limpieza de Base de Datos — Sesión 2026-04-19
+
+### Schema confirmado de `tareas` y `pasos_tarea`
+
+- `tareas` tiene `id_maquina` (Text) como FK directa a `maquinas.id_maquina`.
+- `pasos_tarea` tiene FK a `tareas.id_tarea` con `ON DELETE CASCADE` → borrar una tarea elimina sus pasos automáticamente.
+
+### SQL de limpieza ejecutado
+
+Se eliminaron tareas y pasos de **todas las máquinas excepto `9991` y `9183`**:
+
+```sql
+BEGIN;
+-- 1. Eliminar instancias de ejecución
+DELETE FROM registro_tareas WHERE id_maquina NOT IN ('9991', '9183');
+-- 2. Eliminar tareas (CASCADE elimina pasos_tarea automáticamente)
+DELETE FROM tareas WHERE id_maquina NOT IN ('9991', '9183');
+COMMIT;
+```
+
+> ⚠️ `pasos_tarea` NO necesita DELETE manual gracias al `ON DELETE CASCADE`.
+
+---
+
+## 9. Bugs Corregidos — admin_web GTS (2026-04-19)
+
+Módulo: `Gestión de Tareas y Pasos` en `admin_web/index.html`.
+
+### Bug 1: `refreshCurrentView` nunca refrescaba el GTS
+- **Causa:** `currentView.includes('GTS')` pero el valor real es `'Gestión de Tareas y Pasos'`.
+- **Fix:** `currentView === 'Gestión de Tareas y Pasos'`.
+
+### Bug 2: `moveStep` violaba `UNIQUE(id_tarea, numeropaso)`
+- **Causa:** `Promise.all` actualizaba todos los `numeropaso` en paralelo → colisión momentánea en DB.
+- **Fix:** Doble batch: primero asigna offset `+1000`, luego asigna los números finales.
+
+### Bug 3 + OPT: `fetchData` con query duplicada y `select('*')` innecesario
+- Se eliminó la llamada a `buildHistoricoQuery` que era descartada inmediatamente.
+- `select('*')` reemplazado por campos específicos: `id, estado, fecha_limite, id_maquina`.
+
+### Optimización: Lazy-load filtros del Histórico
+- Los 2 queries a `operadores` y `maquinas` para los filtros ahora se ejecutan solo cuando el usuario navega a "Histórico de CILTs" por primera vez (flag `filterOptionsLoaded`).
+
+---
+
+## 10. Bug Corregido — Flutter `tareas_screen.dart` (2026-04-19)
+
+### `frecuencia` no definida en `_procesarYNavigar`
+- **Síntoma:** Error de compilación en línea 396: `The getter 'frecuencia' isn't defined for the type '_TareasScreenState'`.
+- **Causa:** `frecuencia` era local de `_buildTareaCard` pero se usaba en `_procesarYNavigar` sin estar definida en ese scope.
+- **Fix:** Añadido `final frecuencia = tarea?['frecuencia'] ?? 'Otro';` dentro de `_procesarYNavigar`.

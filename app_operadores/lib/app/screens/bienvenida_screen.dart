@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
@@ -377,6 +378,9 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
     final trimmedId = idOperador.trim();
     if (trimmedId.isEmpty) return;
+
+    // Feedback físico al detectar tarjeta
+    HapticFeedback.heavyImpact();
 
     setState(() {
       _isValidando = true;
