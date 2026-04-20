@@ -529,6 +529,7 @@
 
         let supabase, currentView, currentTable, editingId, deleteId;
         let currentPage = 1, totalCount = 0;
+        let filterOptionsLoaded = false; // OPT: lazy-load filtros Histórico
         
         // Estado del Navegador GTS
         let gtsState = { level: 'lines', line: null, machine: null, task: null, machineName: '', taskName: '' };
@@ -655,8 +656,7 @@
             });
 
             // Carga inicial
-            changeView(); 
-            loadFilterOptions();
+            changeView();
         })();
 
         // --- CONTROL DE VISTAS ---
@@ -675,7 +675,8 @@
                 toggleClass('filters-container', 'hidden', false);
                 toggleClass('card-view', 'hidden', false);
                 toggleClass('pagination-controls', 'hidden', false);
-                applyFilters(); 
+                loadFilterOptionsLazy();
+                applyFilters();
             } 
             else if (currentView === 'Gestión de Operadores') {
                 currentTable = 'operadores';
@@ -1089,6 +1090,12 @@
             if (!isShown) dropdown.classList.add('show');
         };
 
+        // OPT: Carga filtros solo cuando el usuario navega al Histórico
+        async function loadFilterOptionsLazy() {
+            if (filterOptionsLoaded) return;
+            await loadFilterOptions();
+            filterOptionsLoaded = true;
+        }
         async function loadFilterOptions() {
             try {
                 const { data: ops } = await supabase.from('operadores').select('id_operador, nombreoperador');
@@ -1198,13 +1205,13 @@
 
             let query;
             if (currentTable === 'registro_tareas') {
-                query = buildHistoricoQuery(filters).select('*', { count: 'exact', head: false });
-                // Re-construimos con count:exact (buildHistoricoQuery no lo incluye)
+                // OPT: solo campos necesarios para cards (evita traer parsable_job_id, motivo_bloqueo, etc.)
                 let tJoin = 'tareas(nombre_tarea, frecuencia, tipo)';
                 let oJoin = 'operadores(nombreoperador, linea)';
                 if (filters.tipo) tJoin = 'tareas!inner(nombre_tarea, frecuencia, tipo)';
                 if (filters.area) oJoin = 'operadores!inner(nombreoperador, linea)';
-                query = supabase.from('registro_tareas').select(`*, ${tJoin}, ${oJoin}`, { count: 'exact' });
+                query = supabase.from('registro_tareas')
+                    .select(`id, estado, fecha_limite, id_maquina, ${tJoin}, ${oJoin}`, { count: 'exact' });
                 if (filters.start) query = query.gte('fecha_limite', filters.start + 'T00:00:00-05:00');
                 if (filters.end)   query = query.lte('fecha_limite', filters.end + 'T23:59:59-05:00');
                 if (filters.ops  && filters.ops.length)  query = query.in('id_operador', filters.ops);
@@ -1302,7 +1309,8 @@
             toggleClass('modal-editor', 'hidden', false);
         };
         function refreshCurrentView() {
-            if (currentView.includes('GTS')) {
+            // FIX: comparación exacta (currentView = 'Gestión de Tareas y Pasos', no contiene 'GTS')
+            if (currentView === 'Gestión de Tareas y Pasos') {
                 const gtsParam = gtsState.level === 'tasks' ? gtsState.machine
                                : gtsState.level === 'steps' ? gtsState.task
                                : gtsState.line;
@@ -2486,10 +2494,16 @@
                 // Mover elemento en el array
                 const element = steps.splice(idx, 1)[0];
                 steps.splice(idx + direction, 0, element);
-                
-                // Actualizar numeropaso secuencialmente a todos para evitar problemas
-                const updates = steps.map((s, i) => supabase.from('pasos_tarea').update({ numeropaso: i + 1 }).eq('id', s.id));
-                await Promise.all(updates);
+
+                // FIX: offset temporal para evitar violación de UNIQUE(id_tarea, numeropaso)
+                // Paso 1: números altos sin riesgo de colisión
+                await Promise.all(steps.map((s, i) =>
+                    supabase.from('pasos_tarea').update({ numeropaso: i + 1 + 1000 }).eq('id', s.id)
+                ));
+                // Paso 2: números finales definitivos
+                await Promise.all(steps.map((s, i) =>
+                    supabase.from('pasos_tarea').update({ numeropaso: i + 1 }).eq('id', s.id)
+                ));
 
                 renderGTS('steps', gtsState.task, true, gtsState.taskName);
             } catch (err) {
