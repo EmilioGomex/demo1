@@ -525,7 +525,7 @@
         const FRECUENCIAS_VALIDAS = ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Semestral', 'Tres años'];
         
         const PAGE_SIZE = 24;      // Paginación Principal
-        const GTS_PAGE_SIZE = 20;  // Paginación para Tareas/Pasos
+        const GTS_PAGE_SIZE = 50;  // Paginación para Tareas/Pasos
 
         let supabase, currentView, currentTable, editingId, deleteId;
         let currentPage = 1, totalCount = 0;
@@ -595,11 +595,11 @@
 
         // --- RELOJ CORPORATIVO ---
         function updateClock() {
-            const now = new Date();
+            const now = _getHoyEc();
             const clockEl = document.getElementById('hk-clock');
             const dateEl  = document.getElementById('hk-date');
-            if (clockEl) clockEl.textContent = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            if (dateEl)  dateEl.textContent  = now.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+            if (clockEl) clockEl.textContent = now.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Guayaquil' });
+            if (dateEl)  dateEl.textContent  = now.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Guayaquil' });
         }
         updateClock();
         setInterval(updateClock, 1000);
@@ -860,6 +860,8 @@
                             <p class="text-sm text-gray-300 leading-relaxed">${s.descripcion}</p>
                         </div>
                         <div class="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity rounded p-0.5" style="background:rgba(13,17,23,0.85)">
+                            <button class="btn-action btn-action-edit" onclick="event.stopPropagation(); moveStep('${s.id}', -1)" title="Subir" style="color:#9ca3af" onmouseover="this.style.color='#fff'"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg></button>
+                            <button class="btn-action btn-action-edit" onclick="event.stopPropagation(); moveStep('${s.id}', 1)" title="Bajar" style="color:#9ca3af" onmouseover="this.style.color='#fff'"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
                             <button class="btn-action btn-action-edit" onclick="event.stopPropagation(); editItem('${s.id}')" title="Editar">${ICON.edit}</button>
                             <button class="btn-action btn-action-del" onclick="event.stopPropagation(); askDelete('${s.id}')" title="Eliminar">${ICON.trash}</button>
                         </div>
@@ -980,14 +982,26 @@
             const masterData = XLSX.utils.sheet_to_json(masterSheet, { header: 1, range: 2 });
             let createdCount = 0; let errors = [];
 
+            const tareasToInsert = [];
+            const pasosToInsertAll = [];
+
             for (let i = 0; i < masterData.length; i++) {
                 const row = masterData[i];
                 // MAPEO EXACTO: A=0(Nombre), C=2(Tipo), D=3(Frecuencia)
-                const rawNombre = row[0];
-                let rawTipo = row[2];
-                let rawFrec = row[3];
-
+                const rawNombre = row[0] ? row[0].toString().trim() : null;
                 if (!rawNombre) continue; 
+
+                let rawTipo = row[2] ? row[2].toString().trim() : 'General';
+                // Validar Tipo Estricto
+                let validTipo = 'General';
+                const formattedTipo = rawTipo.charAt(0).toUpperCase() + rawTipo.slice(1).toLowerCase();
+                const TIPOS_VALIDOS = ['Limpieza', 'Lubricación', 'Inspección', 'Ajuste', 'General'];
+                if (TIPOS_VALIDOS.includes(rawTipo)) validTipo = rawTipo;
+                else if (TIPOS_VALIDOS.includes(formattedTipo)) validTipo = formattedTipo;
+                else if (formattedTipo === 'Lubricacion') validTipo = 'Lubricación';
+                else if (formattedTipo === 'Inspeccion') validTipo = 'Inspección';
+
+                let rawFrec = row[3];
 
                 // Validar Frecuencia Estricta
                 let validFrec = 'Diario'; 
@@ -996,22 +1010,16 @@
                     const formatted = cleanFrec.charAt(0).toUpperCase() + cleanFrec.slice(1).toLowerCase();
                     if (FRECUENCIAS_VALIDAS.includes(cleanFrec)) validFrec = cleanFrec;
                     else if (FRECUENCIAS_VALIDAS.includes(formatted)) validFrec = formatted;
-                    else if (cleanFrec === '3 años') validFrec = 'Tres años';
+                    else if (cleanFrec.toLowerCase() === '3 años' || cleanFrec.toLowerCase() === 'tres anos') validFrec = 'Tres años';
                 }
 
-                // Generar ID_TAREA anico (Texto)
-                const generatedIdTarea = `${gtsState.machine}-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+                // Generar ID_TAREA unico (Texto)
+                const generatedIdTarea = `${gtsState.machine}-${Date.now()}-${Math.floor(Math.random()*1000)}-${i}`;
 
-                // A. Insertar Tarea
-                const { error: errTarea } = await supabase.from('tareas').insert([{
+                tareasToInsert.push({
                     id_maquina: gtsState.machine, id_tarea: generatedIdTarea,
-                    nombre_tarea: rawNombre, frecuencia: validFrec, tipo: rawTipo || 'General', es_compartida: false
-                }]);
-
-                if (errTarea) {
-                    console.error(`Error tarea "${rawNombre}":`, errTarea);
-                    errors.push(rawNombre); continue;
-                }
+                    nombre_tarea: rawNombre, frecuencia: validFrec, tipo: validTipo, es_compartida: false
+                });
 
                 // B. Buscar Pasos en Hoja de Detalle
                 const possibleSheetName = sanitizeSheetName(rawNombre);
@@ -1019,28 +1027,54 @@
                 
                 if (foundSheetName) {
                     const detailSheet = workbook.Sheets[foundSheetName];
-                    const detailData = XLSX.utils.sheet_to_json(detailSheet, { header: 1, range: 3 });
-                    const pasosToInsert = [];
+                    const detailData = XLSX.utils.sheet_to_json(detailSheet, { header: 1 });
 
                     detailData.forEach(stepRow => {
                         const numPaso = stepRow[0];
                         const descPaso = stepRow[1];
                         const rawImage = stepRow[2];
                         const imageUrl = rawImage ? rawImage.toString().trim() : null;
-                        if (numPaso && descPaso) {
-                            pasosToInsert.push({
+                        
+                        // Asegurar que numPaso sea válido y omitir encabezados o filas vacías
+                        if (numPaso !== undefined && numPaso !== null && !isNaN(parseInt(numPaso)) && descPaso) {
+                            pasosToInsertAll.push({
                                 id_tarea: generatedIdTarea, numeropaso: parseInt(numPaso)||0,
                                 descripcion: descPaso, imagenurl: imageUrl || null
                             });
                         }
                     });
-
-                    if (pasosToInsert.length > 0) await supabase.from('pasos_tarea').insert(pasosToInsert);
                 }
                 createdCount++;
             }
+
+            // Inserciones en bloque (Bulk Insert) para Tareas
+            if (tareasToInsert.length > 0) {
+                const BATCH_TAREAS = 50;
+                for (let i = 0; i < tareasToInsert.length; i += BATCH_TAREAS) {
+                    const chunk = tareasToInsert.slice(i, i + BATCH_TAREAS);
+                    const { error: errTareas } = await supabase.from('tareas').insert(chunk);
+                    if (errTareas) {
+                        console.error("Error batch tareas:", errTareas);
+                        errors.push("Lote Tareas " + (Math.floor(i/BATCH_TAREAS) + 1));
+                    }
+                }
+            }
+
+            // Inserciones en bloque para Pasos
+            if (pasosToInsertAll.length > 0) {
+                const BATCH_PASOS = 500;
+                for (let i = 0; i < pasosToInsertAll.length; i += BATCH_PASOS) {
+                    const chunk = pasosToInsertAll.slice(i, i + BATCH_PASOS);
+                    const { error: errPasos } = await supabase.from('pasos_tarea').insert(chunk);
+                    if (errPasos) {
+                        console.error("Error batch pasos:", errPasos);
+                        errors.push("Lote Pasos " + (Math.floor(i/BATCH_PASOS) + 1));
+                    }
+                }
+            }
+
             if (errors.length) {
-                showToast(`${createdCount} tareas creadas. Errores en: ${errors.join(', ')}`, 'info', 7000);
+                showToast(`${createdCount} tareas procesadas. Errores en: ${errors.join(', ')}`, 'info', 7000);
             } else {
                 showToast(`${createdCount} tareas creadas correctamente desde Excel.`, 'success');
             }
@@ -1088,8 +1122,8 @@
             if (filters.tipo) tJoin = 'tareas!inner(nombre_tarea, frecuencia, tipo)';
             if (filters.area) oJoin = 'operadores!inner(nombreoperador, linea)';
             let q = supabase.from('registro_tareas').select(`*, ${tJoin}, ${oJoin}`);
-            if (filters.start) q = q.gte('fecha_limite', filters.start);
-            if (filters.end)   q = q.lte('fecha_limite', filters.end + 'T23:59:59');
+            if (filters.start) q = q.gte('fecha_limite', filters.start + 'T00:00:00-05:00');
+            if (filters.end)   q = q.lte('fecha_limite', filters.end + 'T23:59:59-05:00');
             if (filters.ops  && filters.ops.length)  q = q.in('id_operador', filters.ops);
             if (filters.maqs && filters.maqs.length) q = q.in('id_maquina',  filters.maqs);
             if (filters.area)  q = q.eq('operadores.linea', filters.area);
@@ -1120,15 +1154,15 @@
                 'Operador':          item.operadores?.nombreoperador || '',
                 'Línea':             item.operadores?.linea      || '',
                 'Estado':            item.estado                 || '',
-                'Fecha Límite':      item.fecha_limite     ? new Date(item.fecha_limite).toLocaleDateString('es-MX')     : '',
-                'Fecha Completado':  item.fecha_completado ? new Date(item.fecha_completado).toLocaleDateString('es-MX') : '',
+                'Fecha Límite':      item.fecha_limite     ? new Date(item.fecha_limite).toLocaleDateString('es-MX', { timeZone: 'America/Guayaquil' })     : '',
+                'Fecha Completado':  item.fecha_completado ? new Date(item.fecha_completado).toLocaleDateString('es-MX', { timeZone: 'America/Guayaquil' }) : '',
                 'Autogenerado':      item.fue_autogenerado ? 'Sí' : 'No',
             }));
             const ws = XLSX.utils.json_to_sheet(rows);
             ws['!cols'] = [30,15,15,30,15,12,15,15,12].map(w => ({ wch: w }));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Histórico CILTs');
-            XLSX.writeFile(wb, `CILT-Historico-${new Date().toISOString().slice(0,10)}.xlsx`);
+            XLSX.writeFile(wb, `CILT-Historico-${new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' })}.xlsx`);
             showToast(`${data.length} registros exportados a Excel.`, 'success');
         };
 
@@ -1171,8 +1205,8 @@
                 if (filters.tipo) tJoin = 'tareas!inner(nombre_tarea, frecuencia, tipo)';
                 if (filters.area) oJoin = 'operadores!inner(nombreoperador, linea)';
                 query = supabase.from('registro_tareas').select(`*, ${tJoin}, ${oJoin}`, { count: 'exact' });
-                if (filters.start) query = query.gte('fecha_limite', filters.start);
-                if (filters.end)   query = query.lte('fecha_limite', filters.end + 'T23:59:59');
+                if (filters.start) query = query.gte('fecha_limite', filters.start + 'T00:00:00-05:00');
+                if (filters.end)   query = query.lte('fecha_limite', filters.end + 'T23:59:59-05:00');
                 if (filters.ops  && filters.ops.length)  query = query.in('id_operador', filters.ops);
                 if (filters.maqs && filters.maqs.length) query = query.in('id_maquina',  filters.maqs);
                 if (filters.area)  query = query.eq('operadores.linea', filters.area);
@@ -1234,7 +1268,7 @@
                     <div class="data-card p-4 flex flex-col gap-3">
                         <div class="flex justify-between items-start">
                             <span class="badge ${cls}">${st}</span>
-                            <span class="text-xs font-mono text-gray-500">${new Date(item.fecha_limite).toLocaleDateString('es-MX')}</span>
+                            <span class="text-xs font-mono text-gray-500">${new Date(item.fecha_limite).toLocaleDateString('es-MX', { timeZone: 'America/Guayaquil' })}</span>
                         </div>
                         <div class="font-bold text-white text-base leading-snug">${t.nombre_tarea || 'Tarea Desconocida'}</div>
                         <div class="flex gap-2 flex-wrap">
@@ -1344,7 +1378,7 @@
                     { name: 'id_tarea', type: 'hidden', value: gtsState.task },
                     { name: 'numeropaso', label: 'Número Paso', type: 'number' },
                     { name: 'descripcion', label: 'Instrucción', type: 'textarea' },
-                    { name: 'imagenurl', label: 'URL Imagen', type: 'text' }
+                    { name: 'imagenurl', label: 'Imagen', type: 'image_upload' }
                 ];
             }
             return fields.map(f => {
@@ -1352,6 +1386,16 @@
                 if (f.type === 'hidden') return `<input type="hidden" name="${f.name}" value="${val}">`;
                 if (f.type === 'select') return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><select name="${f.name}" class="form-select">${f.options.map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
                 if (f.type === 'textarea') return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><textarea name="${f.name}" class="form-input h-24">${val}</textarea></div>`;
+                if (f.type === 'image_upload') {
+                    return `<div>
+                                <label class="block text-sm text-gray-400 mb-1">${f.label}</label>
+                                <div class="flex gap-2">
+                                    <input type="text" name="${f.name}" id="input-${f.name}" value="${val}" class="form-input flex-grow" placeholder="URL o sube archivo">
+                                    <button type="button" onclick="document.getElementById('file-${f.name}').click()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors border border-gray-600 text-white flex-shrink-0">Subir</button>
+                                </div>
+                                <input type="file" id="file-${f.name}" class="hidden" accept="image/*" onchange="uploadImageToSupabase(this, 'input-${f.name}')">
+                            </div>`;
+                }
                 return `<div><label class="block text-sm text-gray-400 mb-1">${f.label}</label><input type="${f.type}" name="${f.name}" value="${val}" class="form-input"></div>`;
             }).join('');
         }
@@ -1538,10 +1582,15 @@
             cargarTurnosRecientes();
         }
 
-        // Devuelve fecha YYYY-MM-DD del lunes más próximo (en hora local, sin desfase UTC)
+        // Devuelve fecha YYYY-MM-DD del lunes más próximo (en hora local de Ecuador)
         // Si hoy ES lunes, devuelve hoy. Para el Excel se usa getLunesSiguiente().
+        function _getHoyEc() {
+            const str = new Date().toLocaleString("en-US", { timeZone: "America/Guayaquil" });
+            return new Date(str);
+        }
+
         function getLunesProximo() {
-            const hoy = new Date();
+            const hoy = _getHoyEc();
             const dia = hoy.getDay(); // 0=dom, 1=lun...6=sab
             const diff = dia === 0 ? 1 : dia === 1 ? 0 : (8 - dia);
             const lunes = new Date(hoy);
@@ -1552,7 +1601,7 @@
         // Devuelve el lunes de la SIGUIENTE semana (para carga de horario Excel)
         // Válido subir desde viernes, sábado o domingo (días previos al lunes siguiente)
         function getLunesSiguiente() {
-            const hoy = new Date();
+            const hoy = _getHoyEc();
             const dia = hoy.getDay(); // 0=dom, 1=lun...6=sab
             // Viernes(5), Sábado(6), Domingo(0) → próximo lunes
             // Lunes-Jueves → lunes de la semana siguiente (7 días + ajuste)
@@ -2398,6 +2447,58 @@
             showToast('Semana eliminada correctamente.', 'info');
             cargarVistaSemana();
         }
+
+        window.uploadImageToSupabase = async (fileInput, targetInputId) => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            toggleClass('app-loading', 'hidden', false);
+            showToast('Subiendo imagen...', 'info', 2000);
+            
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.floor(Math.random()*1000)}.${fileExt}`;
+            const filePath = `pasos/${fileName}`;
+            
+            try {
+                const { error } = await supabase.storage.from('pasosimagen').upload(filePath, file);
+                if (error) throw error;
+                
+                const { data: { publicUrl } } = supabase.storage.from('pasosimagen').getPublicUrl(filePath);
+                document.getElementById(targetInputId).value = publicUrl;
+                showToast('Imagen subida correctamente', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error subiendo imagen: ' + err.message, 'error');
+            } finally {
+                toggleClass('app-loading', 'hidden', true);
+            }
+        };
+
+        window.moveStep = async (id, direction) => {
+            toggleClass('app-loading', 'hidden', false);
+            try {
+                const { data: steps } = await supabase.from('pasos_tarea').select('id, numeropaso').eq('id_tarea', gtsState.task).order('numeropaso');
+                const idx = steps.findIndex(s => s.id === id);
+                if (idx < 0 || idx + direction < 0 || idx + direction >= steps.length) {
+                    toggleClass('app-loading', 'hidden', true); return;
+                }
+                
+                // Mover elemento en el array
+                const element = steps.splice(idx, 1)[0];
+                steps.splice(idx + direction, 0, element);
+                
+                // Actualizar numeropaso secuencialmente a todos para evitar problemas
+                const updates = steps.map((s, i) => supabase.from('pasos_tarea').update({ numeropaso: i + 1 }).eq('id', s.id));
+                await Promise.all(updates);
+
+                renderGTS('steps', gtsState.task, true, gtsState.taskName);
+            } catch (err) {
+                console.error(err);
+                showToast('Error al reordenar', 'error');
+            } finally {
+                toggleClass('app-loading', 'hidden', true);
+            }
+        };
 
         //    Exponer funciones del módulo al scope global (requerido por onclick inline)   
         window.switchHorarioTab   = switchHorarioTab;

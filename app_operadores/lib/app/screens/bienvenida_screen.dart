@@ -8,6 +8,11 @@ import 'config_screen.dart';
 import 'tareas_screen.dart';
 import 'supervisor_screen.dart';
 
+import 'dart:convert';
+
+// Retorna la fecha actual del dispositivo. Como las tablets estarán en Ecuador, esto será hora Ecuador.
+DateTime get mockNow => DateTime.now();
+
 class BienvenidaScreen extends StatefulWidget {
   final String idMaquinaLocal;
 
@@ -145,7 +150,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   /// Corre en background al iniciar, sin bloquear la UI.
   Future<void> _actualizarTareasVencidas() async {
     try {
-      final hoyInicio = DateTime.now();
+      final hoyInicio = mockNow;
       final limiteFecha = DateTime(hoyInicio.year, hoyInicio.month, hoyInicio.day)
           .toUtc()
           .toIso8601String();
@@ -162,15 +167,47 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   Future<void> _precargarOperadores() async {
     try {
-      final response = await SupabaseManager.client
+      final maquinas = widget.idMaquinaLocal.split(',').map((e) => e.trim()).toList();
+      if (maquinas.isEmpty || maquinas.first.isEmpty) {
+        if (mounted) setState(() { _operadoresPrecargados = []; _operadoresCargados = true; });
+        return;
+      }
+
+      final maquinasIn = maquinas.map((e) => '"$e"').join(',');
+      final hoy = mockNow.toIso8601String().split('T')[0];
+
+      final responseTurnos = await SupabaseManager.client
+          .from('turnos_semana')
+          .select('id_operador')
+          .eq('fecha', hoy)
+          .filter('id_maquina', 'in', '($maquinasIn)');
+
+      final Set<String> idsValidos = (responseTurnos as List)
+          .map((e) => e['id_operador'].toString())
+          .toSet();
+
+      if (idsValidos.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _operadoresPrecargados = [];
+            _operadoresCargados = true;
+          });
+        }
+        return;
+      }
+
+      final idsIn = idsValidos.map((e) => '"$e"').join(',');
+
+      final responseOps = await SupabaseManager.client
           .from('operadores')
           .select()
-          .eq('id_maquina', widget.idMaquinaLocal)
+          .filter('id_operador', 'in', '($idsIn)')
           .neq('tipo', 'supervisor')
           .order('nombreoperador');
+
       if (mounted) {
         setState(() {
-          _operadoresPrecargados = List<Map<String, dynamic>>.from(response);
+          _operadoresPrecargados = List<Map<String, dynamic>>.from(responseOps);
           _operadoresCargados = true;
         });
       }
@@ -182,13 +219,15 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
   Future<void> _cargarNombreMaquina() async {
     try {
+      final maquinas = widget.idMaquinaLocal.split(',').map((e) => e.trim()).toList();
       final resp = await SupabaseManager.client
           .from('maquinas')
           .select('nombre')
-          .eq('id_maquina', widget.idMaquinaLocal)
-          .maybeSingle();
-      if (resp != null && mounted) {
-        setState(() => _nombreMaquina = resp['nombre']?.toString());
+          .filter('id_maquina', 'in', '(${maquinas.map((e) => '"$e"').join(',')})');
+          
+      if (mounted) {
+        final nombres = (resp as List).map((m) => m['nombre'].toString()).join(', ');
+        setState(() => _nombreMaquina = nombres);
       }
     } catch (e) {
       debugPrint('Error cargando nombre máquina: $e');
@@ -208,30 +247,33 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   }
 
   String _calcularHora() {
-    final now = DateTime.now();
+    final now = mockNow;
     return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
 
   String _turnoActual() {
-    final hora = DateTime.now().hour;
+    final hora = mockNow.hour;
     if (hora >= 6 && hora < 14) return 'Turno Mañana';
     if (hora >= 14 && hora < 22) return 'Turno Tarde';
     return 'Turno Noche';
   }
 
-  Future<void> _cargarResumenBienvenida(String idOp, String idMaquina) async {
+  Future<void> _cargarResumenBienvenida(String idOp, String maquinasStr) async {
     try {
-      final hoy = DateTime.now();
+      final hoy = mockNow;
       final hoyInicio = DateTime(hoy.year, hoy.month, hoy.day);
       final inicioHoy = hoyInicio.toUtc().toIso8601String();
       final finHoy = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999)
           .toUtc()
           .toIso8601String();
 
+      final maquinas = maquinasStr.split(',').map((e) => e.trim()).toList();
+      final maquinasIn = maquinas.map((e) => '"$e"').join(',');
+
       final tareas = await SupabaseManager.client
           .from('registro_tareas')
           .select('estado, fecha_limite, motivo_bloqueo')
-          .or('id_operador.eq.$idOp,and(id_operador.is.null,id_maquina.eq.$idMaquina)')
+          .or('id_operador.eq.$idOp,and(id_operador.is.null,id_maquina.in.($maquinasIn))')
           .or(
             'estado.in.("Pendiente","Atrasado"),'
             'and(estado.eq.Completado,fecha_completado.gte.$inicioHoy,fecha_completado.lte.$finHoy)',
@@ -291,7 +333,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     if (_isValidando || !mounted) return;
 
     try {
-      final oneMinuteAgo = DateTime.now().toUtc().subtract(const Duration(minutes: 1));
+      final oneMinuteAgo = mockNow.toUtc().subtract(const Duration(minutes: 1));
       final response = await SupabaseManager.client
           .from('lecturas_rfid')
           .select('id, id_operador')
@@ -365,17 +407,9 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       }
 
       final tipo = (response['tipo'] ?? '').toString().toLowerCase().trim();
-      final idMaquinaOperador = response['id_maquina']?.toString();
       final nombre = response['nombreoperador'] ?? 'Usuario';
 
       bool esSupervisor = tipo == 'supervisor';
-      bool esMaquinaCorrecta = idMaquinaOperador == widget.idMaquinaLocal;
-
-      if (!esSupervisor && !esMaquinaCorrecta) {
-        debugPrint('Acceso denegado: Operador de $idMaquinaOperador en tablet ${widget.idMaquinaLocal}');
-        _mostrarAccesoDenegado();
-        return;
-      }
 
       setState(() {
         _mensajeEstado = 'Bienvenido, $nombre';
@@ -392,7 +426,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       _progressController.forward(from: 0.0);
 
       if (!esSupervisor) {
-        _cargarResumenBienvenida(trimmedId, idMaquinaOperador ?? '');
+        _cargarResumenBienvenida(trimmedId, widget.idMaquinaLocal);
       }
 
       await Future.delayed(const Duration(seconds: 3));
@@ -991,16 +1025,47 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
 
   Future<void> _cargarOperadores() async {
     try {
-      final response = await SupabaseManager.client
+      final maquinas = widget.idMaquinaLocal.split(',').map((e) => e.trim()).toList();
+      if (maquinas.isEmpty || maquinas.first.isEmpty) {
+        if (mounted) setState(() { _operadores = []; _cargando = false; });
+        return;
+      }
+
+      final maquinasIn = maquinas.map((e) => '"$e"').join(',');
+      final hoy = mockNow.toIso8601String().split('T')[0];
+
+      final responseTurnos = await SupabaseManager.client
+          .from('turnos_semana')
+          .select('id_operador')
+          .eq('fecha', hoy)
+          .filter('id_maquina', 'in', '($maquinasIn)');
+
+      final Set<String> idsValidos = (responseTurnos as List)
+          .map((e) => e['id_operador'].toString())
+          .toSet();
+
+      if (idsValidos.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _operadores = [];
+            _cargando = false;
+          });
+        }
+        return;
+      }
+
+      final idsIn = idsValidos.map((e) => '"$e"').join(',');
+
+      final responseOps = await SupabaseManager.client
           .from('operadores')
           .select()
-          .eq('id_maquina', widget.idMaquinaLocal)
+          .filter('id_operador', 'in', '($idsIn)')
           .neq('tipo', 'supervisor')
           .order('nombreoperador');
 
       if (mounted) {
         setState(() {
-          _operadores = List<Map<String, dynamic>>.from(response);
+          _operadores = List<Map<String, dynamic>>.from(responseOps);
           _cargando = false;
         });
       }

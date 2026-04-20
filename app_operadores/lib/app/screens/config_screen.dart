@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_routes.dart';
 import 'bienvenida_screen.dart';
+import '../../supabase_manager.dart';
 
 class ConfigScreen extends StatefulWidget {
   /// true = primera instalación, muestra formulario sin pedir PIN.
@@ -24,12 +25,42 @@ class _ConfigScreenState extends State<ConfigScreen> {
   bool _pinError = false;
   bool _guardando = false;
   String _pinActual = '1234';
+  
+  List<Map<String, dynamic>> _listaMaquinas = [];
+  bool _cargandoMaquinas = false;
+  List<String> _maquinasSeleccionadas = [];
 
   @override
   void initState() {
     super.initState();
     _pinVerificado = widget.primerInicio;
     _cargarConfig();
+    _cargarMaquinas();
+  }
+
+  Future<void> _cargarMaquinas() async {
+    setState(() => _cargandoMaquinas = true);
+    try {
+      final data = await SupabaseManager.client
+          .from('maquinas')
+          .select('id_maquina, nombre')
+          .order('nombre', ascending: true);
+      
+      if (!mounted) return;
+      setState(() {
+        _listaMaquinas = List<Map<String, dynamic>>.from(data);
+        _cargandoMaquinas = false;
+        
+        // Remove selected that no longer exist
+        _maquinasSeleccionadas.removeWhere(
+          (id) => !_listaMaquinas.any((m) => m['id_maquina'] == id)
+        );
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _cargandoMaquinas = false);
+      debugPrint('Error cargando máquinas: $e');
+    }
   }
 
   @override
@@ -42,9 +73,12 @@ class _ConfigScreenState extends State<ConfigScreen> {
 
   Future<void> _cargarConfig() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _pinActual = prefs.getString('admin_pin') ?? '1234';
-      _maquinaController.text = prefs.getString('id_maquina_local') ?? '';
+      final guardada = prefs.getString('id_maquina_local') ?? '';
+      _maquinaController.text = guardada;
+      _maquinasSeleccionadas = guardada.split(',').where((e) => e.isNotEmpty).toList();
     });
   }
 
@@ -61,13 +95,13 @@ class _ConfigScreenState extends State<ConfigScreen> {
   }
 
   Future<void> _guardar() async {
-    final idMaquina = _maquinaController.text.trim();
-    if (idMaquina.isEmpty) {
+    if (_maquinasSeleccionadas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El ID de máquina no puede estar vacío')),
+        const SnackBar(content: Text('Por favor selecciona al menos una máquina')),
       );
       return;
     }
+    final idMaquina = _maquinasSeleccionadas.join(',');
 
     setState(() => _guardando = true);
 
@@ -221,22 +255,59 @@ class _ConfigScreenState extends State<ConfigScreen> {
           ),
         ],
         const SizedBox(height: 28),
-        const Text('ID de máquina',
-            style:
-                TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        const Text('Máquinas asignadas',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 8),
-        TextField(
-          controller: _maquinaController,
-          autofocus: widget.primerInicio,
-          decoration: InputDecoration(
-            hintText: 'Ej: 9991',
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10)),
-            prefixIcon: const Icon(
-                Icons.precision_manufacturing,
-                color: _accentGreen),
+        if (_cargandoMaquinas)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 20, height: 20,
+                child: CircularProgressIndicator(color: _accentGreen, strokeWidth: 2),
+              ),
+            ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _listaMaquinas.map((maquina) {
+                final id = maquina['id_maquina'].toString();
+                final isSelected = _maquinasSeleccionadas.contains(id);
+                return FilterChip(
+                  label: Text(maquina['nombre']?.toString() ?? id),
+                  selected: isSelected,
+                  selectedColor: _accentGreen.withValues(alpha: 0.15),
+                  checkmarkColor: _accentGreen,
+                  labelStyle: TextStyle(
+                    color: isSelected ? _accentGreen : Colors.black87,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  onSelected: (bool selected) {
+                    setState(() {
+                      if (selected) {
+                        _maquinasSeleccionadas.add(id);
+                      } else {
+                        _maquinasSeleccionadas.remove(id);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
           ),
-        ),
         const SizedBox(height: 24),
         const Text('Cambiar PIN de administrador',
             style:

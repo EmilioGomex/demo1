@@ -10,6 +10,9 @@ import 'pasos_tarea_screen.dart';
 import 'bienvenida_screen.dart';
 import 'dart:convert';
 
+// Retorna la fecha actual del dispositivo. Como las tablets estarán en Ecuador, esto será hora Ecuador.
+DateTime get mockNow => DateTime.now();
+
 class TareasScreen extends StatefulWidget {
   final String idOperador;
   final String idMaquinaLocal;
@@ -29,9 +32,12 @@ class _TareasScreenState extends State<TareasScreen> {
   static const _background = Color(0xFFF8FAFB);
 
   Map<String, dynamic>? operador;
-  List<dynamic> tareasOrdenadas = [];
+  List<dynamic> tareasHoy = [];
+  List<dynamic> tareasFuturas = [];
+  List<dynamic> tareasCompletadas = [];
   bool cargando = true;
   String? error;
+  String _nombresMaquinas = '-';
 
   @override
   void initState() {
@@ -48,7 +54,7 @@ class _TareasScreenState extends State<TareasScreen> {
     try {
       final operadorResp = await SupabaseManager.client
           .from('operadores')
-          .select('id_operador, nombreoperador, linea, id_maquina, foto_operador, maquinas (nombre)')
+          .select('id_operador, nombreoperador, linea, foto_operador')
           .eq('id_operador', widget.idOperador)
           .maybeSingle()
           .timeout(const Duration(seconds: 10));
@@ -62,14 +68,23 @@ class _TareasScreenState extends State<TareasScreen> {
       }
 
       operador = operadorResp;
-      final idMaquina = operador!['id_maquina'] ?? '';
+      
+      final maquinas = widget.idMaquinaLocal.split(',').map((e) => e.trim()).toList();
+      final maquinasInStr = maquinas.map((e) => '"$e"').join(',');
+      
+      final respMaq = await SupabaseManager.client
+          .from('maquinas')
+          .select('nombre')
+          .filter('id_maquina', 'in', '(${maquinas.map((e) => '"$e"').join(',')})');
+          
+      _nombresMaquinas = (respMaq as List).map((m) => m['nombre'].toString()).join(', ');
 
-      final hoy = DateTime.now();
+      final hoy = mockNow;
       final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day).toUtc().toIso8601String();
       final finHoy = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999).toUtc().toIso8601String();
 
       final filtroOperador =
-          'id_operador.eq.${widget.idOperador},and(id_operador.is.null,id_maquina.eq.$idMaquina)';
+          'id_operador.eq.${widget.idOperador},and(id_operador.is.null,id_maquina.in.($maquinasInStr))';
       final filtroEstado =
           'or(estado.in.("Pendiente","Atrasado"),and(estado.eq.Completado,fecha_completado.gte.$inicioHoy,fecha_completado.lte.$finHoy))';
 
@@ -85,7 +100,7 @@ class _TareasScreenState extends State<TareasScreen> {
           .timeout(const Duration(seconds: 10)) as List<dynamic>;
 
       setState(() {
-        tareasOrdenadas = _ordenarTareas(listaTareas);
+        _clasificarTareas(listaTareas);
         cargando = false;
       });
 
@@ -104,25 +119,59 @@ class _TareasScreenState extends State<TareasScreen> {
     }
   }
 
-  List<dynamic> _ordenarTareas(List<dynamic> tareas) {
-    final sorted = List<dynamic>.from(tareas);
-    sorted.sort((a, b) {
-      final estadoA = (a['estado'] ?? '').toString().toLowerCase();
-      final estadoB = (b['estado'] ?? '').toString().toLowerCase();
-      final aActivo = estadoA == 'pendiente' || estadoA == 'atrasado';
-      final bActivo = estadoB == 'pendiente' || estadoB == 'atrasado';
-      if (aActivo && !bActivo) return -1;
-      if (!aActivo && bActivo) return 1;
-      final fechaA = DateTime.tryParse(a['fecha_limite'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final fechaB = DateTime.tryParse(b['fecha_limite'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return fechaA.compareTo(fechaB);
+  void _clasificarTareas(List<dynamic> tareas) {
+    tareasHoy.clear();
+    tareasFuturas.clear();
+    tareasCompletadas.clear();
+
+    final hoy = mockNow;
+    final hoyInicio = DateTime(hoy.year, hoy.month, hoy.day);
+
+    for (var r in tareas) {
+      final estado = (r['estado'] ?? '').toString().toLowerCase();
+      if (estado == 'completado') {
+        tareasCompletadas.add(r);
+        continue;
+      }
+      
+      bool esFutura = false;
+      final fechaStr = r['fecha_limite']?.toString();
+      if (fechaStr != null) {
+        try {
+          final fl = DateTime.parse(fechaStr).toLocal();
+          final limiteDia = DateTime(fl.year, fl.month, fl.day);
+          if (limiteDia.isAfter(hoyInicio)) {
+            esFutura = true;
+          }
+        } catch (_) {}
+      }
+
+      if (esFutura) {
+        tareasFuturas.add(r);
+      } else {
+        tareasHoy.add(r);
+      }
+    }
+
+    int compareFecha(a, b) {
+      final fa = DateTime.tryParse(a['fecha_limite'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final fb = DateTime.tryParse(b['fecha_limite'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return fa.compareTo(fb);
+    }
+
+    tareasHoy.sort(compareFecha);
+    tareasFuturas.sort(compareFecha);
+    
+    tareasCompletadas.sort((a, b) {
+      final fa = DateTime.tryParse(a['fecha_completado'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final fb = DateTime.tryParse(b['fecha_completado'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return fb.compareTo(fa); // Descending for completed
     });
-    return sorted;
   }
 
   Future<void> _calcularYActualizarSemaforo(List<dynamic> tareas) async {
     String nuevoColor = 'Verde';
-    final ahora = DateTime.now();
+    final ahora = mockNow;
     final hoyInicio = DateTime(ahora.year, ahora.month, ahora.day);
 
     for (final registro in tareas) {
@@ -146,12 +195,9 @@ class _TareasScreenState extends State<TareasScreen> {
     }
 
     try {
-      await SupabaseManager.client.from('semaforo_maquina').upsert({
-        'id_maquina': widget.idMaquinaLocal,
-        'estado': nuevoColor,
-        'fecha_actualizacion': DateTime.now().toUtc().toIso8601String(),
-      }, onConflict: 'id_maquina');
-      debugPrint('Semáforo actualizado a: $nuevoColor');
+      // El backend (trigger tr_evaluar_semaforo en registro_tareas) 
+      // ya se encarga de actualizar semaforo_maquina automáticamente.
+      // Ya no necesitamos hacer upsert manual desde el cliente.
     } catch (e) {
       debugPrint('Error actualizando semáforo: $e');
     }
@@ -397,7 +443,7 @@ class _TareasScreenState extends State<TareasScreen> {
     if (raw == null) return '-';
     try {
       final fechaLimite = DateTime.parse(raw).toLocal();
-      final ahora = DateTime.now();
+      final ahora = mockNow;
       final fl = DateTime(fechaLimite.year, fechaLimite.month, fechaLimite.day);
       final hoy = DateTime(ahora.year, ahora.month, ahora.day);
       final diff = fl.difference(hoy).inDays;
@@ -405,7 +451,10 @@ class _TareasScreenState extends State<TareasScreen> {
         final d = diff.abs();
         return 'Venció hace $d día${d > 1 ? 's' : ''}';
       }
-      if (diff == 0) return 'Vence hoy';
+      if (diff == 0) {
+        final hora = '${fechaLimite.hour.toString().padLeft(2, '0')}:${fechaLimite.minute.toString().padLeft(2, '0')}';
+        return 'Vence hoy a las $hora';
+      }
       if (diff == 1) return 'Vence mañana';
       return 'Vence en $diff días';
     } catch (_) {
@@ -417,7 +466,7 @@ class _TareasScreenState extends State<TareasScreen> {
     if (raw == null) return '';
     try {
       final fecha = DateTime.parse(raw).toLocal();
-      final ahora = DateTime.now();
+      final ahora = mockNow;
       final esHoy = fecha.year == ahora.year &&
           fecha.month == ahora.month &&
           fecha.day == ahora.day;
@@ -459,7 +508,7 @@ class _TareasScreenState extends State<TareasScreen> {
     );
   }
 
-  Widget _buildTareaCard(Map<String, dynamic> registro) {
+  Widget _buildTareaCard(Map<String, dynamic> registro, {bool esFutura = false}) {
     final tarea = registro['tareas'] as Map<String, dynamic>?;
     final estado = registro['estado'] ?? 'Pendiente';
     final frecuencia = tarea?['frecuencia'] ?? 'Otro';
@@ -474,23 +523,35 @@ class _TareasScreenState extends State<TareasScreen> {
         ? _formatearFechaCompletado(registro['fecha_completado']?.toString())
         : 'Fecha límite: ${_formatearFechaLimite(registro['fecha_limite']?.toString())}';
 
+    // Opacidad sutil para tareas futuras
+    final double opacidadBase = esFutura && !completado ? 0.75 : 1.0;
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: completado ? Colors.grey.shade50 : Colors.white,
+        color: completado ? Colors.grey.shade100 : (esFutura ? Colors.white70 : Colors.white),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: esFutura ? Colors.grey.shade200 : Colors.grey.shade300),
+        boxShadow: esFutura || completado ? [] : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: completado
-                ? () => _confirmarReapertura(registro, tarea)
-                : () => _procesarYNavigar(registro, tarea),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                onTap: completado
+                    ? () => _confirmarReapertura(registro, tarea)
+                    : () => _procesarYNavigar(registro, tarea),
+                child: Opacity(
+                  opacity: opacidadBase,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -563,12 +624,13 @@ class _TareasScreenState extends State<TareasScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildInfoCard() {
     final nombre = operador?['nombreoperador'] ?? '-';
-    final maquina = operador?['maquinas']?['nombre'] ?? '-';
+    final maquina = _nombresMaquinas;
     final linea = operador?['linea'] ?? '-';
     final foto = operador?['foto_operador']?.toString() ?? '';
 
@@ -633,9 +695,12 @@ class _TareasScreenState extends State<TareasScreen> {
 
   Map<String, int> get _resumenTareas {
     int pendientes = 0, atrasadas = 0, completadas = 0, aplazadas = 0;
-    final hoy = DateTime.now();
+    final hoy = mockNow;
     final hoyInicio = DateTime(hoy.year, hoy.month, hoy.day);
-    for (final r in tareasOrdenadas) {
+    
+    final todas = [...tareasHoy, ...tareasFuturas, ...tareasCompletadas];
+    
+    for (final r in todas) {
       final estado = (r['estado'] ?? '').toString().toLowerCase();
       final motivo = r['motivo_bloqueo']?.toString() ?? '';
       if (estado == 'completado') {
@@ -733,6 +798,29 @@ class _TareasScreenState extends State<TareasScreen> {
     );
   }
 
+  Widget _buildSectionHeader(String title, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 8, left: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
+        ],
+      ),
+    );
+  }
+
   void _autoLogout() {
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
@@ -800,25 +888,9 @@ class _TareasScreenState extends State<TareasScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildInfoCard(),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          const Text(
-                            'Tareas asignadas',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black54,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Expanded(
-                        child: tareasOrdenadas.isEmpty
+                        child: (tareasHoy.isEmpty && tareasFuturas.isEmpty && tareasCompletadas.isEmpty)
                             ? RefreshIndicator(
                                 color: _accentGreen,
                                 onRefresh: _cargarDatos,
@@ -840,13 +912,38 @@ class _TareasScreenState extends State<TareasScreen> {
                                       PointerDeviceKind.mouse,
                                     },
                                   ),
-                                  child: ListView.builder(
+                                  child: CustomScrollView(
                                     physics: const AlwaysScrollableScrollPhysics(),
-                                    cacheExtent: 400,
-                                    itemCount: tareasOrdenadas.length,
-                                    itemBuilder: (_, index) => RepaintBoundary(
-                                      child: _buildTareaCard(tareasOrdenadas[index]),
-                                    ),
+                                    slivers: [
+                                      if (tareasHoy.isNotEmpty) ...[
+                                        SliverToBoxAdapter(child: _buildSectionHeader('Para Hoy', Icons.assignment_late_outlined, Colors.orange.shade800)),
+                                        SliverList(
+                                          delegate: SliverChildBuilderDelegate(
+                                            (_, index) => _buildTareaCard(tareasHoy[index], esFutura: false),
+                                            childCount: tareasHoy.length,
+                                          ),
+                                        ),
+                                      ],
+                                      if (tareasFuturas.isNotEmpty) ...[
+                                        SliverToBoxAdapter(child: _buildSectionHeader('Próximas a realizar', Icons.calendar_month_outlined, Colors.blue.shade700)),
+                                        SliverList(
+                                          delegate: SliverChildBuilderDelegate(
+                                            (_, index) => _buildTareaCard(tareasFuturas[index], esFutura: true),
+                                            childCount: tareasFuturas.length,
+                                          ),
+                                        ),
+                                      ],
+                                      if (tareasCompletadas.isNotEmpty) ...[
+                                        SliverToBoxAdapter(child: _buildSectionHeader('Completadas', Icons.check_circle_outline, Colors.green.shade700)),
+                                        SliverList(
+                                          delegate: SliverChildBuilderDelegate(
+                                            (_, index) => _buildTareaCard(tareasCompletadas[index], esFutura: false),
+                                            childCount: tareasCompletadas.length,
+                                          ),
+                                        ),
+                                      ],
+                                      const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                                    ],
                                   ),
                                 ),
                               ),
