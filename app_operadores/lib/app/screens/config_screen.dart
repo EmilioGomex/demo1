@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_routes.dart';
 import 'bienvenida_screen.dart';
 import '../../supabase_manager.dart';
+import 'dart:convert';
 
 class ConfigScreen extends StatefulWidget {
   /// true = primera instalación, muestra formulario sin pedir PIN.
@@ -38,28 +39,51 @@ class _ConfigScreenState extends State<ConfigScreen> {
     _cargarMaquinas();
   }
 
-  Future<void> _cargarMaquinas() async {
-    setState(() => _cargandoMaquinas = true);
-    try {
-      final data = await SupabaseManager.client
-          .from('maquinas')
-          .select('id_maquina, nombre')
-          .order('nombre', ascending: true);
-      
-      if (!mounted) return;
-      setState(() {
-        _listaMaquinas = List<Map<String, dynamic>>.from(data);
-        _cargandoMaquinas = false;
+  Future<void> _cargarMaquinas({bool forceRemote = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Intentar cargar de caché primero si no es forzado
+    if (!forceRemote) {
+      final cached = prefs.getString('cache_maquinas');
+      if (cached != null) {
+        try {
+          setState(() {
+            _listaMaquinas = List<Map<String, dynamic>>.from(jsonDecode(cached));
+          });
+          debugPrint('Máquinas cargadas desde caché local');
+        } catch (e) {
+          debugPrint('Error decodificando caché máquinas: $e');
+        }
+      }
+    }
+
+    // Si el caché está vacío o pedimos forzar, ir a la DB
+    if (_listaMaquinas.isEmpty || forceRemote) {
+      setState(() => _cargandoMaquinas = true);
+      try {
+        final data = await SupabaseManager.client
+            .from('maquinas')
+            .select('id_maquina, nombre')
+            .order('nombre', ascending: true);
         
-        // Remove selected that no longer exist
-        _maquinasSeleccionadas.removeWhere(
-          (id) => !_listaMaquinas.any((m) => m['id_maquina'] == id)
-        );
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _cargandoMaquinas = false);
-      debugPrint('Error cargando máquinas: $e');
+        if (!mounted) return;
+        
+        final listData = List<Map<String, dynamic>>.from(data);
+        await prefs.setString('cache_maquinas', jsonEncode(listData));
+
+        setState(() {
+          _listaMaquinas = listData;
+          _cargandoMaquinas = false;
+          
+          _maquinasSeleccionadas.removeWhere(
+            (id) => !_listaMaquinas.any((m) => m['id_maquina'] == id)
+          );
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _cargandoMaquinas = false);
+        debugPrint('Error cargando máquinas: $e');
+      }
     }
   }
 
@@ -131,6 +155,13 @@ class _ConfigScreenState extends State<ConfigScreen> {
             style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         automaticallyImplyLeading: !widget.primerInicio,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _cargarMaquinas(forceRemote: true),
+            tooltip: 'Refrescar catálogo de máquinas',
+          ),
+        ],
       ),
       body: Center(
         child: SingleChildScrollView(

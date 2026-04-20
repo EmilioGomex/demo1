@@ -55,59 +55,43 @@ class _TareasScreenState extends State<TareasScreen> {
     });
 
     try {
-      final operadorResp = await SupabaseManager.client
-          .from('operadores')
-          .select('id_operador, nombreoperador, linea, foto_operador')
-          .eq('id_operador', widget.idOperador)
-          .maybeSingle()
-          .timeout(const Duration(seconds: 10));
+      final hoy = mockNow;
+      final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day).toUtc().toIso8601String();
+      final finHoy = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999).toUtc().toIso8601String();
+      
+      final maquinas = widget.idMaquinaLocal.split(',').map((e) => e.trim()).toList();
 
-      if (operadorResp == null) {
+      // NUEVO: Una sola llamada RPC que trae Operador, Máquinas y Tareas
+      final response = await SupabaseManager.client.rpc(
+        'get_dashboard_data',
+        params: {
+          'p_id_operador_texto': widget.idOperador,
+          'p_id_maquinas': maquinas,
+          'p_inicio_hoy': inicioHoy,
+          'p_fin_hoy': finHoy,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response == null) {
         setState(() {
-          error = 'Operador no encontrado.';
+          error = 'No se pudo obtener la información del servidor.';
           cargando = false;
         });
         return;
       }
 
-      operador = operadorResp;
+      final data = response as Map<String, dynamic>;
       
-      final maquinas = widget.idMaquinaLocal.split(',').map((e) => e.trim()).toList();
-      final maquinasInStr = maquinas.map((e) => '"$e"').join(',');
-      
-      final respMaq = await SupabaseManager.client
-          .from('maquinas')
-          .select('nombre')
-          .filter('id_maquina', 'in', '(${maquinas.map((e) => '"$e"').join(',')})');
-          
-      _nombresMaquinas = (respMaq as List).map((m) => m['nombre'].toString()).join(', ');
-
-      final hoy = mockNow;
-      final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day).toUtc().toIso8601String();
-      final finHoy = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59, 999).toUtc().toIso8601String();
-
-      final filtroOperador =
-          'id_operador.eq.${widget.idOperador},and(id_operador.is.null,id_maquina.in.($maquinasInStr))';
-      final filtroEstado =
-          'or(estado.in.("Pendiente","Atrasado"),and(estado.eq.Completado,fecha_completado.gte.$inicioHoy,fecha_completado.lte.$finHoy))';
-
-      final listaTareas = await SupabaseManager.client
-          .from('registro_tareas')
-          .select('''
-            id, id_tarea, fecha_periodo, fecha_limite, estado, fecha_completado, parsable_job_id, motivo_bloqueo, veces_aplazada,
-            tareas(nombre_tarea, frecuencia, tipo, es_compartida)
-          ''')
-          .or(filtroOperador)
-          .or(filtroEstado)
-          .order('fecha_limite', ascending: true)
-          .timeout(const Duration(seconds: 10)) as List<dynamic>;
-
       setState(() {
+        operador = data['operador'];
+        _nombresMaquinas = (data['maquinas'] as List).map((m) => m['nombre'].toString()).join('  •  ');
+        
+        final listaTareas = data['tareas'] as List<dynamic>;
         _clasificarTareas(listaTareas);
         cargando = false;
+        
+        _calcularYActualizarSemaforo(listaTareas);
       });
-
-      _calcularYActualizarSemaforo(listaTareas);
     } on TimeoutException {
       setState(() {
         error = 'Sin conexión. Verifica la red e intenta de nuevo.';

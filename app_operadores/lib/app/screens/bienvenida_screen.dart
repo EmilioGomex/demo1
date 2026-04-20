@@ -202,7 +202,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
       final responseOps = await SupabaseManager.client
           .from('operadores')
-          .select()
+          .select('id_operador, nombreoperador, foto_operador, linea')
           .filter('id_operador', 'in', '($idsIn)')
           .neq('tipo', 'supervisor')
           .order('nombreoperador');
@@ -228,7 +228,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
           .filter('id_maquina', 'in', '(${maquinas.map((e) => '"$e"').join(',')})');
           
       if (mounted) {
-        final nombres = (resp as List).map((m) => m['nombre'].toString()).join(', ');
+        final nombres = (resp as List).map((m) => m['nombre'].toString()).join('  •  ');
         setState(() => _nombreMaquina = nombres);
       }
     } catch (e) {
@@ -400,7 +400,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     try {
       final response = await SupabaseManager.client
           .from('operadores')
-          .select()
+          .select('id_operador, nombreoperador, foto_operador, tipo, linea')
           .eq('id_operador', trimmedId)
           .maybeSingle()
           .timeout(const Duration(seconds: 10));
