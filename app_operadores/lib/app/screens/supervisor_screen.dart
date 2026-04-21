@@ -65,7 +65,8 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
       final results = await Future.wait([
         SupabaseManager.client
             .from('maquinas')
-            .select('id_maquina, nombre')
+            .select('id_maquina, nombre, linea')
+            .eq('implementado', true)
             .order('nombre')
             .timeout(const Duration(seconds: 10)),
         SupabaseManager.client
@@ -450,7 +451,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
           ),
           ...maquinas.map<DropdownMenuItem<String?>>((m) => DropdownMenuItem(
                 value: m['id_maquina'],
-                child: Text(m['nombre']),
+                child: Text('${m['nombre']} (${m['linea']})'),
               )),
         ],
         onChanged: (value) {

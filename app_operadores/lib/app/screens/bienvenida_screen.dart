@@ -63,6 +63,13 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   String? _nombreMaquina;
   String _horaDisplay = '';
   Timer? _clockTimer;
+  Timer? _connectivityTimer;
+  bool _isOnline = true;
+
+  // Animación de fondo
+  late AnimationController _bgAnimationController;
+  late Animation<Alignment> _topAlignment;
+  late Animation<Alignment> _bottomAlignment;
 
   // Pre-carga en segundo plano
   List<Map<String, dynamic>> _operadoresPrecargados = [];
@@ -79,16 +86,18 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     });
 
     _focusNode.addListener(() {
-      if (!_focusNode.hasFocus && !_operadorValido) {
+      if (!_focusNode.hasFocus && !_operadorValido && !_selectorAbierto) {
         // Solo re-enfocar si la pantalla de Bienvenida es la que está al frente (activa).
-        // Esto evita que robe el foco cuando el usuario navega a Configuración.
         final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
         if (!isCurrent) return;
 
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted && !_operadorValido) {
+        // Añadimos un pequeño delay mayor y verificamos que no se haya abierto un teclado u otro input
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted && !_operadorValido && !_selectorAbierto) {
             final stillCurrent = ModalRoute.of(context)?.isCurrent ?? false;
-            if (stillCurrent) _focusNode.requestFocus();
+            if (stillCurrent && !_focusNode.hasFocus) {
+              _focusNode.requestFocus();
+            }
           }
         });
       }
@@ -109,11 +118,31 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
 
-    // Progreso suave de 3 segundos para la pantalla de bienvenida
+    // Progreso suave de 2 segundos para la pantalla de bienvenida
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 2),
     );
+
+    // Animación de fondo (degradado sutil)
+    _bgAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat(reverse: true);
+
+    _topAlignment = TweenSequence<Alignment>([
+      TweenSequenceItem(tween: AlignmentTween(begin: Alignment.topLeft, end: Alignment.topRight), weight: 1),
+      TweenSequenceItem(tween: AlignmentTween(begin: Alignment.topRight, end: Alignment.bottomRight), weight: 1),
+      TweenSequenceItem(tween: AlignmentTween(begin: Alignment.bottomRight, end: Alignment.bottomLeft), weight: 1),
+      TweenSequenceItem(tween: AlignmentTween(begin: Alignment.bottomLeft, end: Alignment.topLeft), weight: 1),
+    ]).animate(_bgAnimationController);
+
+    _bottomAlignment = TweenSequence<Alignment>([
+      TweenSequenceItem(tween: AlignmentTween(begin: Alignment.bottomRight, end: Alignment.bottomLeft), weight: 1),
+      TweenSequenceItem(tween: AlignmentTween(begin: Alignment.bottomLeft, end: Alignment.topLeft), weight: 1),
+      TweenSequenceItem(tween: AlignmentTween(begin: Alignment.topLeft, end: Alignment.topRight), weight: 1),
+      TweenSequenceItem(tween: AlignmentTween(begin: Alignment.topRight, end: Alignment.bottomRight), weight: 1),
+    ]).animate(_bgAnimationController);
 
     // --- SUSCRIPCIÓN REALTIME ---
     _rfidChannel = Supabase.instance.client
@@ -141,13 +170,25 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
     _rfidChannel.onError((e) {
       debugPrint('Error Realtime: $e');
+      if (mounted) setState(() => _isOnline = false);
     });
-    _rfidChannel.subscribe();
+
+    _rfidChannel.subscribe((status, [error]) {
+      if (status == 'SUBSCRIBED') {
+        if (mounted) setState(() => _isOnline = true);
+      } else if (status == 'CLOSED' || status == 'CHANNEL_ERROR' || status == 'TIMED_OUT') {
+        if (mounted) setState(() => _isOnline = false);
+      }
+    });
 
     _horaDisplay = _calcularHora();
     _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() => _horaDisplay = _calcularHora());
     });
+
+    // Heartbeat muy lento (2 min) para no consumir el plan gratuito
+    _connectivityTimer = Timer.periodic(const Duration(minutes: 2), (_) => _checkConnectivity());
+    _checkConnectivity();
 
     _buscarLecturaPendiente();
     _cargarNombreMaquina();
@@ -226,16 +267,27 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     }
   }
 
+  Future<void> _checkConnectivity() async {
+    try {
+      // Intento de ping ligero a Supabase
+      await SupabaseManager.client.from('maquinas').select('id_maquina').limit(1).timeout(const Duration(seconds: 5));
+      if (mounted && !_isOnline) setState(() => _isOnline = true);
+    } catch (_) {
+      if (mounted && _isOnline) setState(() => _isOnline = false);
+    }
+  }
+
   Future<void> _cargarNombreMaquina() async {
     try {
       final maquinas = widget.idMaquinaLocal.split(',').map((e) => e.trim()).toList();
       final resp = await SupabaseManager.client
           .from('maquinas')
-          .select('nombre')
-          .filter('id_maquina', 'in', '(${maquinas.map((e) => '"$e"').join(',')})');
+          .select('nombre, linea')
+          .filter('id_maquina', 'in', '(${maquinas.map((e) => '"$e"').join(',')})')
+          .eq('implementado', true);
           
       if (mounted) {
-        final nombres = (resp as List).map((m) => m['nombre'].toString()).join('  •  ');
+        final nombres = (resp as List).map((m) => '${m['nombre']} (${m['linea']})').join('  •  ');
         setState(() => _nombreMaquina = nombres);
       }
     } catch (e) {
@@ -246,9 +298,11 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
   @override
   void dispose() {
     _clockTimer?.cancel();
+    _connectivityTimer?.cancel();
     _pulseController.dispose();
     _scaleController.dispose();
     _progressController.dispose();
+    _bgAnimationController.dispose();
     _focusNode.dispose();
     _controller.dispose();
     _rfidChannel.unsubscribe();
@@ -441,7 +495,8 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
         _cargarResumenBienvenida(trimmedId, widget.idMaquinaLocal);
       }
 
-      await Future.delayed(const Duration(seconds: 3));
+      // Reducimos a 2 segundos para que se sienta más ágil
+      await Future.delayed(const Duration(milliseconds: 2000));
 
       if (!mounted) {
         _isValidando = false;
@@ -513,35 +568,34 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     ).whenComplete(() => _selectorAbierto = false);
   }
 
-  Future<void> _mostrarAccesoDenegado() async {
-    if (!mounted) return;
-    setState(() {
-      _accesoDenegado = true;
-      _isValidando = false;
-      _mensajeEstado = 'Acceso no autorizado';
-    });
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() {
-        _accesoDenegado = false;
-        _mensajeEstado = _mensajeInicial;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_operadorValido) {
-      return _buildWelcomeScreen();
-    }
-    return _buildScanScreen();
+    return AnimatedBuilder(
+      animation: _bgAnimationController,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: _topAlignment.value,
+              end: _bottomAlignment.value,
+              colors: [
+                const Color(0xFFF5F5F7),
+                _isOnline ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                const Color(0xFFECEFF1),
+              ],
+            ),
+          ),
+          child: _operadorValido ? _buildWelcomeScreen() : _buildScanScreen(),
+        );
+      },
+    );
   }
 
   Widget _buildWelcomeScreen() {
     final total = (_tareasAtrasadas ?? 0) + (_tareasPendientes ?? 0) + (_tareasAplazadas ?? 0);
 
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -574,6 +628,23 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: 3,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Indicador de conexión
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isOnline ? Colors.greenAccent : Colors.redAccent,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (_isOnline ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.5),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -681,7 +752,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
               child: AnimatedBuilder(
                 animation: _progressController,
                 builder: (context, _) {
-                  final seg = (3 - (_progressController.value * 3)).ceil();
+                  final seg = (2 - (_progressController.value * 2)).ceil();
                   return Column(
                     children: [
                       ClipRRect(
@@ -713,7 +784,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
     final Color statusColor = _accesoDenegado ? _accentRed : _accentGreen;
 
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -758,6 +829,24 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: 3,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Indicador de conexión
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isOnline ? Colors.greenAccent : Colors.redAccent,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (_isOnline ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.5),
+                                    blurRadius: 6,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
                               ),
                             ),
                           ],

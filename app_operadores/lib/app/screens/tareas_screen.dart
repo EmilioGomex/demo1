@@ -152,12 +152,18 @@ class _TareasScreenState extends State<TareasScreen> {
     tareasCompletadas.sort((a, b) {
       final fa = DateTime.tryParse(a['fecha_completado'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
       final fb = DateTime.tryParse(b['fecha_completado'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return fb.compareTo(fa); // Descending for completed
+      return fb.compareTo(fa); 
     });
   }
 
+  String _obtenerSaludo() {
+    final hora = mockNow.hour;
+    if (hora >= 5 && hora < 12) return 'Buenos días';
+    if (hora >= 12 && hora < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
   Future<void> _calcularYActualizarSemaforo(List<dynamic> tareas) async {
-    String nuevoColor = 'Verde';
     final ahora = mockNow;
     final hoyInicio = DateTime(ahora.year, ahora.month, ahora.day);
 
@@ -174,10 +180,9 @@ class _TareasScreenState extends State<TareasScreen> {
       }
 
       if (esAtrasado) {
-        nuevoColor = 'Rojo';
         break;
       } else if (estado == 'Pendiente') {
-        nuevoColor = 'Amarillo';
+        // ...
       }
     }
 
@@ -517,114 +522,126 @@ class _TareasScreenState extends State<TareasScreen> {
     // Opacidad sutil para tareas futuras
     final double opacidadBase = esFutura && !completado ? 0.75 : 1.0;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: completado ? Colors.grey.shade100 : (esFutura ? Colors.white70 : Colors.white),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: esFutura ? Colors.grey.shade200 : Colors.grey.shade300),
-        boxShadow: esFutura || completado ? [] : [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          )
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    if (completado) {
-                      _confirmarReapertura(registro, tarea);
-                    } else {
-                      _procesarYNavigar(registro, tarea);
-                    }
-                  },
-                child: Opacity(
-                  opacity: opacidadBase,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                Hero(
-                  tag: 'hero_icon_${registro['id']}',
-                  child: CircleAvatar(
-                    radius: 26,
-                    backgroundColor: completado
-                        ? Colors.grey.shade300
-                        : _colorFrecuencia(frecuencia),
-                    child: _iconoTipoTarea(tipo),
-                  ),
-                ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 400),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: completado ? Colors.grey.shade100 : (esFutura ? Colors.white70 : Colors.white),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: esFutura ? Colors.grey.shade200 : Colors.grey.shade300),
+                boxShadow: esFutura || completado ? [] : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  )
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      if (completado) {
+                        _confirmarReapertura(registro, tarea);
+                      } else {
+                        _procesarYNavigar(registro, tarea);
+                      }
+                    },
+                    child: Opacity(
+                      opacity: opacidadBase,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                nombreTarea,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17,
-                                  decoration: subtitleDecoration,
-                                  color: completado
-                                      ? Colors.grey.shade500
-                                      : Colors.black87,
-                                ),
+                            Hero(
+                              tag: 'hero_icon_${registro['id']}',
+                              child: CircleAvatar(
+                                radius: 26,
+                                backgroundColor: completado
+                                    ? Colors.grey.shade300
+                                    : _colorFrecuencia(frecuencia),
+                                child: _iconoTipoTarea(tipo),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            _iconoEstado(estado),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          nombreTarea,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 17,
+                                            decoration: subtitleDecoration,
+                                            color: completado
+                                                ? Colors.grey.shade500
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _iconoEstado(estado),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Frecuencia: $frecuencia',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: subtitleColor,
+                                        decoration: subtitleDecoration),
+                                  ),
+                                  if (segundaLinea.isNotEmpty) ...[
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      segundaLinea,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: completado
+                                            ? Colors.green.shade600
+                                            : subtitleColor,
+                                        decoration: completado ? null : subtitleDecoration,
+                                        fontWeight: completado
+                                            ? FontWeight.w500
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                  if (!completado && motivo != null && motivo.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    _motivoChip(motivo, (registro['veces_aplazada'] as int?) ?? 1),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Frecuencia: $frecuencia',
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: subtitleColor,
-                              decoration: subtitleDecoration),
-                        ),
-                        if (segundaLinea.isNotEmpty) ...[
-                          const SizedBox(height: 3),
-                          Text(
-                            segundaLinea,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: completado
-                                  ? Colors.green.shade600
-                                  : subtitleColor,
-                              decoration: completado ? null : subtitleDecoration,
-                              fontWeight: completado
-                                  ? FontWeight.w500
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
-                        if (!completado && motivo != null && motivo.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          _motivoChip(motivo, (registro['veces_aplazada'] as int?) ?? 1),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
-    ),
-  );
+        );
+      },
+    );
   }
 
   Widget _buildInfoCard() {
@@ -655,6 +672,10 @@ class _TareasScreenState extends State<TareasScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    '${_obtenerSaludo()},',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                  ),
                   Text(
                     nombre,
                     style: const TextStyle(
@@ -780,13 +801,20 @@ class _TareasScreenState extends State<TareasScreen> {
   }
 
   Widget _buildProgressBar() {
-    final r = _resumenTareas;
-    final completadas = r['completadas'] ?? 0;
-    final total = completadas + (r['pendientes'] ?? 0) + (r['atrasadas'] ?? 0) + (r['aplazadas'] ?? 0);
+    // Filtramos para el progreso solo lo que es de HOY o ATRASADO
+    final hoy = mockNow;
+    final completadasHoy = tareasCompletadas.where((t) {
+      final fs = t['fecha_completado']?.toString();
+      if (fs == null) return false;
+      final dt = DateTime.parse(fs).toLocal();
+      return dt.year == hoy.year && dt.month == hoy.month && dt.day == hoy.day;
+    }).length;
 
-    if (total == 0) return const SizedBox.shrink();
+    final totalHoy = completadasHoy + tareasHoy.length;
 
-    final porcentaje = completadas / total;
+    if (totalHoy == 0) return const SizedBox.shrink();
+
+    final porcentaje = completadasHoy / totalHoy;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -865,7 +893,7 @@ class _TareasScreenState extends State<TareasScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, Color color) {
+  Widget _buildSectionHeader(String title, IconData icon, Color color, {int count = 0}) {
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 8, left: 4),
       child: Row(
@@ -874,13 +902,27 @@ class _TareasScreenState extends State<TareasScreen> {
           const SizedBox(width: 8),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
               letterSpacing: 0.3,
             ),
           ),
+          if (count > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
+              ),
+            ),
+          ],
           const SizedBox(width: 12),
           Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
         ],
@@ -985,7 +1027,7 @@ class _TareasScreenState extends State<TareasScreen> {
                                     physics: const AlwaysScrollableScrollPhysics(),
                                     slivers: [
                                       if (tareasHoy.isNotEmpty) ...[
-                                        SliverToBoxAdapter(child: _buildSectionHeader('Para Hoy', Icons.assignment_late_outlined, Colors.orange.shade800)),
+                                        SliverToBoxAdapter(child: _buildSectionHeader('Para Hoy', Icons.assignment_late_outlined, Colors.orange.shade800, count: tareasHoy.length)),
                                         SliverList(
                                           delegate: SliverChildBuilderDelegate(
                                             (_, index) => _buildTareaCard(tareasHoy[index], esFutura: false),
@@ -994,7 +1036,7 @@ class _TareasScreenState extends State<TareasScreen> {
                                         ),
                                       ],
                                       if (tareasFuturas.isNotEmpty) ...[
-                                        SliverToBoxAdapter(child: _buildSectionHeader('Próximas a realizar', Icons.calendar_month_outlined, Colors.blue.shade700)),
+                                        SliverToBoxAdapter(child: _buildSectionHeader('Próximas a realizar', Icons.calendar_month_outlined, Colors.blue.shade700, count: tareasFuturas.length)),
                                         SliverList(
                                           delegate: SliverChildBuilderDelegate(
                                             (_, index) => _buildTareaCard(tareasFuturas[index], esFutura: true),
@@ -1003,7 +1045,7 @@ class _TareasScreenState extends State<TareasScreen> {
                                         ),
                                       ],
                                       if (tareasCompletadas.isNotEmpty) ...[
-                                        SliverToBoxAdapter(child: _buildSectionHeader('Completadas', Icons.check_circle_outline, Colors.green.shade700)),
+                                        SliverToBoxAdapter(child: _buildSectionHeader('Completadas', Icons.check_circle_outline, Colors.green.shade700, count: tareasCompletadas.length)),
                                         SliverList(
                                           delegate: SliverChildBuilderDelegate(
                                             (_, index) => _buildTareaCard(tareasCompletadas[index], esFutura: false),

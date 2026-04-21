@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../supabase_manager.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import '../utils/time_manager.dart';
 
 class PasosTareaScreen extends StatefulWidget {
@@ -332,6 +332,45 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     }
   }
 
+  Future<void> _mostrarExito() async {
+    if (!mounted) return;
+    
+    // Haptic feedback para sensación premium
+    HapticFeedback.vibrate();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 600),
+          tween: Tween(begin: 0.0, end: 1.0),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: Container(
+                padding: const EdgeInsets.all(40),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20, spreadRadius: 5)],
+                ),
+                child: const Icon(Icons.check_circle_rounded, size: 100, color: _verdeHeineken),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (mounted) {
+      Navigator.of(context).pop(); // Cerrar diálogo de éxito
+      Navigator.pop(context, true); // Volver a la pantalla anterior
+    }
+  }
+
   Future<void> _confirmarTarea() async {
     if (_procesando) return;
     setState(() { cargando = true; _procesando = true; });
@@ -349,15 +388,10 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
       await _callParsableRpc('completeWithOpts', reason: 'Completado desde ECILT');
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Tarea completada y sincronizada'),
-          backgroundColor: Colors.green.shade600,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) Navigator.pop(context, true);
+      
+      // En lugar de SnackBar, mostramos la animación satisfactoria
+      await _mostrarExito();
+      
     } catch (e) {
       debugPrint('Error confirmando tarea: $e');
       if (mounted) setState(() { cargando = false; _procesando = false; });

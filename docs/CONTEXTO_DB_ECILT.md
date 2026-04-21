@@ -59,36 +59,68 @@ En `config_screen.dart`, el catálogo de máquinas se almacena localmente. La Ap
 
 ---
 
-## 3. Lógica de Negocio y Automatización
+## 3. Lógica de Negocio y Automatización (Actualizado 2026-04-21)
 
-### `public.hoy_ec()`
-Retorna `now() AT TIME ZONE 'America/Guayaquil'`. Fundamental para evitar errores de desfase UTC.
+### `public.hoy_ec()` / `public.ahora_ec()`
+Funciones para normalizar el tiempo a `America/Guayaquil` (UTC-5). Todo el sistema (App, DB, Cron) debe usar estas funciones para comparaciones de fecha.
 
 ### `pg_cron` (Jobs Automáticos)
-- **Generación de Tareas:** Se ejecuta a las 06:00, 14:00 y 22:00 (Ecuador).
-- **Marcado de Atrasos:** A las 00:00 cambia `Pendiente` -> `Atrasado` si la fecha límite pasó.
-- **Semaforización:** Recalcula el estado de salud de las máquinas en cada cambio de turno.
+- **Generación de Tareas:** 07:00, 15:00 y 23:00 (Mañana, Tarde, Noche).
+- **Marcado de Atrasos:** 05:00 AM (Medianoche Ecuador) ejecuta `marcar_tareas_atrasadas()`.
+- **Seguro de Semáforos:** 07:10, 15:10 y 23:10 ejecuta `evaluar_todos_semaforos()`.
 
 ---
 
-## 4. Módulo `rpi_app` (Resiliencia Industrial)
+## 4. Motor de Generación de Tareas
+Refactorizado para soportar frecuencias complejas y evitar duplicados.
+
+### 4.1. Frecuencias Soportadas
+- **Diario:** Se genera en cada turno. Deadline: fin del turno.
+- **Semanal:** Solo los Lunes (Mañana). Deadline: +6 días (Domingo).
+- **Mensual:** Primer Lunes del mes. Deadline: +6 días.
+- **Quincenal:** Segundo Lunes del mes. Deadline: +6 días.
+- **Superiores (Trimestral/Semestral/Anual):** Primer Lunes del periodo correspondiente.
+
+### 4.2. Asignación de Operadores
+- **Tareas No-Compartidas:** La función consulta la tabla `turnos_semana` (Excel de horarios) y asigna la tarea directamente al `id_operador` programado para ese turno/máquina.
+- **Tareas Compartidas:** Se generan solo en el turno de la Mañana con `id_operador = NULL`. Cualquiera puede hacerlas.
+
+### 4.3. Restricciones de Integridad
+- **Constraint:** `registro_tareas_unique_por_turno` -> `UNIQUE (id_tarea, fecha_periodo, turno)`.
+- Resuelve el error de "duplicate key" permitiendo la misma tarea en diferentes turnos.
+
+---
+
+## 5. Sistema de Semáforos (Real-Time + Failsafe)
+El semáforo ya no tiene "amnesia" (mira más allá del día de hoy).
+
+### 5.1. Lógica de Colores (Jerarquía)
+1.  🔴 **Rojo:** Existe AL MENOS una tarea en estado `Atrasado` o `Pendiente` con `fecha_limite` vencida (no importa el día).
+2.  🟡 **Amarillo:** No hay atrasos, pero existen tareas `Pendientes` (del turno actual o semanales vigentes).
+3.  🟢 **Verde:** Máquina al día.
+
+### 5.2. Sincronización
+- **Tiempo Real:** Gatillado por `trg_actualizar_semaforo_realtime` en la tabla `registro_tareas`.
+- **Backup (Cron):** Los jobs de `evaluar_todos_semaforos()` actúan como barredora automática.
+
+---
+
+## 6. Módulo `rpi_app` (Resiliencia Industrial)
 
 Los scripts de la Raspberry Pi fueron rediseñados para entornos de red inestables:
 
 ### `supabase_realtime_to_mqtt.py` (Semáforo)
 - **No Bloqueante:** Usa `asyncio` y el loop nativo de `paho-mqtt`.
-- **Persistencia Local:** Guarda el último estado del semáforo en `estado_semaforo.json`. Si el internet falla al arrancar, lee el archivo local para encender la luz correcta de inmediato.
-- **Auto-Recuperación:** Se reinicia internamente cada 10 minutos para limpiar conexiones "zombies".
+- **Persistencia Local:** Guarda el último estado del semáforo en `estado_semaforo.json`.
 
 ### `rfid_to_supabase.py` (Lector RFID)
-- **Worker Thread:** El envío a Supabase ocurre en un hilo separado. La lectura de tarjetas nunca se detiene.
-- **Cola de Reintento (Buffer):** Si no hay internet, las lecturas se guardan en una cola interna. El script reintenta enviarlas cada 5 segundos hasta que tengan éxito. **Ninguna marca de asistencia se pierde.**
-- **Debounce:** Bloqueo de 2 segundos para la misma tarjeta para evitar registros duplicados accidentales.
+- **Worker Thread:** El envío a Supabase ocurre en un hilo separado.
+- **Cola de Reintento (Buffer):** Si no hay internet, las lecturas se guardan en una cola interna.
 
 ---
 
-## 5. Despliegue y Mantenimiento
+## 7. Despliegue y Mantenimiento
 
 - **Netlify:** Despliegue de la App Flutter como SPA (`_redirects` obligatorio).
-- **Admin Panel:** Uso de inserciones en lote (Batch Inserts) de 200 en 200 para importaciones masivas de Excel.
+- **Admin Panel:** Uso de inserciones en lote (Batch Inserts) de 200 en 200.
 - **TimeManager:** Singleton en Flutter para viajes en el tiempo (Simulación) durante el testing.
