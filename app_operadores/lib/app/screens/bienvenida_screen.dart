@@ -9,7 +9,6 @@ import 'config_screen.dart';
 import 'tareas_screen.dart';
 import 'supervisor_screen.dart';
 
-import 'dart:convert';
 import '../utils/time_manager.dart';
 
 // Retorna la fecha actual del dispositivo controlada por TimeManager
@@ -81,8 +80,16 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus && !_operadorValido) {
+        // Solo re-enfocar si la pantalla de Bienvenida es la que está al frente (activa).
+        // Esto evita que robe el foco cuando el usuario navega a Configuración.
+        final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
+        if (!isCurrent) return;
+
         Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted && !_operadorValido) _focusNode.requestFocus();
+          if (mounted && !_operadorValido) {
+            final stillCurrent = ModalRoute.of(context)?.isCurrent ?? false;
+            if (stillCurrent) _focusNode.requestFocus();
+          }
         });
       }
     });
