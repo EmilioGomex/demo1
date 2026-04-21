@@ -1,0 +1,21 @@
+id,id_maquina,nombre,linea,area,created_at,implementado
+023e8dcd-ff77-4675-8926-858ebf26e51b,9995,Paletizadora,Botellas,Packaging,2026-04-18 23:01:50.539137+00,true
+14c89e6e-9291-4041-9839-7cb3c96ed26a,9999,Etiquetadora,Botellas,Packaging,2026-04-18 23:01:50.539137+00,true
+2422e08a-b1fa-423f-bb68-ccdbcb6f1e2b,9997,Encajonadora,Botellas,Packaging,2026-04-18 23:01:50.539137+00,true
+54f1719a-ff39-4d48-9629-f1afda5430af,10000,Inspector de Botellas Vacías,Botellas,Packaging,2026-04-18 23:01:50.539137+00,true
+67db84a4-d041-4746-9fe6-5b800b531446,9992,Varioline,Latas,Packaging,2026-04-18 23:01:50.539137+00,true
+6e06f29b-aff5-4b66-a404-3be16a696c0d,9993,Pasteurizador,Botellas,Packaging,2026-04-18 23:01:50.539137+00,true
+70267d2b-ddc2-420e-9005-d4e0a41e4d7a,9996,Despaletizadora,Botellas,Packaging,2026-04-18 23:01:50.539137+00,true
+758e2f22-bcaa-4bc1-a0e5-b0e7824c1d27,10002,Lavadora de Cajas,Botellas,Packaging,2026-04-18 23:01:50.539137+00,false
+82b6b15e-e704-40b2-8ca2-b0a7c5cd9e1b,MAQ-4619,Condensador Evaporativo,Ingenieria,Ingenieria,2026-04-18 23:01:50.539137+00,false
+849fa901-f851-4915-a427-41c4aabcaa7b,9652,Planta de frio,Utilidades,Utilidades,2026-04-18 23:01:50.539137+00,false
+87e6fffb-787e-4a17-a1ff-ad2510a3a650,100100,Condensador Evaporativo,Logistica,Logistica,2026-04-18 23:01:50.539137+00,false
+88da39a1-1cf1-445c-b117-37e44c63ad83,9998,Llenadora,Botellas,Packaging,2026-04-18 23:01:50.539137+00,true
+958f70ac-f71b-4b65-89a3-8e1c28a8dd84,9991,Variopac,Latas,Packaging,2026-04-18 23:01:50.539137+00,true
+a301c4d2-4f00-4092-b0a5-db5182e59f62,10004,Desencajonadora,Botellas,Packaging,2026-04-19 17:15:54.353258+00,true
+abc58bab-8820-4921-ae96-d52d6414047c,10003,Pasteurizador,Latas,Packaging,2026-04-18 23:01:50.539137+00,true
+b073830c-d4fe-4ebf-96fb-002364ce324f,9994,Modulfill,Latas,Packaging,2026-04-18 23:01:50.539137+00,true
+b9ef7efe-6f15-49b5-b23d-c133eccb2aea,10001,Lavadora,Botellas,Packaging,2026-04-18 23:01:50.539137+00,true
+bd4c09de-2437-4e7c-b27b-903353ec9baf,MAQ-5357,Pressant,Latas,Packaging,2026-04-18 23:01:50.539137+00,true
+bfe09067-9805-4a23-90d1-729d4c41f447,MAQ-9758,Modulpal,Latas,Packaging,2026-04-18 23:01:50.539137+00,true
+e32b795e-b8f3-4dab-801b-86cab808b427,9183,Planta CO2,Utilidades,Utilidades,2026-04-18 23:01:50.539137+00,false

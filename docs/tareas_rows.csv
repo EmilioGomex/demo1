@@ -1,0 +1,550 @@
+id,id_tarea,nombre_tarea,frecuencia,tipo,id_maquina,es_compartida,created_at
+0120a88e-30f6-4635-9532-db30f8507d3b,9993-1776661006799-734-8,Verificar paso de vapor a tanques,Diario,Inspección,9993,false,2026-04-20 04:56:47.235956+00
+01a1ad33-569f-4588-917f-e9127c0a9db4,MAQ-9758-1776658519688-119-32,Reemplazar filtro neumático,Mensual,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+02325839-a73f-495c-a5aa-6ba702184296,10000-1776660996845-494-8,Lubricar rodamientos ejes de apoyo,Semanal,Lubricación,10000,false,2026-04-20 04:56:37.282634+00
+031bd3ee-1de2-4f94-9280-83c8313d6b7c,22,Limpiar las barreras de luz y reflectores y empacadora no retornables,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+03b26020-8d86-4785-8f76-8952b8f7793a,9999-1776660986172-599-55,Ajuste barandillas de guiado,Mensual,Inspección,9999,false,2026-04-20 04:56:26.991617+00
+03c30220-9b6e-44a4-84e9-50951e0bcecc,9998-1776661043000-697-26,Verificar cumplimiento HACCP proceso,Diario,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+05177aed-34ac-4cff-922f-d29e7526e92d,57,Lubricar rodamientos,Semanal,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+055f20e9-0f7d-465f-ad63-257963bc7641,9995-1776661059249-1-19,Verificar sensores de salida,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+05ba0a8a-e788-44f1-8b8c-d82b8da75e99,9993-1776661006799-363-0,Limpiar mallas de tanques,Diario,Limpieza,9993,false,2026-04-20 04:56:47.235956+00
+05c8f329-8082-432a-b122-c1ba86345153,9997-1776661022886-378-14,Ajustar enfiladores de botellas,Mensual,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+074a476d-f440-4062-bed1-e3f6e60f4ca2,10004-1776661032302-31-21,Lubricar accionamiento principal,Semanal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+082436b5-a1d2-4f96-a0ab-74aa550ab8e6,9992-1776658470557-999-15,Limpieza ventanas de resguardo,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+0989ab83-4885-40fc-8b79-64f6d5d8d6c6,9999-1776660986172-406-35,Inspección cadenas motrices,Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+09a92466-76ee-49fb-b454-4eefe521954c,9999-1776660986172-9-57,Ajuste estabilizador,Mensual,Inspección,9999,false,2026-04-20 04:56:26.991617+00
+09eccfb9-4b3f-4346-a174-b9c613760d94,9999-1776660986172-41-56,Ajuste chapas tolva y distribución,Mensual,Inspección,9999,false,2026-04-20 04:56:26.991617+00
+0b6f60d1-e8ca-4637-bf61-e986b34fa23d,9992-1776658470557-802-35,Inspección cadenas motrices,Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+0bed4903-b5f8-4e8f-85f9-bccf3163ff7a,10001-1776661051633-200-3,Verificar bombeo soda (tanque diario → lavadora),Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+0c184738-879f-4a2b-ab78-f54bbdd47ecf,10001-1776661051633-733-8,Verificar compactador de etiquetas,Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+0c5c6570-ab72-441e-8737-6f0e2ccf7e11,MAQ-9758-1776658519688-268-7,Inspeccionar transportador de entrada,Semanal,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+0d5a21ca-6b66-42a9-a8b8-7a282c7f9218,10004-1776661032302-984-18,Lubricar árbol articulado de accionamiento,Semanal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+0db9d903-bedd-43d0-9b6e-6f3475ecad12,20,Limpiar los elementos de mando y los tableros de conexiones eléctricas,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+0ec8c636-913e-4699-9e5c-1f344b51ddac,9997-1776661022886-6-10,Verificar estado de racores neumáticos,Mensual,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+0ec9099a-def0-459f-b2f9-319dd7219072,MAQ-9758-1776658519688-190-20,Lubricar tornillo sin fin,Mensual,Lubricación,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+0f70bf3b-e04b-4452-b2c5-1b2f516dfa2b,9999-1776660986172-59-44,Verificación nivel sistema lubricación (aceite),Trimestral,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+0f8120f0-0764-46e7-bd14-ca5af59e801c,10003-1776658481737-665-10,Limpiar interior de la máquina,Mensual,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+0f892837-ab9c-4d38-81de-d4bb2e758de6,9997-1776661022886-169-25,Lubricar seguidor de leva viga sincrónica,Quincenal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+10ce72f2-c790-4355-b52d-62f3efa94411,10001-1776661051633-485-14,Lubricar cojinetes eje excéntricas,Diario,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+112bfad8-3c39-4f10-aca0-9d73a5d00329,10001-1776661051633-783-24,Limpiar ventanas de inspección,Semanal,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+1145fdd7-284a-4155-a51d-0bab3db65e4b,9994-1776658499174-204-25,Lubricar eje articulado sinfín,Trimestral,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+11c4bf4b-265b-48a9-8807-cd0b1108be52,10000-1776660996845-972-12,Lubricar cardan accionamiento principal,Quincenal,Lubricación,10000,false,2026-04-20 04:56:37.282634+00
+120a122e-5a1a-4cf1-9625-a6a2077c18b2,9992-1776658470557-73-27,Verificación dispositivos de seguridad (test semanal),Semanal,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+127e844c-1092-4484-9f1f-4ea2fb951c2d,MAQ-9758-1776658519688-271-18,Lubricar unidad lineal,Trimestral,Lubricación,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+1322a6c2-3291-4089-b898-054c5c39d344,9994-1776658499174-330-30,Ajustar tensión cadena entrada,Semanal,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+146e9116-11ad-49b6-889b-760bfeedbe7e,10,Limpiar los rodillos tensores en módulo de procesamiento de film plástico,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+153be691-743c-4144-a74d-13208993d727,60,"Lubricar servoaccionamientos ",Trimestral,Ajuste,9991,true,2026-04-18 23:21:57.584484+00
+15aa6a54-766f-4f8a-b6f0-fb46bf615884,9993-1776661006799-311-11,Lubricar rodamientos accionamiento (lado derecho),Semanal,Lubricación,9993,false,2026-04-20 04:56:47.235956+00
+15bca9c2-8433-43b3-8db9-a9f0c3cf2ec7,9997-1776661022886-183-11,Verificar nivel y estado unidad de mantenimiento,Semanal,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+15d8b43a-a6df-4fb6-a64a-c0f7f2853af2,9996-1776661069105-219-10,Reapretar sistema de garras,Mensual,Inspección,9996,false,2026-04-20 04:57:49.545415+00
+16041879-ae6f-4cc5-a98c-d51ec13114e8,MAQ-9758-1776658519688-662-5,Limpiar motores y servomotores,Semanal,Limpieza,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+16ce4c9d-0383-4b51-936f-ad9847d42961,120,Flujómetro de CO2 - Proceso,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+171acce7-2dd0-4415-ac4e-0d554584ae29,10001-1776661051633-434-15,Lubricar rodamientos rótulas,Diario,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+174ac629-1b15-467c-bfd1-fb6fa7ce129e,62,Ajustar y reemplazar brochas de lubricación,Semanal,Ajuste,9991,true,2026-04-18 23:21:57.584484+00
+17778ce5-e826-4128-9a0f-3d12968d30fa,MAQ-9758-1776658519688-890-25,Operar máquina en modo manual (paso a paso),Mensual,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+17db277f-a515-4d91-95d0-808591515603,9999-1776660986172-466-39,Verificación fugas adhesivo/lubricante,Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+17faa15d-41f5-421d-99cd-ec9ff0fda0f5,9998-1776661043000-742-32,Ajustar tornillo sin fin,Mensual,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+180b75e8-5cc8-4e08-ae79-db741cab2a95,9999-1776660986172-947-28,Inspección barreras de luz y reflectores,Semanal,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+1853a568-44ea-44b6-8978-d492e73c9cb0,10003-1776658481737-295-29,Lubricar válvulas de agua,Mensual,Lubricación,10003,false,2026-04-20 04:14:42.147113+00
+18f4cba4-fc9e-410d-8c06-bcbe70594655,10004-1776661032302-772-13,Ajustar chupas de agarre de botellas,Mensual,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+19b5d695-ccc8-4d35-9501-0cdb3972ee5c,10004-1776661032302-772-12,Reapretar pernos de ejes de accionamiento,Semanal,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+19cba74e-c71f-460f-95f3-a5b242d9260b,MAQ-9758-1776658519688-511-4,Limpiar resguardo de la máquina,Semanal,Limpieza,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+1a287cd7-ec74-433b-b220-ce8d0c02d0f3,10004-1776661032302-544-19,Lubricar rodamientos de transporte de cajas,Semanal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+1b0f8cda-f653-4d35-b671-8517479f552a,37,Comprobar el estado de las cadenas de transporte,Semanal,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+1b5930f4-7f50-4746-937c-141571505caf,121,Flujómetro C02 - Línea Latas,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+1b761d06-516f-4275-806a-74a8ea8f3c5a,9997-1776661022886-226-17,Ajustar transporte de cajas,Mensual,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+1e23ac3e-4cda-40c9-804b-43a7dcde4092,9999-1776660986172-143-21,Limpieza pisos y áreas comunes,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+1e4c5f3e-5275-482e-b31f-b29001632299,32,Comprobar el nivel de condensado,Diario,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+1e4c74bd-5a09-4ec1-8118-12e1202073e2,9998-1776661043000-855-17,Lubricar distribuidores de aire,Semanal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+1f90431d-2e0c-4813-a113-503aeef50a52,108,Enfriador de CO2 1era etapa,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+1fb80d1e-91b4-4375-a6f2-46acd58d0df7,10004-1776661032302-555-24,Lubricar cadenas de arrastre de cajas,Quincenal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+1fd512f5-163e-4965-80e3-d585ceda776c,10003-1776658481737-508-6,Limpiar transportadores,Semanal,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+20db17a8-560d-43fb-89b2-afdee72c0724,9992-1776658470557-341-11,Limpieza placas transporte y pernos,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+21fe87bf-54da-48c4-80b7-55d0605a4a83,10000-1776660996845-324-24,Verificar estado y tensión de correas,Mensual,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+23c6f6a2-c5ea-4b66-b37c-1b3288419a08,10004-1776661032302-143-30,Lubricar eje de elevación dosificador de cajas,Mensual,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+2402e5f2-bca9-45cd-8cb7-e63b870d38fc,9996-1776661069105-520-15,Lubricar sistema portagarras,Diario,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+2403dede-3af9-4067-988d-e29fae604221,9994-1776658499174-32-29,Ajustar tornillo sinfín,Mensual,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+24afb9c5-78ee-4d66-859f-f3e6d2dd488b,9999-1776660986172-842-37,Inspección sistema encolador (estado),Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+254a32e3-024d-4272-aca0-f50dd310710f,10004-1776661032302-51-9,Verificar estado de mangueras neumáticas,Mensual,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+2577fffa-8457-4f5a-ab29-8b7813b193cb,MAQ-5357-1776658509306-554-18,Ajuste de sensores y actuadores,Semanal,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+25ede7bd-e6bb-403c-b0d4-bb16759bd3de,50,Lubricar cadena de transportador en tunel de retractilado,Semanal,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+2614986a-cc33-4b59-9a12-4ee22f38c94f,10003-1776658481737-579-23,Verificar estanqueidad de tuberías,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+265db67c-04de-4d51-94ee-ebc0d2fa58db,9992-1776658470557-503-8,Limpieza filtro módulo encartonador,Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+2691fff2-545c-433c-b39f-48a4de63eaff,9999-1776660986172-854-36,Inspección reductores (fugas),Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+26ce7a80-a6c3-4926-bc27-04d6a4ca74fb,MAQ-5357-1776658509306-654-5,Inspección visual de depaletizadora,Diario,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+26e1096f-ff03-4287-856c-ec0a8f974b7b,9999-1776660986172-45-49,Ajuste/reemplazo brochas lubricación,Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+26f30bdd-485f-41ac-bc92-379ed45a697e,9992-1776658470557-828-1,Limpieza cortina fotoeléctrica (emisor/receptor),Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+27cad965-7c40-4d90-8f69-891574c2ef78,10004-1776661032302-145-11,Verificar nivel y estado unidad de mantenimiento,Quincenal,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+28206963-1450-48bd-9620-981d40ff85ff,9995-1776661059249-392-11,Lubricar mecanismo de garras,Semanal,Lubricación,9995,false,2026-04-20 04:57:39.680218+00
+2825b695-e5ec-4d76-8f0e-57985c2c97f5,44,Verificar el casquillo del soporte antitorsión,Semestral,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+2827421c-5b2f-4fd5-a35e-a93f8aee27cc,10001-1776661051633-407-10,Limpiar mallas de prerociado,Diario,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+289a7a26-ebbc-4ffc-82fc-8233fbc6df00,9995-1776661059249-384-8,Limpiar sistema de garras,Diario,Limpieza,9995,false,2026-04-20 04:57:39.680218+00
+28aa3c70-0022-4842-bab5-0217fcf646e9,MAQ-9758-1776658519688-284-1,Limpiar transportadores de rodillos,Semanal,Limpieza,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+28f92609-5120-4ae4-a268-a9408082a6fd,MAQ-5357-1776658509306-280-2,Limpieza de sistema neumático,Mensual,Limpieza,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+29186ca8-8558-4341-9d0b-eb23ecd8cdc5,9992-1776658470557-495-22,"Verificación dispositivos de seguridad (E-Stop, alarmas)",Diario,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+2a341bb5-9705-47c7-a40c-6dd501c872cc,10003-1776658481737-191-5,Limpiar climatizador,Semanal,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+2a49abf6-8865-4196-820d-e8153a13c2cd,9995-1776661059249-704-20,Ajustar guías de salida,Mensual,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+2a8a583b-e4a6-4f35-ac4a-d656326a2a8c,10004-1776661032302-292-2,Limpiar pisos profundos (interior y bajo máquina),Semanal,Limpieza,10004,false,2026-04-20 04:57:12.752805+00
+2ab48970-91a1-4687-92b9-88f9335bc4a3,10003-1776658481737-873-30,Lubricar manholes y escotillas,Mensual,Lubricación,10003,false,2026-04-20 04:14:42.147113+00
+2ad50046-9655-4de7-bb1c-f13d3a664e36,10001-1776661051633-936-4,Verificar bomba de condensado,Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+2bd107a4-5e36-418a-93c3-05fce70cc5c2,9992-1776658470557-920-17,Limpieza servomotores,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+2c6ce351-7840-4f09-bc5b-f8a3d958e67d,9998-1776661043000-534-33,Verificar ajuste tulipa centradora,Semanal,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+2cbeaa73-f327-4d69-83ff-992c48c9b34b,9995-1776661059249-523-0,Limpiar transporte de paletas (entrada),Diario,Limpieza,9995,false,2026-04-20 04:57:39.680218+00
+2db0074b-e5a7-44a3-978e-014a185b7c2b,9999-1776660986172-303-5,Limpieza boquillas de encolado,Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+2db9017a-f722-4434-86c8-5f12183877c8,9999-1776660986172-477-54,Ajuste sensores ópticos entrada latas,Mensual,Inspección,9999,false,2026-04-20 04:56:26.991617+00
+2dd1c542-2ba2-41b6-b5bf-70d0e32d196c,9992-1776658470557-478-36,Inspección reductores (fugas),Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+2e4b2223-f986-45ae-a8ca-7cd0991705e0,9998-1776661043000-515-14,Lubricar sistema taponador (rodamientos y rodillos),Semanal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+2e738f0b-3808-49e9-b429-bb3ae182dd4b,9996-1776661069105-823-6,Verificar funcionamiento de sistema de elevación,Diario,Inspección,9996,false,2026-04-20 04:57:49.545415+00
+2f393cff-1395-4b1c-ac70-e9e19fc6397a,11,Limpiar rodillos engomados en Estación de corte del film plástico,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+2f4f5178-4fff-481d-8a68-790365b8ce5e,MAQ-9758-1776658519688-993-22,Cambiar lubricante reductores transferencia,Tres años,Lubricación,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+2f5ca0a5-6289-4eb6-8763-3d3466870ebf,10003-1776658481737-488-17,Inspeccionar cinta transportadora principal,Mensual,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+2f78ed8f-87e7-4516-9aea-d7597ef340fc,9994-1776658499174-146-8,Comprobar estado técnico de máquina,Diario,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+2fa56c0a-f0b3-48f0-a06d-1b9feb4e6318,9999-1776660986172-963-29,Inspección cortina fotoeléctrica,Semanal,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+2ff95766-275a-4dbe-98bb-1a4e48fe45bb,9992-1776658470557-526-19,Limpieza armario eléctrico / mandos,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+3121b30e-0938-43ba-bd73-cb8aa0c84597,10001-1776661051633-877-26,Limpiar tanque cero,Semanal,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+3143fa39-3281-4ec4-9626-cd0e0b79d38b,9999-1776660986172-7-8,Limpieza filtro módulo encartonador,Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+31e672ee-bc58-495e-8464-3e4afd2062fc,9994-1776658499174-532-23,Lubricar pernos de leva,Mensual,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+32001155-d315-4365-b80c-7402829cc4ba,27,Limpieza del exceso de carbonilla en los tanques,Semestral,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+32907ed4-595c-48f2-8dd9-4ebbfd1d7785,26,"Limpieza de los tanques al cambiar el adhesivo ",Semestral,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+337dc0fd-b8cc-4b52-8f21-4c07e8aa6a05,9994-1776658499174-395-13,Inspeccionar estaciones de llenado,Diario,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+3386bd29-19f1-44c6-a725-9b3bb7da3357,10003-1776658481737-406-19,Inspeccionar transferencia,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+33a66525-38f5-4451-b8fe-22c96f5dff98,10001-1776661051633-628-27,Limpiar zona de descarga,Semanal,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+345d792c-4d08-44bf-9dff-fdc4821ca045,9992-1776658470557-157-47,Reemplazo engrasadores sistema cartón,Diario,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+345d8859-c51c-43ed-b105-efbd9e033813,10004-1776661032302-535-26,Lubricar resortes de uñas dosificadoras,Quincenal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+3492b7ce-f2d1-420f-b764-4246b5b1f7ce,9999-1776660986172-410-43,Verificación nivel sistema lubricación (grasa),Trimestral,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+34f704a3-e884-4eb7-9ea6-900c8057f716,9993-1776661006799-358-15,Hervido y limpieza profunda de tanques,Quincenal,Limpieza,9993,false,2026-04-20 04:56:47.235956+00
+354d3215-1ae1-4bae-b850-5649277e1de0,9999-1776660986172-724-11,Limpieza placas transporte y pernos,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+363fc250-c4da-4305-bc5f-e57376f9ca18,9992-1776658470557-475-26,Verificación presión bomba de vacío,Diario,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+3657db18-5c9c-4c48-930c-b914917760e8,9992-1776658470557-595-46,Reemplazo engrasadores estación elevadora,Diario,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+37017fb4-2d81-4b0b-8ba4-13bc713fb6bc,9999-1776660986172-473-18,Limpieza carcasa filtro separador agua,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+37054829-3e31-433e-9707-c44315ceeb48,9998-1776661043000-780-22,Lubricar guías de cierre taponador,Quincenal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+37631ce2-421d-4f95-a2b5-ec799b48d71b,9994-1776658499174-101-18,Verificar lubricación distribuidor central,Semanal,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+37ddc7d3-d995-44bc-959a-2c51d78268e9,10004-1776661032302-95-15,Ajustar altura dosificador de cajas,Mensual,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+37f5dc43-243e-4343-8f4d-93f735c0f866,9992-1776658470557-406-57,Ajuste estabilizador,Mensual,Inspección,9992,false,2026-04-20 04:14:31.355948+00
+38210411-d025-4020-ac61-3369ae7e1f6d,9995-1776661059249-670-17,Limpiar transporte de paletas (salida),Diario,Limpieza,9995,false,2026-04-20 04:57:39.680218+00
+38a9a0c6-73a5-45f0-8a27-080484e6b0d5,9992-1776658470557-480-21,Limpieza pisos y áreas comunes,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+38ac16e9-c3b8-40d7-8100-88e90d178e44,10001-1776661051633-990-1,"Verificar alineación de duchas (prerociado, soda, enjuague)",Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+38b4a117-1610-4ddd-8e90-782197d26a03,9995-1776661059249-691-4,Limpiar mesa formadora de capas,Diario,Limpieza,9995,false,2026-04-20 04:57:39.680218+00
+3909c711-c88d-4912-925a-7a858123987c,9998-1776661043000-931-16,Lubricar bomba de vacío,Semanal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+390d183e-34ae-4776-a63b-1ce7f72c58c9,9992-1776658470557-527-40,Verificación lubricación cadenas motrices,Semanal,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+3958f589-b6a5-4123-b7df-b496365146a3,9999-1776660986172-442-31,Inspección desgaste cadenas transporte,Semanal,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+3a39cdfa-9390-47e1-a469-09c2227df807,9998-1776661043000-916-15,Lubricar sistema de transporte y sinfín,Semanal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+3b7b95dc-6de4-4f1e-b83c-abd66fd4e320,9994-1776658499174-239-16,Inspeccionar sistema de aire comprimido,Semanal,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+3bc24edc-c6ac-4643-802f-564bf9924640,10000-1776660996845-639-22,Ajustar ancho transporte de botellas,Mensual,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+3be67cb6-7acf-451c-91ef-a73fe91172a1,9994-1776658499174-713-20,Verificar nivel depósito lubricación,Semanal,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+3bec214f-4caf-4a03-b459-54a56f63bf45,9992-1776658470557-427-14,Limpieza barreras de luz y reflectores,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+3c693df3-8496-4e21-9fca-f73cbc61391f,MAQ-9758-1776658519688-646-23,Cambiar lubricante reductores paletización,Tres años,Lubricación,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+3c7a736a-d5fa-49f6-87a3-b3a18f9a50f4,9999-1776660986172-697-34,Verificación fijación mangueras neumáticas,Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+3cfceb4b-3b7a-460a-ae4d-4cddcf68eff1,31,Comprobar la marcha de los rodillos.,Mensual,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+3d22a697-8d38-4cd1-b231-54dca22c8a7f,9995-1776661059249-469-16,Reapretar estructura de elevación,Mensual,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+3d7e6a5b-65af-4666-8345-34729a9cf743,10003-1776658481737-750-36,Reemplazar transferencia,Mensual,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+3e8d733b-8f01-47b8-9478-9b1d4dcaf7de,10004-1776661032302-871-1,Limpiar bandejas de la máquina,Semanal,Limpieza,10004,false,2026-04-20 04:57:12.752805+00
+3f2adfad-1996-4708-9e32-644aa72807a2,9994-1776658499174-231-1,Limpiar tubo de caída de latas,Diario,Limpieza,9994,false,2026-04-20 04:14:59.602279+00
+3fb82ba2-6acc-4ad2-addb-7b600aa38539,28,Comprobar el estado de los dispositivos de seguridad y protección,Diario,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+402eaf7c-0869-429b-9bd8-90093b344c96,10001-1776661051633-572-12,Limpiar tanque de prerociado,Diario,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+40322403-fbe7-4364-bbfe-afd4a943e61c,9992-1776658470557-452-48,Cambio lubricante reductores,Tres años,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+4125c305-a864-4fae-b0b6-14f889ec4cb0,10003-1776658481737-716-34,Cambiar lubricante reductor transportador,Tres años,Lubricación,10003,false,2026-04-20 04:14:42.147113+00
+415b5247-828b-4f15-b111-07073a35eaa5,9997-1776661022886-961-5,Limpiar rodillos de transporte,Semanal,Limpieza,9997,false,2026-04-20 04:57:03.321636+00
+41852d87-0fcb-4f29-b67a-db672fdce2ee,MAQ-9758-1776658519688-920-24,Cambiar lubricante reductores mesa,Tres años,Lubricación,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+41e38a38-c4ae-4abb-8054-77e6b0a49608,17,Limpiar la carcasa en unidad de mantenimiento,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+42515908-650f-4e6a-acf7-ea6fe09e22bf,10001-1776661051633-294-35,Inspeccionar canastos y bolsillos,Mensual,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+42e3a348-23b4-4c37-ba06-aaaa7423ecd0,9992-1776658470557-325-43,Verificación nivel sistema lubricación (grasa),Trimestral,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+43347b36-a3a5-42df-9da1-1830932f70f1,MAQ-9758-1776658519688-316-6,Limpiar tableros eléctricos,Semanal,Limpieza,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+43908469-dd89-42d5-981e-58187a6194d4,9999-1776660986172-66-27,Verificación dispositivos de seguridad (test semanal),Semanal,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+442428e2-c6b6-4478-8c34-fd330474c9aa,9993-1776661006799-152-9,Limpiar ventanas del equipo,Semanal,Limpieza,9993,false,2026-04-20 04:56:47.235956+00
+44397456-f9aa-411a-ad5c-0e22b63dfb10,MAQ-9758-1776658519688-289-29,Ajustar sensores de seguridad (muting),Mensual,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+445659f8-8b0a-4f63-bf8f-883afb49639d,43,Purga del agua de condensación del separador de agua,Mensual,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+4465463a-d63c-47f9-ac90-c839adea2420,10001-1776661051633-418-7,Verificar niveles tanque de soda,Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+4466072b-d2b0-4d1b-83a4-048849fece17,10001-1776661051633-931-2,Verificar bombeo soda (tanque externo → diario),Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+446e452b-024d-40ba-8cd1-3d6f7a1baf67,10004-1776661032302-394-25,Lubricar cadenas de transporte de cajas,Quincenal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+45430a2e-d6f5-447f-a958-c497effd6d59,124,Compresor de HN3,Mensual,Lubricación,9183,false,2026-04-18 23:21:57.584484+00
+4546402c-bfec-4119-8038-f6b501500a29,10003-1776658481737-519-0,Limpiar tamices,Diario,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+45c2590e-ba73-49f3-be56-a71412b0308c,9992-1776658470557-729-55,Ajuste barandillas de guiado,Mensual,Inspección,9992,false,2026-04-20 04:14:31.355948+00
+46630bf1-6939-4143-b8de-9deb882935a5,47,Lubricar depósito del sistema de lubricación central con aceite en bastidor de máquina,Semanal,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+46f50b0d-885c-4f9e-aa41-e9b791505b15,40,Comprobar la tensión y deterioros de las cadenas En Empacadora de no retornables,Mensual,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+47c9f7d6-9b63-4504-9550-3df091603ba4,MAQ-9758-1776658519688-265-14,Inspeccionar estación de transferencia,Semanal,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+47d1a79d-7217-4c20-9367-f261400469ca,114,Flujómetro entrada CO2,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+48149a9c-b9bd-4b1a-9fed-c67d5188df4c,10001-1776661051633-188-21,Limpiar mallas extractoras de etiquetas,Semanal,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+48d98969-c0f7-4a90-88be-27fdd55c66b8,9998-1776661043000-874-27,Ajustar coronadores según formato,Mensual,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+48f9733c-e4c8-4eeb-bddd-80ed0b8cf0d4,9992-1776658470557-5-0,Limpieza botonera bloqueo/desbloqueo puertas,Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+490a068b-09b2-4ead-90c6-0d72057ef4a5,5,Limpiar Cintas transportadoras y cintas asistidas por vacío,Mensual,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+4934b4d7-c1ef-4c2d-9da5-e315a04fe28b,10000-1776660996845-543-16,Verificar unidad de mantenimiento (soplado vidrio),Quincenal,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+49538799-5c84-455e-865e-b80d3f1cbcf3,105,Lavador de CO2,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+49694b6e-28d4-42a8-a18c-e189ff99e66d,9998-1776661043000-890-25,Verificar parámetros HACCP (pH producto),Diario,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+4c15de76-98cd-4545-a548-7e310928143e,118,Tanque interno de CO2,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+4c492a05-744c-4152-8ac0-709aa52f3572,9998-1776661043000-599-1,Limpiar sistema CIP (tanques y recirculación),Semanal,Limpieza,9998,false,2026-04-20 04:57:23.44441+00
+4c59eb3a-9ea1-4a46-9fde-f8f3fec67687,MAQ-9758-1776658519688-332-28,Ajustar sensores de posición,Mensual,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+4c706ea4-c656-4d72-812e-9f9e075e480b,10000-1776660996845-558-18,Ajustar barandillas del transportador,Mensual,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+4da87c06-f425-4a87-aa2d-77472fccd04d,10001-1776661051633-362-11,Limpiar extractores de etiquetas,Diario,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+4ecf2585-f8c9-4ee4-a84c-4f2e6a41738b,10004-1776661032302-389-14,Ajustar enfiladores de botellas,Mensual,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+4ed8d310-a24a-425f-b736-1d8e8f88a365,9993-1776661006799-671-13,Lubricar rodamientos reenvío (lado izquierdo),Semanal,Lubricación,9993,false,2026-04-20 04:56:47.235956+00
+4fcf8a34-394b-40ee-8c18-47818d0b9ff8,9992-1776658470557-397-38,Verificación presión sistema encolado,Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+4fda74e5-6482-4ca5-b99c-736ffebde8fa,9996-1776661069105-30-4,Inspeccionar sensores y actuadores,Diario,Inspección,9996,false,2026-04-20 04:57:49.545415+00
+4ff3430f-378f-4d4e-a252-cd558dbdf6ae,9994-1776658499174-947-12,Verificar nivel de condensado,Diario,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+4ff58d25-43c3-45f5-a182-b3b008ac7df8,9992-1776658470557-698-54,Ajuste sensores ópticos entrada latas,Mensual,Inspección,9992,false,2026-04-20 04:14:31.355948+00
+4ffa32cb-45f5-43f4-b213-507de1e7ef6a,9996-1776661069105-766-2,Limpiar sensores y fotoceldas,Diario,Limpieza,9996,false,2026-04-20 04:57:49.545415+00
+4ffe3370-2bd4-404c-af37-e56131fb4940,9993-1776661006799-115-4,Revisar boquillas de aspersión,Diario,Inspección,9993,false,2026-04-20 04:56:47.235956+00
+5077b2dc-3d61-43b3-964d-5f4574d526ae,9996-1776661069105-797-5,Inspeccionar transporte de paletas,Diario,Inspección,9996,false,2026-04-20 04:57:49.545415+00
+51855a5c-155c-4061-b899-9e5bdc6e1c5b,MAQ-9758-1776658519688-478-11,Inspeccionar barreras de luz y sensores,Diario,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+530b5fb7-c09b-457e-a122-abd934e96a54,10000-1776660996845-975-14,Lubricar cardan transportador,Quincenal,Lubricación,10000,false,2026-04-20 04:56:37.282634+00
+53818feb-a4dd-493d-917b-9d82cd6db421,9999-1776660986172-269-9,Limpieza guías y cabezotes robot,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+54a534b6-f68a-46f4-9c12-65d46f035884,9999-1776660986172-432-47,Reemplazo engrasadores sistema cartón,Diario,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+54c3b04d-9c88-4835-aab2-517fe0020462,10000-1776660996845-709-23,Verificar rechazo de botellas (pusher),Mensual,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+55c4fe76-7821-43f5-8803-a40d1599a1ae,13,Limpiar la banda transportadora en Túnel de retractilado,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+5669d69a-7791-406b-8a2a-d85e943d40f6,119,Evaporador,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+56af9f31-012b-485e-9804-96bd9bc3fdf0,9993-1776661006799-629-5,Verificar lógica de control (vapor y agua),Diario,Inspección,9993,false,2026-04-20 04:56:47.235956+00
+571fbb39-5ae7-4a25-8735-af12828656cf,10003-1776658481737-123-33,Cambiar lubricante reductor cónico,Tres años,Lubricación,10003,false,2026-04-20 04:14:42.147113+00
+57552b23-2160-4e4a-8a95-d57d3abac24f,9999-1776660986172-331-42,Lubricación rodillos actuadores bastidor,Semanal,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+57f4100a-e201-43fb-81db-90e59c829abd,9997-1776661022886-561-6,Limpiar canaletas de drenaje,Quincenal,Limpieza,9997,false,2026-04-20 04:57:03.321636+00
+586d7dd9-1d32-4d52-ba40-700c45b82a02,10001-1776661051633-763-28,Lubricar eje ruedas dentadas table top,Semanal,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+58bb071c-4a58-4d64-9ade-7dbdb042d005,24,Limpieza de los orificios de los soportes de la placa de cambio,Mensual,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+5952536a-7da5-4ff2-b446-d88ae265e985,MAQ-5357-1776658509306-206-3,Limpieza de mesa de entrada de palets,Diario,Limpieza,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+595ded1c-d7d5-469f-b193-8357b83c8865,10000-1776660996845-551-3,Limpiar tapa de vidrio protector,Diario,Limpieza,10000,false,2026-04-20 04:56:37.282634+00
+59c4a4ec-aa6f-49b3-ada2-c3775318a668,10001-1776661051633-915-0,"Verificar presión de aire, vapor y agua",Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+5ba3303f-b7e1-47cf-bdc0-a34e0f9a79a3,9998-1776661043000-914-9,Lubricar accionamiento principal del carrusel,Diario,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+5bf473e0-95ef-4484-9767-e3597b3b53d5,58,Lubricar servoaccionamientos en empacadora de no retornables y transportador de envases y de cartones,Tres años,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+5c3fd7ab-c037-4407-8815-b8676b3047dc,10003-1776658481737-616-28,Lubricar rodamientos eje principal,Mensual,Lubricación,10003,false,2026-04-20 04:14:42.147113+00
+5ca59df9-40b9-40c4-85b2-ac70ffa846b7,9998-1776661043000-653-28,Ajustar barandas de entrada,Mensual,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+5cd6a108-71d7-4dab-8c72-85a5a1b649e2,MAQ-9758-1776658519688-365-16,Verificar nivel de condensado,Semanal,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+5d13a034-dd5a-41d5-9f54-56d91bc10f14,9997-1776661022886-332-28,Lubricar cadenas dosificadoras de cajas,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+5dbc0767-fbfb-429f-826e-adf2586d5137,9992-1776658470557-505-49,Ajuste/reemplazo brochas lubricación,Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+5f1bdd8b-8c1a-402b-97a5-8c2ae4b868df,9994-1776658499174-973-28,Ajustar presión sistema neumático,Semanal,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+5ff118f1-6e58-4bb3-8fe7-997cece7e689,10003-1776658481737-443-26,Inspeccionar válvulas y tuberías,Mensual,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+6000ac5c-aeb9-41ab-a8e8-b9939688530a,9997-1776661022886-495-26,Lubricar engrane cónico dosificador de cajas,Quincenal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+60055681-746b-4d64-a39e-c3697e9a7b00,56,Lubricar unidad de mantenimiento en Mandril portabobinas,Mensual,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+6022bf77-365b-49ab-96cd-cfe506d839e6,59,Abrir y recortar la cadena,Trimestral,Ajuste,9991,true,2026-04-18 23:21:57.584484+00
+60563203-8b1e-46b6-b00a-15d1bba78ba4,10003-1776658481737-114-37,Reemplazar manguera de soplado,Mensual,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+6146e727-289e-4a4a-86c3-aefc058a588d,9994-1776658499174-890-15,Inspeccionar distribuidor de fluidos,Semanal,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+615f1ff3-605a-4acb-bce2-f3861cad2fcd,9999-1776660986172-912-41,Ajuste contacto brochas de lubricación,Semanal,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+620d82bf-0f37-468d-80a9-e4b19e5fe041,10003-1776658481737-957-16,Comprobar conexiones,Diario,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+62530703-076d-411e-bf1b-09d77499cc36,16,Limpiar servomotores en Empacadora de no retornables,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+626fc38b-33f0-4799-a013-7fd10f47453f,9997-1776661022886-588-19,Lubricar rodamientos viga sincrónica,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+62d4e73f-e5bc-43b1-a7a8-a4705f8ed52f,9993-1776661006799-533-14,Lubricar rodamientos reenvío (lado derecho),Semanal,Lubricación,9993,false,2026-04-20 04:56:47.235956+00
+630cec86-9320-46f7-93da-5b3ef7e5aba6,33,Comprobar la presión,Diario,Inspección,9991,false,2026-04-18 23:21:57.584484+00
+633c3c64-ea90-4b45-8d9a-285e03152af4,2,Limpieza de los fusores de adhesivo,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+63de4a9f-04ae-4a70-a09b-75c0a302ad0e,10003-1776658481737-635-22,Inspeccionar instrumentos de medición,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+64c8b8e2-a613-4e15-a1ec-7d02ecb781c6,9999-1776660986172-357-46,Reemplazo engrasadores estación elevadora,Diario,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+65120aaa-16c4-44a7-b58a-e30e0d762acb,10001-1776661051633-699-22,Limpiar grasa en puntos de lubricación,Semanal,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+663be839-1199-4219-83ad-7400e3ba0bc1,MAQ-5357-1776658509306-903-1,Limpieza de transportadores,Diario,Limpieza,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+6666f4e8-931a-43ba-ad0c-7fb86671effb,39,Comprobar el estado de los componentes neumáticos,Mensual,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+66d10335-91e5-4a9e-9212-f22379da8aaf,9998-1776661043000-530-13,Lubricar sistema de estrellas (entrada/salida),Semanal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+682c3777-1ba9-4590-bbc2-6bdb7fb9d070,10001-1776661051633-977-32,Lubricar extractores de etiquetas,Semanal,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+6894c4da-9db3-4c89-95b5-010b5b8de894,9997-1776661022886-863-4,Limpiar sensores del equipo,Semanal,Limpieza,9997,false,2026-04-20 04:57:03.321636+00
+68abf781-639b-42ad-b9cc-4bfc22ecd2a1,10004-1776661032302-769-23,Lubricar engrane cónico de elevación,Quincenal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+695563ce-46cc-4ad2-b0b1-801d4191edef,51,Lubricar rotulas de clindros en unidad tensión de film,Trimestral,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+69895114-57e5-41dc-9ce6-e5949dacca29,9994-1776658499174-798-11,Inspeccionar sistema CIP,Semanal,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+69a246e5-4f10-4351-aeb6-16fe387062a3,9999-1776660986172-664-15,Limpieza ventanas de resguardo,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+6a877fff-3872-4df2-b09b-d8ccc89c02eb,9996-1776661069105-125-0,Limpiar estructura general y áreas de trabajo,Diario,Limpieza,9996,false,2026-04-20 04:57:49.545415+00
+6b32938a-cfd3-4061-9896-fa101c7cdba5,9999-1776660986172-18-53,Ajuste dispositivos cambio formato (tambor),Mensual,Inspección,9999,false,2026-04-20 04:56:26.991617+00
+6b98ae25-8c78-4730-a87a-aaa2ff4a7e3d,9993-1776661006799-221-10,Controlar flujo de bombas químicas,Semanal,Inspección,9993,false,2026-04-20 04:56:47.235956+00
+6cb3a237-46f9-4568-b64c-06c0d49b8e29,55,Lubricar rodillos de levas del perfil distanciador,Semestral,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+6cdc9b14-c85d-46c5-8c1d-95ab097eab5b,9994-1776658499174-206-32,Ajustar rodillos seguidores,Mensual,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+6d02f16d-5e6d-4e5b-99d7-b59095c9756e,9997-1776661022886-152-0,Limpiar pisos del área de encajonadora,Diario,Limpieza,9997,false,2026-04-20 04:57:03.321636+00
+6d4f4409-ab33-45f2-ba04-de05ded77d95,10001-1776661051633-188-25,Limpiar filtro panel eléctrico,Semanal,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+6dbf8cc5-1e1c-4891-8326-1b6d625924a7,MAQ-9758-1776658519688-206-31,Ajustar cadenas modulares (cerrar),Mensual,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+6e8f1694-d8b5-422b-855c-d7b342b8bb46,9999-1776660986172-219-26,Verificación presión bomba de vacío,Diario,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+6eb26237-c44f-4398-8760-cfed4c514cdd,9999-1776660986172-881-33,Inspección componentes neumáticos (fugas/presión),Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+701ae844-0864-4991-9bfa-1fec084537a8,10003-1776658481737-809-12,Comprobar dispositivos de seguridad,Diario,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+701c8db8-5b6c-4ff9-9abd-ee36fb01c58f,9997-1776661022886-704-18,Lubricar árbol articulado de accionamiento,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+7128b7f9-0b99-4bab-a612-5ab288abe303,MAQ-9758-1776658519688-724-17,Verificar sistema de lubricación central,Mensual,Lubricación,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+713cc143-a6a7-48b9-a4f9-8973e61b24b0,9999-1776660986172-308-14,Limpieza barreras de luz y reflectores,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+72e861ae-ebc8-45cf-b025-10febf0602bb,9998-1776661043000-887-23,Lubricar engrane cónico de elevación,Mensual,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+73b74e5b-c8ef-453a-8dc2-ba2f7dce3a24,MAQ-9758-1776658519688-743-2,Limpiar carcasa de filtro neumático,Semanal,Limpieza,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+73fa1e3f-7da0-4e88-8283-8b456b07143c,10000-1776660996845-489-15,Lubricar cadena de ajuste de altura,Quincenal,Lubricación,10000,false,2026-04-20 04:56:37.282634+00
+749f1a2b-3f8c-461e-8879-830e241d6ef6,107,Compresor de C02,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+7569ed8c-f177-4a4f-a115-41cab83b15ef,9997-1776661022886-344-22,Lubricar accionamiento principal,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+75bd5f0d-0ffd-41f1-8bfd-be9b0589d6c8,9992-1776658470557-29-30,Inspección cadenas de transporte,Semanal,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+75ec4fcf-b70c-4a60-8533-55476872f72a,9992-1776658470557-3-44,Verificación nivel sistema lubricación (aceite),Trimestral,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+7616ee91-5c9c-49e8-be57-10d64461152d,9999-1776660986172-228-2,Limpieza herramientas robot (ventosas - seco),Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+7635d50c-89ca-47f5-aaf6-44e8d2b6d800,10003-1776658481737-520-25,Inspeccionar cadenas y ruedas,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+763f4e3d-61e2-45dc-aa2a-c5895c118e5b,9994-1776658499174-740-2,Limpiar resguardo y vidrios protectores,Diario,Limpieza,9994,false,2026-04-20 04:14:59.602279+00
+7688025a-984b-4869-a600-1faa54a4df9a,10000-1776660996845-637-11,Lubricar ruedas dentadas de transmisión,Quincenal,Lubricación,10000,false,2026-04-20 04:56:37.282634+00
+76900bdd-b547-4645-8ca8-1eebe9cd9bd8,10003-1776658481737-607-39,Ajustar sensor de acumulación,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+777ac5a0-6807-4226-a287-d63321ad50fe,46,Climatizador: Realización de una prueba de funcionamiento,Semestral,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+77a8aa5c-9d1a-4e97-82a1-32dfe299d32e,30,"Comprobar movimiento del mandril de film plástico ",Diario,Inspección,9991,false,2026-04-18 23:21:57.584484+00
+77ea22d0-8847-457f-b29c-86093de3d1ee,9997-1776661022886-405-16,Ajustar uñas separadoras de cajas,Mensual,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+7828edb3-450b-454c-89a6-44a7860db705,9992-1776658470557-42-12,Limpieza jaula de almacén,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+782df935-ac17-42ef-9c74-91018446cb46,9998-1776661043000-660-18,Lubricar distribuidor de cerveza,Semanal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+78da6494-fcfc-4f2e-8f2f-b19f513ef9c6,10000-1776660996845-542-21,Ajustar altura de cabezal inspector,Mensual,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+78ed09eb-38a5-4644-9836-9818cafb33e8,9992-1776658470557-965-18,Limpieza carcasa filtro separador agua,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+79641293-6fba-49bd-8f50-ef37e3680ac6,9999-1776660986172-210-23,Prueba de lámparas y señalización,Diario,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+7a01644c-7368-47ca-b812-29fd1dd41f52,9999-1776660986172-556-25,Verificación nivel de condensado sistema neumático,Diario,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+7a59d614-58fa-4a9f-8be1-06a7fa18586e,9994-1776658499174-390-24,Lubricar chumaceras transportadores,Mensual,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+7aa51390-e881-4acb-96dc-e4ea485bab33,9999-1776660986172-456-12,Limpieza jaula de almacén,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+7aecea20-150d-4c29-83de-55971e7266c2,MAQ-9758-1776658519688-727-26,Ajustar presión neumática,Diario,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+7bfab6a2-0350-4153-b0fe-5fc77a8db359,115,Compresor de NH3,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+7c658fd9-2388-4600-88ab-5e4fba11c013,9996-1776661069105-190-16,Lubricar bujes dispositivo desgarrador,Diario,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+7dfc272a-90b1-4ea6-9293-2fd77213f7c3,MAQ-9758-1776658519688-135-12,Verificar tensión de correas (transferencia),Semanal,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+7e241b6b-211f-4412-a594-be746d7b16d7,9993-1776661006799-66-7,Verificar purgadores de condensado,Diario,Inspección,9993,false,2026-04-20 04:56:47.235956+00
+7fd335e3-c052-4c63-b26c-58babb104db4,9992-1776658470557-543-50,Ajuste regulador de vacío,Mensual,Inspección,9992,false,2026-04-20 04:14:31.355948+00
+80097756-73bd-4f36-afe4-9472bf2331c7,9994-1776658499174-385-21,Lubricar guías y elementos de fijación,Mensual,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+81038c37-bf34-4c88-8476-cd611612e472,MAQ-5357-1776658509306-850-16,Reapriete de estructura de transportadores,Trimestral,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+81b63496-bc7f-40ed-acf7-91b766b439b2,10004-1776661032302-313-17,Ajustar transporte de cajas,Mensual,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+81d5b13d-084e-4a28-aa8f-ba599cf3d27f,10003-1776658481737-983-13,Inspeccionar manholes y compuertas,Diario,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+82737ee7-c053-4ce1-99b7-6940921cc922,10000-1776660996845-441-7,Inspeccionar sensores de inspección (rechazos),Diario,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+82b14d2f-9422-4d87-86dd-c2012ab76762,10004-1776661032302-942-8,Verificar funcionamiento de sensores,Semanal,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+833a9b70-60d6-47b7-9879-a5de2da53a19,9998-1776661043000-597-2,Limpiar transporte de botellas en envasadora,Diario,Limpieza,9998,false,2026-04-20 04:57:23.44441+00
+8434354b-5d54-4104-94a8-e43085ea0d44,9998-1776661043000-183-12,Verificar nivel de aceite cilindros elevadores,Diario,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+85a519a1-2ed5-4dd0-85cd-b7752d5dd117,9996-1776661069105-938-20,Lubricar guías mecanismo traslación,Mensual,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+86171f2a-a2f2-4220-8c4f-7e76b88ec470,9998-1776661043000-555-19,Lubricar válvulas y mecanismos de cierre,Semanal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+87121946-a868-4a0b-89b8-495b2686feed,25,Limpieza de la unidad de los climatizadores,Semestral,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+875831fa-104d-42f7-9c7c-fe982417295c,15,Limpiar guías de aire,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+87821b9d-b444-48e3-81be-1a4b4d3c7b65,9998-1776661043000-236-0,Limpiar exterior de llenadora,Semanal,Limpieza,9998,false,2026-04-20 04:57:23.44441+00
+87e3edd5-e85c-45bc-a9c2-eeacd189cc4c,9996-1776661069105-875-7,Verificar estado de cadenas y guías,Semanal,Inspección,9996,false,2026-04-20 04:57:49.545415+00
+88095431-d4d2-4094-a45b-6ea558bf456f,9992-1776658470557-90-25,Verificación nivel de condensado sistema neumático,Diario,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+8ad2a2ab-6e2f-4e81-8d4e-1b426fb46be4,MAQ-5357-1776658509306-211-19,Ajuste de sistema neumático,Mensual,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+8b0436bc-df8c-4468-bee3-e579ad330cd8,111,Purificadores de CO2,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+8b408a2f-7200-44ec-aa0f-dcd932c97e3c,9997-1776661022886-68-7,Limpiar cabezales de encajonado,Mensual,Limpieza,9997,false,2026-04-20 04:57:03.321636+00
+8ba9857f-c1fe-4ba9-847f-1bc22065683e,MAQ-9758-1776658519688-147-0,Limpiar barandillas de guiado,Semanal,Limpieza,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+8bde210e-c6ad-43d0-a5cb-ba600450f9a4,9998-1776661043000-375-24,Lubricar árbol articulado elevación calderín,Mensual,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+8c254948-9050-41be-8f26-89f44fbd9ddd,122,Flujómetro C02 - Línea Botellas,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+8c341916-ecff-4387-8956-256ef046e1af,10004-1776661032302-105-27,Lubricar cadenas dosificadoras de cajas,Quincenal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+8d4d731b-9fd2-40fc-ad82-b057af137f09,18,Limpiar pisos y áreas comunes,Diario,Limpieza,9991,false,2026-04-18 23:21:57.584484+00
+8d592731-3bd5-4b48-a7dc-8df9c98b459a,9995-1776661059249-429-6,Verificar sensores de posicionamiento,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+8e3d7ab8-9817-45c1-b545-64e457b1456e,9997-1776661022886-3-2,Limpiar pisos profundos (interior y bajo máquina),Semanal,Limpieza,9997,false,2026-04-20 04:57:03.321636+00
+8fe359c8-1e42-4c2c-b627-367e405b09df,21,Limpiar resguardo,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+8fe61f7a-3524-4bdc-8107-68dfb6ad7228,10003-1776658481737-447-11,Limpiar tamiz protector,Mensual,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+90fdc84c-55b7-4f43-8f61-03b4bb355501,9996-1776661069105-443-11,Ajustar guías de transporte de paletas,Mensual,Inspección,9996,false,2026-04-20 04:57:49.545415+00
+9128e87f-1d70-4526-abc0-c8349f691538,9998-1776661043000-805-31,Ajustar fotocelda presencia botellas,Mensual,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+91c0d91a-8d6d-495d-ab22-d4d809641828,9997-1776661022886-652-21,Lubricar rodamientos acople reductor,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+924dbbd7-8a91-4b94-868d-d947786833eb,9992-1776658470557-784-33,Inspección componentes neumáticos (fugas/presión),Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+92608348-87b0-4950-b7d5-1964ccb3a859,10003-1776658481737-169-40,Ajustar sensor de barras,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+927ca8b8-d8fc-4b82-a1ab-8aabe017f3fc,9996-1776661069105-724-18,Lubricar rodamiento central mesa de capas,Mensual,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+92a2dadb-86ba-4a32-a311-c7ca5013cc59,9992-1776658470557-229-53,Ajuste dispositivos cambio formato (tambor),Mensual,Inspección,9992,false,2026-04-20 04:14:31.355948+00
+933df298-1c26-4389-8831-cc672d0cdd52,10001-1776661051633-222-30,Lubricar árbol de transmisión,Semanal,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+9398c8cd-107e-4bec-a5eb-7ed3cb5af820,9993-1776661006799-722-2,Limpiar bandejas (retiro de vidrio y suciedad),Diario,Limpieza,9993,false,2026-04-20 04:56:47.235956+00
+945efa90-cc19-45cb-80ad-fbcf24e39b0b,10003-1776658481737-390-4,Limpiar bandeja de residuos,Semanal,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+947f941b-3b77-4b56-b788-11408a692bac,9996-1776661069105-66-19,Lubricar guías mecanismo elevación (limpieza y engrase),Mensual,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+94f76209-5820-4003-876c-c30650416e0b,36,Comprobar el estado en las barreras de luz y los reflectores,Semanal,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+957095f6-7535-4aea-a008-753e4bfea864,23,Limpiar cuchillas de corte en Módulo de corte del film plástico (interno),Mensual,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+965c9a9c-9825-43a0-86b8-7a97d7b6d02c,9995-1776661059249-102-5,Inspeccionar alineación de productos,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+966ae798-226c-48a3-a1c6-44d20a084496,9992-1776658470557-311-9,Limpieza guías y cabezotes robot,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+96bf9d17-2fc5-443d-9e27-a2b3bbde062c,10004-1776661032302-445-6,Limpiar canaletas de drenaje,Quincenal,Limpieza,10004,false,2026-04-20 04:57:12.752805+00
+96d302d8-11dc-4dd1-a465-d4e4fa2d1f17,9999-1776660986172-986-45,Lubricación rótulas y vástagos neumáticos,Trimestral,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+96e7b299-d0f0-4779-bf93-fabd3ca8797d,10004-1776661032302-72-0,Limpiar pisos del área de desencajonadora,Diario,Limpieza,10004,false,2026-04-20 04:57:12.752805+00
+98a69379-7660-4cf4-83fd-39d4bf60d223,9999-1776660986172-962-19,Limpieza armario eléctrico / mandos,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+98cb5014-e722-412b-9c0f-7ab3e1755073,1,Limpiar placas de transferencia,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+98ea9987-e584-4ae0-b741-6cfffc27055b,52,Lubricar tirador en bastidor de la máquina,Trimestral,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+999fcfa6-50cf-4a34-9c7a-787b1947c817,9992-1776658470557-51-10,Limpieza sensores de posicionamiento,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+99e8692a-9e97-480b-b9cf-4ba32fa30a10,48,Examinar visualmente que las cadenas motrices ubicadas se encuentren lubricados,Quincenal,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+99f84153-49b1-46ab-9342-1bac1957f7de,10003-1776658481737-226-35,Cambiar lubricante reductor corredera,Tres años,Lubricación,10003,false,2026-04-20 04:14:42.147113+00
+9a359527-7efe-4416-9a0b-f5866241ae29,9994-1776658499174-354-3,Limpiar sistema de rociado,Diario,Limpieza,9994,false,2026-04-20 04:14:59.602279+00
+9a483f4d-a775-4d38-8017-4666e1bdbdd3,9996-1776661069105-524-13,Lubricar rodamientos mecanismo elevación,Diario,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+9a5fae3f-b636-4b95-a997-5384624fa019,4,Limpieza de los filtros del separador,Quincenal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+9a8b07c0-c182-4865-86e7-4ad294f96f29,9994-1776658499174-773-35,Ajustar barra retenedora,Mensual,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+9a920af7-5921-4d6d-8729-98689e0fa0d4,9992-1776658470557-703-3,Limpieza herramientas robot (ventosas profunda),Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+9a9f0d28-0102-44b2-9053-1bedb485d924,109,Enfriador de CO2 2da etapa,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+9b37f1de-50df-4098-b048-9baf431cd4b7,49,Lubricar depósito del sistema de lubricación central con aceite de tunel de retractilado,Semanal,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+9c30310d-10cd-4d87-bf0f-bf8e6d65a815,9996-1776661069105-181-23,Lubricar árbol articulado portagarras,Mensual,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+9ca20b4d-1192-4c98-8fa7-09495d1a8096,10001-1776661051633-260-31,Lubricar sistema descarga completo,Semanal,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+9cbd2b52-aace-4e02-bec1-ce07944dc39c,9992-1776658470557-578-16,Limpieza entrada de envases,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+9d250fef-538c-44f4-9169-70b4bbead3e8,10003-1776658481737-206-8,Limpiar pisos y áreas,Semanal,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+9d8e9302-0891-4fda-8f31-bccb4d7a9d5b,9996-1776661069105-556-14,Lubricar guías mecanismo elevación,Diario,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+9ed1ad33-cf72-47d1-a2c2-96b2fa06edef,9996-1776661069105-123-22,Lubricar cadena mecanismo elevación,Mensual,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+9edc2044-3363-4d79-bc41-2a5679216401,9995-1776661059249-792-9,Inspeccionar funcionamiento de garras,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+9fb15de5-b7fb-42ed-a622-06ca833ac19a,9999-1776660986172-303-20,Limpieza panel de control principal,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+a0951b54-1c8e-430e-a6eb-8bfd2e0ab23d,63,Ajustar la tensión de la cadena,Semanal,Ajuste,9991,true,2026-04-18 23:21:57.584484+00
+a0c53cad-b661-439c-b5cc-3c98bfb3881a,10003-1776658481737-227-32,Cambiar lubricante reductor planetario,Tres años,Lubricación,10003,false,2026-04-20 04:14:42.147113+00
+a11d8411-5976-4895-9bb1-8054a983750c,10004-1776661032302-266-7,Limpiar cabezales de manipulación,Mensual,Limpieza,10004,false,2026-04-20 04:57:12.752805+00
+a17f79ee-8b1a-41c3-bad5-fa76ccde1d0e,9999-1776660986172-896-51,Ajuste sistema de encolado,Mensual,Inspección,9999,false,2026-04-20 04:56:26.991617+00
+a25088f3-3dec-4d03-98b8-896512202422,9995-1776661059249-206-18,Inspeccionar salida de paletas,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+a25683d1-0804-4366-a299-2434794c1919,9997-1776661022886-442-8,Inspeccionar funcionamiento de sensores,Semanal,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+a32e92a1-160e-4bc0-9ca7-328e528bd5fc,9994-1776658499174-811-34,Ajustar altura automática carrusel,Mensual,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+a3521e90-b27d-416c-a5d1-99f2b9fdf7af,19,Limpiar los elementos de mando y los tableros de conexiones eléctricas,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+a461b336-d681-47d1-bbb9-4b21f3fa95cd,9993-1776661006799-499-18,Verificar sistema vapor y condensado,Quincenal,Inspección,9993,false,2026-04-20 04:56:47.235956+00
+a50e8120-2b26-4832-bf1a-f5529b4fa948,117,Licuofactor de CO2,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+a60b855a-81cb-4ba5-9189-aef9879f509a,9992-1776658470557-948-7,Limpieza filtros bomba de vacío,Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+a6881dfc-7d64-4a17-8c11-095fd6c148e2,9995-1776661059249-424-2,Verificar sensores de entrada,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+a7886eb9-4688-49e8-967d-e618d2e557e6,10003-1776658481737-587-1,Limpiar exterior de la máquina,Semanal,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+a83581bf-b751-4100-84ec-06e6ceaf85fa,9992-1776658470557-859-51,Ajuste sistema de encolado,Mensual,Inspección,9992,false,2026-04-20 04:14:31.355948+00
+a90bde34-211f-4662-a21f-56917129f024,10001-1776661051633-948-6,Verificar y limpiar fotoceldas,Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+a956729e-15cf-4329-99b5-c86872bd76dc,9999-1776660986172-954-10,Limpieza sensores de posicionamiento,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+a97d9778-e8f5-4ea6-956d-6f10f403458a,9996-1776661069105-866-3,Limpiar guías y transporte de paletas,Semanal,Limpieza,9996,false,2026-04-20 04:57:49.545415+00
+a9dad325-38b0-4cd2-ab38-6c4b17253177,9994-1776658499174-43-6,Limpiar transmisión de movimiento,Semanal,Limpieza,9994,false,2026-04-20 04:14:59.602279+00
+ab122539-68d6-4b01-82da-465f47f2fb78,9992-1776658470557-678-23,Prueba de lámparas y señalización,Diario,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+ab26f945-e8ee-4318-a912-0141d7b8ff7b,9992-1776658470557-715-37,Inspección sistema encolador (estado),Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+ab7a7290-e3d8-45c8-afda-f0c0904bef86,9994-1776658499174-995-33,Ajustar placas de fijación carrusel,Mensual,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+abd9c61e-6bd7-440b-be02-133ca468449c,9998-1776661043000-271-10,Lubricar ruedas dentadas de transmisión,Diario,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+ac26f15e-6e66-44de-9c41-eb8165996b21,9999-1776660986172-85-17,Limpieza servomotores,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+aca16c22-9736-4e9b-a0f7-9267a9b3000f,10000-1776660996845-704-5,Limpiar soplador de fondo,Diario,Limpieza,10000,false,2026-04-20 04:56:37.282634+00
+ad7a9833-231c-42ba-8d6d-96b129058edf,9997-1776661022886-448-13,Ajustar chupas de agarre,Mensual,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+ae32ff8b-e21e-4c82-8a08-657915d00d72,10000-1776660996845-296-19,Ajustar sensibilidad detección soda cáustica,Mensual,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+ae98816c-dd46-4a93-af11-3249fbaeb028,9995-1776661059249-448-7,Lubricar guías de formación,Semanal,Lubricación,9995,false,2026-04-20 04:57:39.680218+00
+aea6c8f2-b1fc-4a44-849b-88d5f5168d76,9999-1776660986172-292-16,Limpieza entrada de envases,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+af38f658-35ae-4c6b-95db-53fbfbec1d3c,9992-1776658470557-127-4,Limpieza placas de guiado,Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+af3bd638-03dd-4002-ad98-a5f8d31d5bb3,10003-1776658481737-732-14,Comprobar nivel de condensado,Diario,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+afa39d73-d363-4ba6-b5bc-a0e88962158f,29,Comprobar el estado técnico de la máquina,Diario,Inspección,9991,false,2026-04-18 23:21:57.584484+00
+afd51284-f8f7-45a5-bf4a-c4b01b411a55,9992-1776658470557-82-2,Limpieza herramientas robot (ventosas - seco),Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+b01d173e-50c0-4194-8e0f-489a39c299f5,9995-1776661059249-79-12,Reapretar sistema de garras,Mensual,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+b0c84478-b472-40e0-a48f-9f28a3c41f48,9998-1776661043000-333-8,Lubricar sistema de rotación del carrusel,Diario,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+b1370146-5342-4197-a017-ea0ce5bff048,9994-1776658499174-529-10,Verificar secador de aire,Semanal,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+b15f65fe-ebe5-40a5-8f71-96ac8c61ea8a,MAQ-9758-1776658519688-821-13,Verificar tensión de correas (paletización),Semanal,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+b1bf577a-0669-4d36-a930-6864f559afd0,9995-1776661059249-755-10,Verificar sujeción de carga,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+b1c3598a-b351-4d84-b4e4-a563c629932f,MAQ-5357-1776658509306-848-12,Lubricación de mecanismo elevador,Mensual,Lubricación,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+b1c803ec-8957-45e4-a552-cc9a53441726,MAQ-5357-1776658509306-969-8,Inspección de mecanismo elevador,Semanal,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+b25e8772-d988-46c5-8891-2d6aff430876,9993-1776661006799-56-16,Scrubbing placas entrada/salida,Quincenal,Limpieza,9993,false,2026-04-20 04:56:47.235956+00
+b318594a-fe41-4e9a-b7e1-f68512d75362,9999-1776660986172-71-52,Ajuste ancho cabezal robot,Mensual,Inspección,9999,false,2026-04-20 04:56:26.991617+00
+b4970623-2178-441b-adc7-1008f1d27613,9997-1776661022886-565-27,Lubricar cadenas de arrastre de cajas,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+b62d5658-aecb-4a99-b681-5303d91e8376,10001-1776661051633-14-13,Lubricar cojinetes eje ruedas dentadas,Diario,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+b6b9cd04-b75f-45d5-94b5-d885db53ddff,10003-1776658481737-1-27,Inspeccionar boquillas,Mensual,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+b7658f7e-e477-4f93-b5c5-3e1711c54005,9995-1776661059249-330-1,Inspeccionar flujo de paletas,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+b79d8bfd-5cc4-4250-aadf-b6d8588ecbdb,10001-1776661051633-1-29,Lubricar accionamientos chasis,Semanal,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+b7ac4db7-ea70-4814-89e0-1dfb0c50aa2d,38,Comprobar el estado de las correas dentadas en el Sistema de corte de film,Mensual,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+b7f10d0e-d413-4d07-9847-0c4c66175736,9992-1776658470557-262-39,Verificación fugas adhesivo/lubricante,Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+b976dee2-1bac-4db3-9833-dc0d9d832a9b,MAQ-9758-1776658519688-741-27,Ajustar barandillas de guiado,Mensual,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+b9b7d81d-0f5c-4818-85c0-b8d70fd21388,9994-1776658499174-41-27,Poner máquina en modo ajuste,Mensual,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+b9e5bf7e-33e9-40b4-a15f-1715089989f1,MAQ-5357-1776658509306-333-9,Inspección de correas de elevación,Mensual,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+ba7bca17-5baa-40da-86ff-05cb893413e7,9997-1776661022886-160-1,Limpiar bandejas de la máquina,Semanal,Limpieza,9997,false,2026-04-20 04:57:03.321636+00
+ba97f418-e1af-438a-9be0-e9052a04f30c,MAQ-9758-1776658519688-126-8,Inspeccionar mesa de agrupación,Semanal,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+baa6aff0-5b14-41ae-98af-15b6a9a4dfb7,9994-1776658499174-442-5,Limpiar distribuidor de fluidos rotativo,Semanal,Limpieza,9994,false,2026-04-20 04:14:59.602279+00
+bb2ee42f-3d28-43af-8e07-a0c869c78950,MAQ-9758-1776658519688-253-9,Inspeccionar estado general de la máquina,Diario,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+bb6a2e66-cbb2-4d9c-ab49-87644c2f5f86,10004-1776661032302-932-29,Lubricar engrane cónico revestimiento protector,Mensual,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+bc60fbf5-eb15-4a4d-88dd-c77420545b53,10001-1776661051633-383-23,Limpiar accionamientos sincrónicos,Semanal,Limpieza,10001,false,2026-04-20 04:57:32.057951+00
+bc9509c4-c66a-4e40-86f6-34166c1c8723,10000-1776660996845-902-9,Lubricar guías de correas dentadas,Semanal,Lubricación,10000,false,2026-04-20 04:56:37.282634+00
+be4d7cda-6e7d-4f55-b028-90f7df8c6696,9999-1776660986172-558-22,"Verificación dispositivos de seguridad (E-Stop, alarmas)",Diario,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+be790da7-4d8d-418b-9d11-f5c556160222,53,Lubricar husillos en unidad formadora de embalajes y de envoltura,Trimestral,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+bf345592-8756-4ff9-946d-9e8f5ea0c278,45,Climatizador: Comprobación de los orificios de ventilación,Semestral,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+c11fad3c-b59d-4fa5-ad1b-41449bea4dcc,9995-1776661059249-689-3,Ajustar guías de entrada de paletas,Mensual,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+c2e114f6-82a2-4624-925b-c9a80fffdaf8,112,Filtro fino de CO2,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+c3312a3d-f487-4044-bf71-00ecade2c654,MAQ-9758-1776658519688-696-10,Verificar dispositivos de seguridad,Diario,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+c34206b4-5412-44ce-932f-53a5d5e25ccd,9992-1776658470557-168-42,Lubricación rodillos actuadores bastidor,Semanal,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+c3e7eec6-9dec-4524-b54f-0f7a16b29332,9993-1776661006799-309-3,Limpiar sensores de válvulas,Diario,Limpieza,9993,false,2026-04-20 04:56:47.235956+00
+c401cba8-2f88-4c61-8129-c479dc12040e,10001-1776661051633-31-5,Verificar sistema de aditivos,Diario,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+c446262c-4ab3-4b97-9203-136ab6e30c48,10004-1776661032302-392-10,Verificar estado de racores neumáticos,Mensual,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+c478c6cb-eee9-4404-9f7d-f1702936167d,9998-1776661043000-749-29,Ajustar altura calderín y coronador,Mensual,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+c4fe790c-cd45-4068-bdd1-4e3fb386bb46,116,"Condensador de NH₃ ",Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+c56c4165-4f72-4e3c-9c91-674f78e20699,9999-1776660986172-820-50,Ajuste regulador de vacío,Mensual,Inspección,9999,false,2026-04-20 04:56:26.991617+00
+c5ed3ea4-0dcb-4ad8-81ac-8947b3e6d86a,9999-1776660986172-578-0,Limpieza botonera bloqueo/desbloqueo puertas,Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+c6717557-2842-49b8-b44c-39707b7ac433,10003-1776658481737-694-2,Limpiar dispositivo de reenvío,Semanal,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+c799e6d7-1b85-44db-8be0-5a05af452bd5,9999-1776660986172-49-40,Verificación lubricación cadenas motrices,Semanal,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+c7d17534-5eb2-483c-87ab-96a60d7c0b44,6,Extraer residuos en la bandeja de goteo - Transportador de envases,Diario,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+c80a57f2-9b41-4c8e-8531-e4de8c3cff37,9994-1776658499174-146-22,Lubricar husillos tulipas centradoras,Mensual,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+c893e048-5edc-4006-8816-6bec0a600940,10003-1776658481737-716-20,Inspeccionar intercambiador de calor,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+c9c9cc4c-037f-43db-a36c-2f5f76909404,9999-1776660986172-395-6,Limpieza resguardos sistema de encolado,Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+c9e1466c-bede-44a6-b6cd-e9a64d00e08f,10003-1776658481737-492-18,Inspeccionar bombas,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+cb3d0f52-3a96-460c-a476-8769c83daab5,9996-1776661069105-736-17,Lubricar ejes dispositivo descargador,Diario,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+cc219908-25a2-4d3b-84f3-99cf7bc0169a,MAQ-9758-1776658519688-395-30,Ajustar cadenas modulares (abrir/recortar),Mensual,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+cc7d8c59-f4cc-4e7a-b414-e94091df8040,41,Comprobar la estanqueidad de los reductores,Mensual,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+cc7ee948-4f8d-484f-83e6-582d9ae07678,10004-1776661032302-769-28,Lubricar guías de revestimiento elevable,Mensual,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+cc9b175d-1f83-4170-a0f6-99bc78822734,9998-1776661043000-378-20,Lubricar cadenas de ajuste (calderín y coronador),Quincenal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+cd05c454-be11-44e6-a5d9-432f9f6e311b,9997-1776661022886-3-12,Reapretar pernos de cabezales,Semanal,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+ce82e579-2674-44d2-9b2d-e98882ffca4d,10000-1776660996845-817-10,Verificar nivel y goteo unidad de mantenimiento,Semanal,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+cea88ee8-2eb5-4ec1-a1d4-6067a15152fb,9997-1776661022886-813-24,Lubricar articulaciones frontales y posteriores,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+ced9415c-7404-4ded-ab19-74b703d71f23,10001-1776661051633-212-9,Cambiar guías según formato (mesa descarga),Diario,Ajuste,10001,false,2026-04-20 04:57:32.057951+00
+cf4ae562-654b-4781-8171-3475a035dee0,9998-1776661043000-461-6,Inspeccionar escaleras fijas y móviles,Mensual,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+cf4ed041-e72b-4860-a490-6855fe5feec3,10000-1776660996845-365-13,Lubricar cardan accionamiento reenvío,Quincenal,Lubricación,10000,false,2026-04-20 04:56:37.282634+00
+cf6d200b-493d-48b9-9be2-ae4cb9c1603e,10000-1776660996845-446-1,Limpiar cámaras y sensores de inspección,Diario,Limpieza,10000,false,2026-04-20 04:56:37.282634+00
+cfda3dc2-1476-4d62-bbfb-9eac2cd12df9,9992-1776658470557-978-29,Inspección cortina fotoeléctrica,Semanal,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+d0ac11ff-7e79-4768-922c-bdc81b562ddb,9999-1776660986172-121-48,Cambio lubricante reductores,Tres años,Lubricación,9999,false,2026-04-20 04:56:26.738821+00
+d0f9ab2f-3fa3-44d0-9ca2-e397baead69f,9992-1776658470557-777-6,Limpieza resguardos sistema de encolado,Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+d126643a-efa6-40de-bc66-b2b91050d3fc,9992-1776658470557-412-52,Ajuste ancho cabezal robot,Mensual,Inspección,9992,false,2026-04-20 04:14:31.355948+00
+d140f811-eeee-4f5f-a039-91c71aed5cd9,10000-1776660996845-898-2,Limpiar espejos de reflexión,Diario,Limpieza,10000,false,2026-04-20 04:56:37.282634+00
+d1f824ce-55b7-408d-804b-e32ddba4c8c0,9995-1776661059249-244-15,Lubricar cadenas y guías,Semanal,Lubricación,9995,false,2026-04-20 04:57:39.680218+00
+d29a4092-3d10-4b45-a2ac-ceb26e033429,9998-1776661043000-561-3,Limpiar sensores HEUFT envasadora,Diario,Limpieza,9998,false,2026-04-20 04:57:23.44441+00
+d2a213b6-3fa2-4035-8aaa-d38d351b2c94,MAQ-9758-1776658519688-127-3,Limpiar cadenas de transportador,Semanal,Limpieza,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+d2cb208d-c08a-4a02-b7b6-14cf6fb5d480,10004-1776661032302-726-3,Limpiar guías de transporte de cajas,Semanal,Limpieza,10004,false,2026-04-20 04:57:12.752805+00
+d2d727af-6145-45c7-a4ec-55cb00a99165,10000-1776660996845-205-20,Verificar funcionamiento sensores,Mensual,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+d309786d-08a6-407c-8dad-46e9e9ed7332,MAQ-5357-1776658509306-900-10,Lubricación de sistema central,Semanal,Lubricación,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+d315ee3d-b9d8-4373-a0dc-66df2648c5f4,3,Limpieza de las ventosas del separador,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+d37bbfd4-6716-46ea-81bd-d4352213cfb4,MAQ-5357-1776658509306-544-0,Limpieza general de depaletizadora,Diario,Limpieza,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+d43ffb19-d008-4b3a-bd25-a164e19a005a,10003-1776658481737-723-3,Limpiar bandejas de goteo,Semanal,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+d4c74844-699e-40ba-a472-1eae5959b8f9,9992-1776658470557-798-5,Limpieza boquillas de encolado,Diario,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+d527714a-c3d0-4d99-b1a8-7d3e23a06278,9996-1776661069105-505-12,Verificar fijación de sensores,Mensual,Inspección,9996,false,2026-04-20 04:57:49.545415+00
+d5559158-97f1-4553-9c2a-1540b780d5fb,10000-1776660996845-942-17,Ajustar sistema detección altura botellas,Mensual,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+d6b6f7fe-9f09-40a2-8280-0b30da614b62,10001-1776661051633-565-17,Revisar bandas y rodamientos sincrónicos (parado),Semanal,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+d6cfd3ed-90ac-48d1-b278-418a9f688177,10003-1776658481737-89-9,Limpiar filtros de tableros eléctricos,Mensual,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+d6d34e54-1613-48ae-bec9-756fe2225b99,9999-1776660986172-360-38,Verificación presión sistema encolado,Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+d701fefd-7e40-4919-b626-89bd8e19469b,10004-1776661032302-243-20,Lubricar rodamientos de cadena dosificadora,Semanal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+d7f96141-da0a-4976-a28c-8f946bdc44db,9998-1776661043000-184-7,Verificar ducha lavaojos,Semanal,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+d8d6abc6-5a65-415d-b9de-2146ba0ff4dc,9994-1776658499174-540-7,Comprobar estado de boquillas,Diario,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+d996074c-a5dc-4a8b-9532-355004f3a400,9996-1776661069105-260-9,Reapretar tornillería estructural,Mensual,Inspección,9996,false,2026-04-20 04:57:49.545415+00
+d9ced48f-708e-4f09-a564-bf6ed7c81fca,10000-1776660996845-17-0,Limpiar lámparas de inspección (entrada y salida),Diario,Limpieza,10000,false,2026-04-20 04:56:37.282634+00
+da8229a4-0b66-4d15-88a8-5dca5674d0e3,9997-1776661022886-817-15,Ajustar altura dosificador de cajas,Mensual,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+dacd2e52-9958-4bb9-9413-c4a30ebfd196,9999-1776660986172-791-30,Inspección cadenas de transporte,Semanal,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+db6d73da-5e68-4875-a473-cead0b8b7cde,9994-1776658499174-280-26,Lubricar cadenas motrices,Trimestral,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+dd0ba037-6ab5-44cf-bb99-bdcd74439c52,10001-1776661051633-441-18,Revisar bandas y rodamientos sincrónicos (en marcha),Semanal,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+dd1e1220-1977-419c-8bfd-6746eee0b746,9992-1776658470557-369-20,Limpieza panel de control principal,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+ddca4f0c-3b14-4705-a55a-c0572a4ffc1b,9997-1776661022886-596-29,Lubricar cadenas de embrague dosificador,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+ddd38124-0fb5-41ac-9277-28ec5983249f,10004-1776661032302-463-4,Limpiar sensores del equipo,Semanal,Limpieza,10004,false,2026-04-20 04:57:12.752805+00
+ddf5f2d4-aed2-4902-9a37-4421d7b95789,9997-1776661022886-292-20,Lubricar rodamientos de transporte de cajas,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+de73bc4d-ff72-431e-afa6-1949430b06fc,MAQ-9758-1776658519688-421-15,Inspeccionar componentes neumáticos,Mensual,Inspección,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+de82e8bc-0a62-45bf-a6b3-b4e412a61e55,10003-1776658481737-34-31,Lubricar chumaceras transportador,Quincenal,Lubricación,10003,false,2026-04-20 04:14:42.147113+00
+de84a361-6f76-49cb-883c-718b04949be6,9996-1776661069105-226-1,Limpiar mesa de capas,Semanal,Limpieza,9996,false,2026-04-20 04:57:49.545415+00
+df5e087e-4ab9-473b-b1ce-7e02f447ef1a,MAQ-9758-1776658519688-115-19,Lubricar chumaceras,Trimestral,Lubricación,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+df866821-70a3-4ff6-988d-be7152a6a816,9994-1776658499174-585-4,Limpiar entrada de envases,Semanal,Limpieza,9994,false,2026-04-20 04:14:59.602279+00
+e048d1f7-bd54-4776-b4dd-5556f039ce79,MAQ-5357-1776658509306-102-13,Lubricación de rodamientos,Mensual,Lubricación,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+e123afc3-1a77-4f51-86a9-40d106a635a2,9994-1776658499174-780-19,Lubricar eje tornillo sinfín entrada,Semanal,Lubricación,9994,false,2026-04-20 04:14:59.602279+00
+e1ace30b-3991-48d1-889a-7a0fd7647053,9994-1776658499174-302-17,Inspeccionar transportador de entrada,Semanal,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+e1b3c309-30da-45b0-93d9-0d678c16e32e,9994-1776658499174-54-31,Ajustar curvas y guías de formato,Mensual,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+e1d8038e-06b9-437c-b378-681b324387b1,110,Secador de CO2,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+e232fcb1-6f9f-4b73-a4ec-2dbb3de33432,10001-1776661051633-554-34,Lubricar rodamientos sincrónicos,Semanal,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+e2e89ab7-0ef1-49f1-9372-c6cac93a8246,MAQ-5357-1776658509306-58-15,Reapriete de tornillería general,Mensual,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+e373f5f5-e558-4044-a02e-7b9c6c3e02d2,9999-1776660986172-367-4,Limpieza placas de guiado,Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+e44bed7a-08fc-44bc-abe6-24138fce4692,9997-1776661022886-111-9,Verificar estado de mangueras neumáticas,Mensual,Inspección,9997,false,2026-04-20 04:57:03.321636+00
+e45e8bc9-d38d-41c1-9b23-d49dbc86dc65,61,Ajustar las barras separadoras,Semanal,Ajuste,9991,true,2026-04-18 23:21:57.584484+00
+e49647a9-6880-40ef-824d-0b3c02d317c2,9995-1776661059249-698-13,Inspeccionar sistema de elevación,Diario,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+e4ed1dde-cf75-4908-aff7-ed1d31341db7,54,Lubricar dispositivos de bloqueo de las puertas,Trimestral,Lubricación,9991,true,2026-04-18 23:21:57.584484+00
+e57018e8-ce80-461d-81e3-13e0444768d1,10003-1776658481737-11-21,Comprobar temperatura,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+e631b3a0-d58d-4647-81cc-a4dcb678a443,106,Globo buffer,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+e6bce8c0-b89c-4874-8c16-2d945b020a1c,10003-1776658481737-620-7,Limpiar sensores y elementos de campo,Semanal,Limpieza,10003,false,2026-04-20 04:14:42.147113+00
+e7306a01-03c1-4ffe-8e6e-ba5cc109b127,9999-1776660986172-349-3,Limpieza herramientas robot (ventosas profunda),Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+e748d6bb-faed-4d76-8414-77ca37ddf88c,MAQ-5357-1776658509306-345-7,Inspección de transportadores,Diario,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+e7e9f94b-fc99-40cd-afb5-d22559e6f386,8,Limpiar las cadenas de transporte de envases,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+e859149a-e3f9-43c6-97cb-67c6bf1906d2,10001-1776661051633-3-20,Verificar extractor de etiquetas,Semanal,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+e86f12b3-74ab-478c-a588-95e9a482ef91,9993-1776661006799-306-1,Limpiar sensores de transporte,Diario,Limpieza,9993,false,2026-04-20 04:56:47.235956+00
+e8935f86-4f74-4dc3-baeb-2a9b26e6a47b,MAQ-5357-1776658509306-114-11,Lubricación de cadenas y transportadores,Semanal,Lubricación,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+e98cb333-a5e5-4d59-ae1d-c04fb45effcd,9992-1776658470557-175-31,Inspección desgaste cadenas transporte,Semanal,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+e9eba57d-073d-49a2-9f29-3d5c4162a584,10001-1776661051633-100-33,Lubricar bombas de circulación,Semanal,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+ebc90c12-9908-4c97-b2e6-19416fdd7a3a,35,Comprobar el estado de los dispositivos de seguridad y protección,Semanal,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+ec436de0-c755-4c6c-b3be-2a0b03b2db70,9996-1776661069105-119-21,Lubricar cremallera y sistema descargador,Mensual,Lubricación,9996,false,2026-04-20 04:57:49.545415+00
+ec7c5779-edd1-4db1-9017-d9de3aea3c01,MAQ-5357-1776658509306-602-4,Limpieza de manipulador de embalajes,Semanal,Limpieza,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+ecbe0d43-86e6-4f66-b2b1-5f88599f9bd2,42,Comprobar el sistema de aplicación de cola,Mensual,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+ed07efdf-983c-4fb2-b40b-63a08240f68c,9998-1776661043000-249-21,Lubricar superficies deslizantes coronador,Quincenal,Lubricación,9998,false,2026-04-20 04:57:23.44441+00
+ed934ea4-95ac-48f6-9dc5-eedbc3f050df,MAQ-9758-1776658519688-27-21,Cambiar lubricante reductores preagrupación,Tres años,Lubricación,MAQ-9758,false,2026-04-20 04:15:20.127639+00
+ee6deb26-dffe-46dd-9521-9207c72db9d3,113,Evacuadores de condensado,Semanal,Inspección,9183,false,2026-04-18 23:21:57.584484+00
+ef6cb2bf-593d-40cf-942a-58bfa15a28df,9992-1776658470557-124-32,Inspección correas dentadas y poleas,Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+f0f188c6-a272-49c1-ac26-4540019a2221,9994-1776658499174-84-0,Limpiar y desinfectar piezas de formato,Diario,Limpieza,9994,false,2026-04-20 04:14:59.602279+00
+f175bfdc-fd62-4679-8264-b0419cf0b577,9992-1776658470557-131-45,Lubricación rótulas y vástagos neumáticos,Trimestral,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+f180fb0f-1ae6-4556-bfe1-53b01452c086,10004-1776661032302-197-22,Lubricar articulaciones frontales,Semanal,Lubricación,10004,false,2026-04-20 04:57:12.752805+00
+f18de13b-0d34-42f9-8caa-4f77951ab9fd,10001-1776661051633-451-16,Lubricar sistema descarga,Diario,Lubricación,10001,false,2026-04-20 04:57:32.057951+00
+f1a9f43b-604d-481a-b4ab-75b3f9705be5,9992-1776658470557-524-28,Inspección barreras de luz y reflectores,Semanal,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+f218242d-445b-4e52-a9b4-aec513e854aa,34,Comprobar deterioro de la cuchilla de corte de film plástico,Semanal,Inspección,9991,true,2026-04-18 23:21:57.584484+00
+f264260c-1406-4b56-aeb0-3b8c953321ba,9992-1776658470557-558-34,Verificación fijación mangueras neumáticas,Mensual,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+f34024cf-28c2-4101-b908-178ddcfd729d,10001-1776661051633-50-19,"Verificar bombas (recirculación, agua caliente, enjuague)",Semanal,Inspección,10001,false,2026-04-20 04:57:32.057951+00
+f3566599-3547-45df-8cc1-e1d233891c73,7,Limpiar mesas de transferencia - Módulo de transferencia de latas (interno),Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+f38c1737-f6d0-4b06-879e-4d2c1a6e25bc,9999-1776660986172-149-32,Inspección correas dentadas y poleas,Mensual,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+f39c9d5c-a9b2-44bf-b670-dc04d4e0f047,9999-1776660986172-103-13,Limpieza cortina enrollable,Semanal,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+f3a1c051-4347-4062-9990-d3698c90211a,10000-1776660996845-973-6,Inspeccionar funcionamiento de barreras de luz,Diario,Inspección,10000,false,2026-04-20 04:56:37.282634+00
+f45a67c9-004b-4af7-9ee4-bf60a497728c,9993-1776661006799-105-17,Limpieza bombas de químicos,Quincenal,Limpieza,9993,false,2026-04-20 04:56:47.235956+00
+f4f08529-b637-44f1-b7fb-846200e8c973,9994-1776658499174-749-14,Verificar tensión transportador,Semanal,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+f51c39f1-6747-47f0-91be-768a7f525f9a,9997-1776661022886-279-23,Lubricar rodamientos cadena dosificadora,Semanal,Lubricación,9997,false,2026-04-20 04:57:03.321636+00
+f5b6bdb1-9be9-4b9c-8713-477e228ee205,9997-1776661022886-527-3,Limpiar guías de transporte de cajas,Semanal,Limpieza,9997,false,2026-04-20 04:57:03.321636+00
+f5d9246d-ff43-458d-98b1-1af4b5eb89b7,12,Limpiar sistema de desionización en Módulo de envoltura,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+f68e2040-2016-407c-8f2c-4be3b704e38b,9998-1776661043000-23-11,Verificar nivel de aceite unidad de mantenimiento,Diario,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+f6b5cb7a-c56f-4528-9701-6d561638ee1b,9995-1776661059249-467-14,Verificar estado de cadenas y guías,Semanal,Inspección,9995,false,2026-04-20 04:57:39.680218+00
+f6fea802-fd50-4312-bf1a-b284cc106436,9993-1776661006799-304-12,Lubricar rodamientos accionamiento (lado izquierdo),Semanal,Lubricación,9993,false,2026-04-20 04:56:47.235956+00
+f73c6822-7ca9-4d34-a9f3-055c1652afc1,9999-1776660986172-564-7,Limpieza filtros bomba de vacío,Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+f78ae1e1-df49-4393-ae4e-bc83a13a1cf2,9998-1776661043000-653-4,Inspeccionar sistema HEUFT envasadora,Diario,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+f84d6b91-a5bd-4970-85e6-58b4d7bc3cf5,10004-1776661032302-694-5,Limpiar rodillos de transporte (checkmat),Semanal,Limpieza,10004,false,2026-04-20 04:57:12.752805+00
+f8967405-0a19-4349-a710-4569b7309ee7,123,Compresor de CO2,Mensual,Lubricación,9183,false,2026-04-18 23:21:57.584484+00
+f8e8aac8-c65a-4653-a39f-d3b5a3c0cdf7,MAQ-5357-1776658509306-142-14,Lubricación de distribuidor principal,Trimestral,Lubricación,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+f97efb5e-9ff9-40c3-9b5a-d0e255390892,9992-1776658470557-432-56,Ajuste chapas tolva y distribución,Mensual,Inspección,9992,false,2026-04-20 04:14:31.355948+00
+f9a29b1a-d81c-443f-bdb6-439198b69096,9992-1776658470557-286-24,Inspección general estado técnico máquina,Diario,Inspección,9992,false,2026-04-20 04:14:31.09897+00
+fa910311-01a9-4b3f-8683-c825dd810832,14,Limpiar los ventiladores en Túnel de retractilado,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+fa984678-d8e1-4f9a-9bc3-71f771ed3a16,9999-1776660986172-883-1,Limpieza cortina fotoeléctrica (emisor/receptor),Diario,Limpieza,9999,false,2026-04-20 04:56:26.738821+00
+fbd61ccf-0d79-49bf-b1e4-f780af0ab861,10000-1776660996845-373-4,Limpiar barreras de luz y reflectores,Diario,Limpieza,10000,false,2026-04-20 04:56:37.282634+00
+fbf11250-4d92-4a58-8c05-4e39fdb51dee,9993-1776661006799-652-6,Verificar calibración válvulas Samson,Diario,Inspección,9993,false,2026-04-20 04:56:47.235956+00
+fc1cf93b-d2cb-48a6-8c68-98b2bf77528e,9,Limpiar las barras,Semanal,Limpieza,9991,true,2026-04-18 23:21:57.584484+00
+fc335c12-b0cd-4ae4-bf84-992b411bd8b5,9992-1776658470557-401-13,Limpieza cortina enrollable,Semanal,Limpieza,9992,false,2026-04-20 04:14:31.09897+00
+fca5162e-f65f-4b9f-8518-2928a83416e4,9998-1776661043000-991-30,Ajustar duchas de salida,Mensual,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+fcb7afbb-7952-4e8e-96db-fb7b7b2f9ac1,MAQ-5357-1776658509306-371-17,Ajuste de correas de elevación,Mensual,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+fcd02a86-397a-457b-b734-a6cecb0af55c,10003-1776658481737-514-24,Inspeccionar corredera de envases,Semanal,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+fd3a3408-86e8-46b4-98ab-2d73621b6046,9999-1776660986172-907-24,Inspección general estado técnico máquina,Diario,Inspección,9999,false,2026-04-20 04:56:26.738821+00
+fd5a8776-9a18-4099-826b-50ce4bb7473e,9998-1776661043000-600-5,Inspeccionar transporte de botellas,Diario,Inspección,9998,false,2026-04-20 04:57:23.44441+00
+fd7718e8-4c5c-415b-880f-7acafd18b9b5,10003-1776658481737-531-38,Reemplazar boquillas,Mensual,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+fd94e8da-d870-48de-882d-33a0671f06a4,10004-1776661032302-795-16,Ajustar uñas separadoras de cajas,Mensual,Inspección,10004,false,2026-04-20 04:57:12.752805+00
+fda77f06-821e-4d7f-98bb-f809c922aa92,10003-1776658481737-328-15,Inspeccionar estado técnico general,Diario,Inspección,10003,false,2026-04-20 04:14:42.147113+00
+fe80ad01-c39c-4f29-b37e-0c71218df5e2,9994-1776658499174-905-9,"Comprobar tuberías, válvulas e instrumentación",Diario,Inspección,9994,false,2026-04-20 04:14:59.602279+00
+fe98a544-97e1-4b5d-ba03-f46bc39e99cd,MAQ-5357-1776658509306-173-6,Inspección de sistema neumático,Semanal,Inspección,MAQ-5357,false,2026-04-20 04:15:09.719514+00
+fee72b39-8ab0-432e-803b-7b7a1647a0a1,9992-1776658470557-210-41,Ajuste contacto brochas de lubricación,Semanal,Lubricación,9992,false,2026-04-20 04:14:31.09897+00
+ff2b83df-690a-4181-bb9f-14de16fbdb81,9996-1776661069105-993-8,Verificar estado de uñas / garras de sujeción,Semanal,Inspección,9996,false,2026-04-20 04:57:49.545415+00
