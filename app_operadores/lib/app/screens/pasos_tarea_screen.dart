@@ -603,28 +603,63 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                               ],
                             ),
                           )
-                        : ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(context).copyWith(
-                              dragDevices: {
-                                PointerDeviceKind.touch,
-                                PointerDeviceKind.mouse,
-                                PointerDeviceKind.trackpad,
-                              },
-                            ),
-                            child: PageView.builder(
-                              controller: _pageController,
-                              onPageChanged: _onPageChanged,
-                              itemCount: pasos.length,
-                              itemBuilder: (context, index) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: _buildPasoImage(pasos[index]),
+                        : Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(
+                                  dragDevices: {
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.trackpad,
+                                  },
+                                ),
+                                child: PageView.builder(
+                                  controller: _pageController,
+                                  onPageChanged: _onPageChanged,
+                                  itemCount: pasos.length,
+                                  itemBuilder: (context, index) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 12),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: _buildPasoImage(pasos[index]),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              if (paginaActual > 0)
+                                Positioned(
+                                  left: -8,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.arrow_back_ios_new, size: 32),
+                                    color: _verdeHeineken,
+                                    splashRadius: 24,
+                                    onPressed: () {
+                                      _pageController.previousPage(
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                    },
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              if (paginaActual < pasos.length - 1)
+                                Positioned(
+                                  right: -8,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.arrow_forward_ios, size: 32),
+                                    color: _verdeHeineken,
+                                    splashRadius: 24,
+                                    onPressed: () {
+                                      _pageController.nextPage(
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
                           ),
                   ),
                 ),

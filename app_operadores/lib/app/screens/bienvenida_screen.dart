@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui' show PointerDeviceKind;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
@@ -228,13 +229,20 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
       final responseTurnos = await SupabaseManager.client
           .from('turnos_semana')
-          .select('id_operador')
+          .select('id_operador, turno')
           .eq('fecha', hoy)
           .filter('id_maquina', 'in', '($maquinasIn)');
 
-      final Set<String> idsValidos = (responseTurnos as List)
-          .map((e) => e['id_operador'].toString())
-          .toSet();
+      final Map<String, String> mapTurnos = {};
+      final Set<String> idsValidos = {};
+      for (final t in responseTurnos as List) {
+        final id = t['id_operador']?.toString();
+        final turno = t['turno']?.toString();
+        if (id != null && id.isNotEmpty) {
+          idsValidos.add(id);
+          if (turno != null && turno.isNotEmpty) mapTurnos[id] = turno;
+        }
+      }
 
       if (idsValidos.isEmpty) {
         if (mounted) {
@@ -257,7 +265,11 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
 
       if (mounted) {
         setState(() {
-          _operadoresPrecargados = List<Map<String, dynamic>>.from(responseOps);
+          _operadoresPrecargados = (responseOps as List).map((op) {
+            final map = Map<String, dynamic>.from(op);
+            map['turno'] = mapTurnos[map['id_operador'].toString()] ?? '';
+            return map;
+          }).toList();
           _operadoresCargados = true;
         });
       }
@@ -1137,13 +1149,20 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
 
       final responseTurnos = await SupabaseManager.client
           .from('turnos_semana')
-          .select('id_operador')
+          .select('id_operador, turno')
           .eq('fecha', hoy)
           .filter('id_maquina', 'in', '($maquinasIn)');
 
-      final Set<String> idsValidos = (responseTurnos as List)
-          .map((e) => e['id_operador'].toString())
-          .toSet();
+      final Map<String, String> mapTurnos = {};
+      final Set<String> idsValidos = {};
+      for (final t in responseTurnos as List) {
+        final id = t['id_operador']?.toString();
+        final turno = t['turno']?.toString();
+        if (id != null && id.isNotEmpty) {
+          idsValidos.add(id);
+          if (turno != null && turno.isNotEmpty) mapTurnos[id] = turno;
+        }
+      }
 
       if (idsValidos.isEmpty) {
         if (mounted) {
@@ -1159,14 +1178,18 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
 
       final responseOps = await SupabaseManager.client
           .from('operadores')
-          .select()
+          .select('id_operador, nombreoperador, foto_operador, linea')
           .filter('id_operador', 'in', '($idsIn)')
           .neq('tipo', 'supervisor')
           .order('nombreoperador');
 
       if (mounted) {
         setState(() {
-          _operadores = List<Map<String, dynamic>>.from(responseOps);
+          _operadores = (responseOps as List).map((op) {
+            final map = Map<String, dynamic>.from(op);
+            map['turno'] = mapTurnos[map['id_operador'].toString()] ?? '';
+            return map;
+          }).toList();
           _cargando = false;
         });
       }
@@ -1221,93 +1244,183 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
               ),
             )
           else ...[
-            SizedBox(
-              height: 260,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _operadores.length,
-                onPageChanged: (i) => setState(() => _paginaActual = i),
-                itemBuilder: (context, index) {
-                  final op = _operadores[index];
-                  final bool activo = index == _paginaActual;
-                  final foto = op['foto_operador']?.toString() ?? '';
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  height: 260,
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
+                      },
+                    ),
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: _operadores.length,
+                      onPageChanged: (i) => setState(() => _paginaActual = i),
+                      itemBuilder: (context, index) {
+                        final op = _operadores[index];
+                        final bool activo = index == _paginaActual;
+                        final foto = op['foto_operador']?.toString() ?? '';
 
-                  return GestureDetector(
-                    onTap: () {
-                      if (activo) {
-                        widget.onOperadorSeleccionado(op['id_operador'].toString());
-                      } else {
-                        _pageController.animateToPage(
-                          index,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
-                    child: AnimatedScale(
-                      scale: activo ? 1.0 : 0.88,
-                      duration: const Duration(milliseconds: 200),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: activo ? _accentGreen : Colors.transparent,
-                              width: 2.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: activo
-                                    ? _accentGreen.withValues(alpha: 0.15)
-                                    : Colors.black.withValues(alpha: 0.07),
-                                blurRadius: activo ? 16 : 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 120,
-                                height: 120,
+                        return GestureDetector(
+                          onTap: () {
+                            if (activo) {
+                              widget.onOperadorSeleccionado(op['id_operador'].toString());
+                            } else {
+                              _pageController.animateToPage(
+                                index,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          },
+                          child: AnimatedScale(
+                            scale: activo ? 1.0 : 0.88,
+                            duration: const Duration(milliseconds: 200),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Container(
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: activo
-                                        ? _accentGreen
-                                        : Colors.grey.shade300,
-                                    width: 3,
+                                    color: activo ? _accentGreen : Colors.transparent,
+                                    width: 2.5,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: activo
+                                          ? _accentGreen.withValues(alpha: 0.15)
+                                          : Colors.black.withValues(alpha: 0.07),
+                                      blurRadius: activo ? 16 : 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
-                                child: ClipOval(child: _buildFoto(foto)),
-                              ),
-                              const SizedBox(height: 14),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  op['nombreoperador'] ?? 'Operador',
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 120,
+                                      height: 120,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: activo
+                                              ? _accentGreen
+                                              : Colors.grey.shade300,
+                                          width: 3,
+                                        ),
+                                      ),
+                                      child: ClipOval(child: _buildFoto(foto)),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.symmetric(horizontal: 12),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            op['nombreoperador'] ?? 'Operador',
+                                            style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black87,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if ((op['turno'] ?? '').toString().isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: _accentGreen.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                'Turno ${op['turno']}',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _accentGreen,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                // Botón Izquierda
+                Positioned(
+                  left: 8,
+                  child: AnimatedOpacity(
+                    opacity: _paginaActual > 0 ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: IgnorePointer(
+                      ignoring: _paginaActual == 0,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, color: _accentGreen, size: 28),
+                        onPressed: () {
+                          if (_paginaActual > 0) {
+                            _pageController.previousPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        },
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          shadowColor: Colors.black26,
+                          elevation: 2,
                         ),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+                // Botón Derecha
+                Positioned(
+                  right: 8,
+                  child: AnimatedOpacity(
+                    opacity: _paginaActual < _operadores.length - 1 ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: IgnorePointer(
+                      ignoring: _paginaActual == _operadores.length - 1,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios, color: _accentGreen, size: 28),
+                        onPressed: () {
+                          if (_paginaActual < _operadores.length - 1) {
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        },
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          shadowColor: Colors.black26,
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
             // Indicador de puntos
