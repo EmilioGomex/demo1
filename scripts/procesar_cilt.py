@@ -36,8 +36,8 @@ except ImportError:
 from PIL import Image
 import io
 
-BASE_DIR = r"C:\eCILT\demo1\admin_web\CILT"
-OUTPUT_DIR = r"C:\eCILT\demo1\admin_web\CILT_ESTANDARIZADO"
+BASE_DIR = os.path.join(os.path.dirname(__file__), "data", "raw")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "data", "processed")
 
 def ensure_dir(path):
     if not os.path.exists(path):

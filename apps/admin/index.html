@@ -329,6 +329,127 @@
         .data-card:hover .op-img { border-color: var(--hk-green); }
         .op-role { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--hk-green-light); letter-spacing: 0.05em; background: rgba(0,137,61,0.1); padding: 0.1rem 0.5rem; border-radius: 4px; }
         .hidden { display: none !important; }
+
+        /* --- SCHEDULING TABLE OVERHAUL --- */
+        .sched-container {
+            border-radius: 0.75rem;
+            border: 1px solid var(--hk-border);
+            background: var(--hk-surface);
+            box-shadow: 0 8px 24px -8px rgba(0,0,0,0.4);
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            overflow-y: visible;
+        }
+
+        .sched-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 0.6rem;
+            table-layout: fixed;
+        }
+
+        .sched-table th, .sched-table td {
+            padding: 0.25rem 0.3rem;
+            border-right: 1px solid var(--hk-border);
+            border-bottom: 1px solid var(--hk-border);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sched-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            background: #1e293b;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 0.55rem;
+            text-align: center;
+            padding: 0.5rem 0.3rem;
+        }
+
+        .sched-table .sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background: var(--hk-surface);
+            width: 80px;
+            min-width: 80px;
+            max-width: 80px;
+        }
+
+        .sched-table .sticky-col-2 {
+            position: sticky;
+            left: 80px;
+            z-index: 20;
+            background: var(--hk-surface);
+            width: 65px;
+            min-width: 65px;
+            max-width: 65px;
+            text-align: center;
+        }
+
+        .sched-table thead th.sticky-col,
+        .sched-table thead th.sticky-col-2 {
+            z-index: 40;
+            background: #2d3748;
+        }
+
+        .sched-row:hover td {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .op-badge {
+            display: inline-block;
+            padding: 0.1rem 0.25rem;
+            border-radius: 3px;
+            background: rgba(134, 239, 172, 0.08);
+            color: #86efac;
+            border: 1px solid rgba(134, 239, 172, 0.12);
+            font-weight: 600;
+            font-size: 0.5rem;
+            line-height: 1.3;
+            margin: 1px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .op-badge:hover {
+            background: rgba(134, 239, 172, 0.18);
+        }
+
+        .turno-label {
+            font-weight: 700;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            text-transform: uppercase;
+            font-size: 0.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .cell-empty {
+            color: #2d3748;
+            text-align: center;
+            font-size: 0.7rem;
+        }
+
+        .line-header-badge {
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.3rem 0.75rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.75rem;
+        }
     </style>
 </head>
 <body class="h-full text-gray-200 font-sans antialiased" style="background-color: var(--hk-bg)">
@@ -521,6 +642,9 @@
                 <button id="tab-semana-btn" onclick="switchHorarioTab('semana')" class="px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-t-lg transition-all border-x border-t border-transparent" style="color:#9ca3af; margin-bottom:-1px;">
                     📅 Semana Actual
                 </button>
+                <button id="tab-config-btn" onclick="switchHorarioTab('config')" class="px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-t-lg transition-all border-x border-t border-transparent" style="color:#9ca3af; margin-bottom:-1px;">
+                    ⚙️ Configuración
+                </button>
             </div>
 
             <!-- TAB EXCEL -->
@@ -640,19 +764,157 @@
             </div>
 
             <!-- TAB VER SEMANA -->
-            <div id="tab-semana" class="hidden flex-grow p-5 overflow-y-auto">
+            <div id="tab-semana" class="hidden flex-grow p-5 overflow-auto">
                 <div class="max-w-6xl mx-auto">
-                    <div class="flex items-center gap-4 mb-4">
-                        <div>
-                            <label class="text-xs text-gray-400 mr-2">Ver semana del:</label>
-                            <input type="date" id="semana-inicio-view" class="form-input text-xs" style="width:auto; display:inline-block" onchange="cargarVistaSemana()">
+                    <div class="flex flex-wrap items-center gap-4 mb-4">
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-400">Mes:</label>
+                            <select id="semana-mes-sel" class="form-select text-xs" style="width:160px" onchange="actualizarSemanasDelMes()"></select>
                         </div>
-                        <button onclick="cargarVistaSemana()" class="px-4 py-1.5 text-xs font-semibold text-white rounded" style="background:var(--hk-green)">Ver</button>
-                        <button onclick="borrarSemana()" class="px-4 py-1.5 text-xs font-semibold rounded" style="background:#7f1d1d; color:#fca5a5; border:1px solid #991b1b">🗑️ Borrar semana</button>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-400">Semana:</label>
+                            <select id="semana-num-sel" class="form-select text-xs" style="width:240px" onchange="cargarVistaSemana()"></select>
+                        </div>
+                        <button onclick="cargarVistaSemana()" class="px-4 py-1.5 text-xs font-semibold text-white rounded transition-all" style="background:var(--hk-green)" onmouseover="this.style.background='var(--hk-green-light)'" onmouseout="this.style.background='var(--hk-green)'">Refrescar</button>
+                        <div class="flex-grow"></div>
+                        <button onclick="borrarSemana()" class="px-3 py-1.5 text-xs font-semibold text-red-400 hover:text-red-300 border border-red-900/30 rounded transition-all hover:bg-red-900/10">
+                            🗑️ Borrar Semana
+                        </button>
                     </div>
-                    <div id="semana-grid" class="overflow-x-auto">
-                        <p class="text-gray-500 text-sm">Selecciona una fecha para ver el horario.</p>
+                    <div id="semana-grid" class="rounded-xl border min-h-[300px]" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                        <p class="text-gray-500 text-sm p-8 text-center italic">Cargando visualización...</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- TAB CONFIGURACIÓN -->
+            <div id="tab-config" class="hidden flex-grow p-5 overflow-y-auto">
+                <div class="max-w-6xl mx-auto space-y-6">
+                    <!-- Header -->
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-1 h-8 rounded-full" style="background:var(--hk-green)"></div>
+                        <div>
+                            <h3 class="text-white font-bold text-sm tracking-tight">Configuración de Asignación de Horarios</h3>
+                            <p class="text-gray-500 text-xs">Reglas de mapeo que se aplican al importar el Excel semanal</p>
+                        </div>
+                    </div>
+
+                    <!-- TURNO CODES -->
+                    <div class="rounded-xl border p-5" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-sm">🕐</span>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-widest">Códigos de Turno</h4>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full font-mono" style="background:rgba(0,137,61,0.1); color:var(--hk-green-light); border:1px solid rgba(0,137,61,0.3)">Numérico → Turno</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="rounded-lg p-3" style="background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.2)">
+                                <div class="text-xs font-bold mb-2" style="color:#fde047">☀️ Mañana</div>
+                                <div class="text-xs text-gray-300 space-y-1">
+                                    <div class="flex items-center gap-2"><span class="font-mono px-1.5 py-0.5 rounded text-[10px]" style="background:rgba(234,179,8,0.15); color:#fde047">1</span><span class="font-mono px-1.5 py-0.5 rounded text-[10px]" style="background:rgba(234,179,8,0.15); color:#fde047">4</span><span class="font-mono px-1.5 py-0.5 rounded text-[10px]" style="background:rgba(234,179,8,0.15); color:#fde047">14</span></div>
+                                    <div class="text-gray-500 text-[10px] mt-1">Horarios: 07:30, 06:00</div>
+                                </div>
+                            </div>
+                            <div class="rounded-lg p-3" style="background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.2)">
+                                <div class="text-xs font-bold mb-2" style="color:#fb923c">🌅 Tarde</div>
+                                <div class="text-xs text-gray-300 space-y-1">
+                                    <div class="flex items-center gap-2"><span class="font-mono px-1.5 py-0.5 rounded text-[10px]" style="background:rgba(249,115,22,0.15); color:#fb923c">5</span><span class="font-mono px-1.5 py-0.5 rounded text-[10px]" style="background:rgba(249,115,22,0.15); color:#fb923c">15</span></div>
+                                    <div class="text-gray-500 text-[10px] mt-1">Horarios: 15:30, 14:00, 16:00</div>
+                                </div>
+                            </div>
+                            <div class="rounded-lg p-3" style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2)">
+                                <div class="text-xs font-bold mb-2" style="color:#a5b4fc">🌙 Noche</div>
+                                <div class="text-xs text-gray-300 space-y-1">
+                                    <div class="flex items-center gap-2"><span class="font-mono px-1.5 py-0.5 rounded text-[10px]" style="background:rgba(99,102,241,0.15); color:#a5b4fc">7</span><span class="font-mono px-1.5 py-0.5 rounded text-[10px]" style="background:rgba(99,102,241,0.15); color:#a5b4fc">9</span></div>
+                                    <div class="text-gray-500 text-[10px] mt-1">Horarios: 19:30, 23:30, 22:00</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-[10px] text-gray-600 flex items-center gap-1">
+                            <span>ℹ️</span> Códigos no listados (0, 6, 8, 10, 11, 12, 13, 25...) = No trabaja
+                        </div>
+                    </div>
+
+                    <!-- NON-WORKING MARKERS -->
+                    <div class="rounded-xl border p-5" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-sm">🚫</span>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-widest">Marcadores No Laborales</h4>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:rgba(239,68,68,0.1); color:#f87171; border:1px solid rgba(239,68,68,0.3)">Se omiten al importar</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2" id="config-no-laboral-tags"></div>
+                    </div>
+
+                    <!-- MACHINE MAPS -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- LATAS MAP -->
+                        <div class="rounded-xl border p-5" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="text-sm">🥫</span>
+                                <h4 class="text-white font-bold text-xs uppercase tracking-widest">Mapeo Latas</h4>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:rgba(234,179,8,0.1); color:#fde047; border:1px solid rgba(234,179,8,0.3)">Excel → Máquinas</span>
+                            </div>
+                            <div class="space-y-2" id="config-map-latas"></div>
+                        </div>
+                        <!-- BOTELLAS MAP -->
+                        <div class="rounded-xl border p-5" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="text-sm">🍺</span>
+                                <h4 class="text-white font-bold text-xs uppercase tracking-widest">Mapeo Botellas</h4>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:rgba(99,102,241,0.1); color:#a5b4fc; border:1px solid rgba(99,102,241,0.3)">Excel → Máquinas</span>
+                            </div>
+                            <div class="space-y-2" id="config-map-botellas"></div>
+                        </div>
+                    </div>
+
+                    <!-- COLUMN OFFSETS -->
+                    <div class="rounded-xl border p-5" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-sm">📐</span>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-widest">Offsets de Columna por Línea</h4>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="rounded-lg p-3" style="background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.15)">
+                                <div class="text-xs font-bold mb-2" style="color:#fde047">Latas</div>
+                                <div class="text-[10px] text-gray-400 space-y-1 font-mono">
+                                    <div>horario: <span class="text-white">col_fecha - 1</span></div>
+                                    <div>código:  <span class="text-white">col_fecha + 1</span></div>
+                                    <div>máquina: <span class="text-white">col_fecha</span></div>
+                                </div>
+                            </div>
+                            <div class="rounded-lg p-3" style="background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15)">
+                                <div class="text-xs font-bold mb-2" style="color:#a5b4fc">Botellas</div>
+                                <div class="text-[10px] text-gray-400 space-y-1 font-mono">
+                                    <div>horario: <span class="text-white">col_fecha - 2</span></div>
+                                    <div>código:  <span class="text-white">col_fecha - 2</span></div>
+                                    <div>máquina: <span class="text-white">col_fecha</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SPECIAL CASES -->
+                    <div class="rounded-xl border p-5" style="background:var(--hk-surface); border-color:var(--hk-border)">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-sm">👤</span>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-widest">Casos Especiales de Operadores</h4>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:var(--hk-surface-2)">
+                                <span class="text-amber-400 font-mono text-[10px] px-2 py-1 rounded" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2)">Excel contiene "Lindsay" + "Lecaro"</span>
+                                <span class="text-gray-600">→</span>
+                                <span class="text-white font-semibold">Lindsay Lecaro</span>
+                            </div>
+                            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:var(--hk-surface-2)">
+                                <span class="text-amber-400 font-mono text-[10px] px-2 py-1 rounded" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2)">Excel contiene "Edison" + "Asencio"</span>
+                                <span class="text-gray-600">→</span>
+                                <span class="text-white font-semibold">Edison Asencio</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-[10px] text-gray-600 flex items-center gap-1">
+                            <span>ℹ️</span> Estos nombres se resuelven antes del matching por cédula para evitar ambigüedad
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -913,7 +1175,7 @@
         })();
 
         // --- CONTROL DE VISTAS ---
-        function changeView(viewName) {
+        async function changeView(viewName) {
             currentView = viewName;
             
             // Actualizar Sidebar UI
@@ -942,7 +1204,7 @@
                 toggleClass('dashboard-metrics', 'hidden', false);
                 setMetricLabels('Total Registros', 'Completados', 'Pendientes', 'Atrasados');
                 loadFilterOptionsLazy();
-                applyFilters();
+                await applyFilters();
                 animateView('card-view');
             } 
             else if (currentView === 'Gestión de Operadores') {
@@ -953,7 +1215,7 @@
                 toggleClass('pagination-controls', 'hidden', false);
                 toggleClass('dashboard-metrics', 'hidden', false);
                 setMetricLabels('Total Operadores', 'Activos Hoy', 'Supervisores', 'Sin Turno');
-                fetchData();
+                await fetchData();
                 animateView('card-view');
             }
             else if (currentView === 'Carga de Horarios') {
@@ -967,6 +1229,7 @@
                 toggleClass('dashboard-metrics', 'hidden', false);
                 setMetricLabels('Líneas Activas', 'Máquinas', 'Tareas Totales', 'Sin Pasos');
                 gtsState = { level: 'lines', line: null, machine: null, task: null, machineName: '', taskName: '' };
+                await updateDashboardMetrics();
                 renderGTS('lines');
                 animateView('gts-view');
             }
@@ -987,44 +1250,82 @@
             if (el('m-label-2')) el('m-label-2').textContent = l2;
             if (el('m-label-3')) el('m-label-3').textContent = l3;
             if (el('m-label-4')) el('m-label-4').textContent = l4;
+            
+            // Resetear valores para evitar "stale state"
+            ['m-total', 'm-done', 'm-pending', 'm-late'].forEach(id => {
+                if (el(id)) el(id).textContent = '...';
+            });
         }
 
         async function updateDashboardMetrics() {
-            if (currentView === 'Histórico de CILTs' || currentTable === 'registro_tareas') {
-                const { data, error } = await supabase.from('registro_tareas').select('estado');
-                if (error || !data) return;
-                const stats = { total: data.length, done: 0, pending: 0, late: 0 };
-                data.forEach(r => {
-                    if (r.estado === 'Completado') stats.done++;
-                    else if (r.estado === 'Atrasado') stats.late++;
-                    else stats.pending++;
-                });
-                if (el('m-total')) el('m-total').textContent = stats.total;
-                if (el('m-done')) el('m-done').textContent = stats.done;
-                if (el('m-pending')) el('m-pending').textContent = stats.pending;
-                if (el('m-late')) el('m-late').textContent = stats.late;
-            } else if (currentView === 'Gestión de Operadores') {
-                const { data: ops, error } = await supabase.from('operadores').select('id, rol');
-                if (error || !ops) return;
-                const supervisors = ops.filter(o => (o.rol || '').toLowerCase().includes('supervisor')).length;
-                // Turnos de hoy
-                const today = new Date().toISOString().slice(0, 10);
-                const { count: activosHoy } = await supabase.from('turnos_semana').select('*', { count: 'exact', head: true }).eq('fecha', today);
-                const { count: sinTurno } = await supabase.from('operadores').select('*', { count: 'exact', head: true }).not('id', 'in', `(select operador_id from turnos_semana where fecha = '${today}')`);
-                if (el('m-total')) el('m-total').textContent = ops.length;
-                if (el('m-done')) el('m-done').textContent = activosHoy || 0;
-                if (el('m-pending')) el('m-pending').textContent = supervisors;
-                if (el('m-late')) el('m-late').textContent = sinTurno || '-';
-            } else if (currentView === 'Gestión de Tareas y Pasos') {
-                // GTS metrics
-                const { count: lineas } = await supabase.from('maquinas').select('linea', { count: 'exact', head: false });
-                const { count: maquinas } = await supabase.from('maquinas').select('*', { count: 'exact', head: true });
-                const { count: tareas } = await supabase.from('tareas').select('*', { count: 'exact', head: true });
-                const { count: sinPasos } = await supabase.from('tareas').select('*', { count: 'exact', head: true }).eq('tiene_pasos', false);
-                if (el('m-total')) el('m-total').textContent = LINEAS ? LINEAS.length : '-';
-                if (el('m-done')) el('m-done').textContent = maquinas || 0;
-                if (el('m-pending')) el('m-pending').textContent = tareas || 0;
-                if (el('m-late')) el('m-late').textContent = sinPasos || 0;
+            const viewAtStart = currentView;
+            try {
+                if (currentView === 'Histórico de CILTs') {
+                    const { data, error } = await supabase.from('registro_tareas').select('estado');
+                    if (currentView !== viewAtStart) return; // Evitar carrera
+                    if (error || !data) throw error || new Error('No data');
+                    
+                    const stats = { total: data.length, done: 0, pending: 0, late: 0 };
+                    data.forEach(r => {
+                        if (r.estado === 'Completado') stats.done++;
+                        else if (r.estado === 'Atrasado') stats.late++;
+                        else stats.pending++;
+                    });
+                    
+                    if (el('m-total')) el('m-total').textContent = stats.total;
+                    if (el('m-done')) el('m-done').textContent = stats.done;
+                    if (el('m-pending')) el('m-pending').textContent = stats.pending;
+                    if (el('m-late')) el('m-late').textContent = stats.late;
+                } else if (currentView === 'Gestión de Operadores') {
+                    const { data: ops, error: errOps } = await supabase.from('operadores').select('id, id_operador, tipo');
+                    if (currentView !== viewAtStart) return;
+                    if (errOps || !ops) throw errOps || new Error('No data');
+                    
+                    const supervisors = ops.filter(o => (o.tipo || '').toLowerCase().includes('supervisor')).length;
+                    
+                    const today = new Date().toISOString().slice(0, 10);
+                    const { count: activosHoy } = await supabase.from('turnos_semana')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('fecha', today);
+                    
+                    const { data: turnosHoy } = await supabase.from('turnos_semana')
+                        .select('id_operador')
+                        .eq('fecha', today);
+                    
+                    if (currentView !== viewAtStart) return;
+
+                    const idsConTurno = new Set((turnosHoy || []).map(t => t.id_operador));
+                    // Nota: En operadores, id_operador es el RFID. 
+                    // En turnos_semana, id_operador también es el RFID según el código de importación.
+                    const sinTurno = ops.filter(o => !idsConTurno.has(o.id_operador)).length;
+
+                    if (el('m-total')) el('m-total').textContent = ops.length;
+                    if (el('m-done')) el('m-done').textContent = activosHoy || 0;
+                    if (el('m-pending')) el('m-pending').textContent = supervisors;
+                    if (el('m-late')) el('m-late').textContent = sinTurno;
+                } else if (currentView === 'Gestión de Tareas y Pasos') {
+                    // GTS metrics
+                    const { count: maquinas } = await supabase.from('maquinas').select('*', { count: 'exact', head: true });
+                    const { count: tareas } = await supabase.from('tareas').select('*', { count: 'exact', head: true });
+                    const { data: allTareas } = await supabase.from('tareas').select('id_tarea');
+                    const { data: allPasos } = await supabase.from('pasos_tarea').select('id_tarea');
+                    const idsConPasos = new Set((allPasos || []).map(p => p.id_tarea));
+                    const sinPasos = (allTareas || []).filter(t => !idsConPasos.has(t.id_tarea)).length;
+                    
+                    if (currentView !== viewAtStart) return;
+
+                    if (el('m-total')) el('m-total').textContent = (typeof LINEAS !== 'undefined' ? LINEAS.length : 0);
+                    if (el('m-done')) el('m-done').textContent = maquinas || 0;
+                    if (el('m-pending')) el('m-pending').textContent = tareas || 0;
+                    if (el('m-late')) el('m-late').textContent = sinPasos || 0;
+                }
+            } catch (err) {
+                console.error("Error updating metrics:", err);
+                if (currentView === viewAtStart) {
+                    ['m-total', 'm-done', 'm-pending', 'm-late'].forEach(id => {
+                        if (el(id)) el(id).textContent = '-';
+                    });
+                }
             }
         }
 
@@ -1658,7 +1959,7 @@
 
         async function fetchData(filters = {}) {
             renderSkeletons();
-            updateDashboardMetrics();
+            await updateDashboardMetrics();
 
             const from = (currentPage - 1) * PAGE_SIZE;
             const to = from + PAGE_SIZE - 1;
@@ -2071,7 +2372,9 @@
                 maquinasCatalogo.map(m => `<option value="${m.id_maquina}">${m.nombre} (${m.linea})</option>`).join('');
             // Fecha default = lunes próximo
             el('manual-fecha').value = getLunesProximo();
-            el('semana-inicio-view').value = getLunesProximo();
+            
+            // Inicializar selectores de semana
+            initSemanaSelector();
             // Cargar recientes
             cargarTurnosRecientes();
         }
@@ -2115,8 +2418,81 @@
                 + String(d.getDate()).padStart(2, '0');
         }
 
+        // --- SELECTORES DE SEMANA MEJORADOS ---
+        function initSemanaSelector() {
+            const mesSel = el('semana-mes-sel');
+            if (!mesSel) return;
+
+            const hoy = _getHoyEc();
+            const year = hoy.getFullYear();
+            const currentMonth = hoy.getMonth() + 1; // 1-12
+
+            // Generar meses: del mes anterior hasta 3 meses a futuro
+            const meses = [];
+            for (let i = -1; i <= 3; i++) {
+                const d = new Date(year, (currentMonth - 1) + i, 1);
+                const val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+                const label = d.toLocaleString('es-EC', { month: 'long', year: 'numeric' });
+                meses.push(`<option value="${val}">${label.charAt(0).toUpperCase() + label.slice(1)}</option>`);
+            }
+            mesSel.innerHTML = meses.join('');
+            
+            // Seleccionar mes actual por defecto
+            mesSel.value = year + '-' + String(currentMonth).padStart(2, '0');
+            
+            actualizarSemanasDelMes(true); // true para intentar seleccionar la semana actual
+        }
+
+        function actualizarSemanasDelMes(seleccionarActual = false) {
+            const mesSel = el('semana-mes-sel');
+            const numSel = el('semana-num-sel');
+            if (!mesSel || !numSel) return;
+
+            const [year, month] = mesSel.value.split('-').map(Number);
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0); // último día del mes
+            
+            // Buscar el primer lunes que cubre el inicio del mes
+            let d = new Date(firstDay);
+            while (d.getDay() !== 1) { 
+                d.setDate(d.getDate() - 1); 
+            }
+            
+            const lunesActual = getLunesProximo();
+            const options = [];
+            let weekNum = 1;
+            let valToSelect = null;
+
+            // Generar hasta 6 semanas para cubrir todo el mes
+            for (let i = 0; i < 6; i++) {
+                const mondayStr = _fechaLocal(d);
+                // Si este lunes ya se pasa del mes Y el lunes anterior ya cubría hasta el final, paramos
+                if (d > lastDay && i > 0) break;
+
+                const sunday = new Date(d);
+                sunday.setDate(d.getDate() + 6);
+                
+                const rangeLabel = `${d.getDate()} ${d.toLocaleString('es-EC',{month:'short'})} - ${sunday.getDate()} ${sunday.toLocaleString('es-EC',{month:'short'})}`;
+                const optionLabel = `Semana ${weekNum} (${rangeLabel})`;
+                
+                options.push(`<option value="${mondayStr}">${optionLabel}</option>`);
+                
+                if (seleccionarActual && mondayStr === lunesActual) {
+                    valToSelect = mondayStr;
+                }
+                
+                d.setDate(d.getDate() + 7);
+                weekNum++;
+            }
+            
+            numSel.innerHTML = options.join('');
+            if (valToSelect) numSel.value = valToSelect;
+            
+            cargarVistaSemana();
+        }
+
         function switchHorarioTab(tab) {
-            ['excel','manual','semana'].forEach(t => {
+            ['excel','manual','semana','config'].forEach(t => {
                 el(`tab-${t}`).classList.toggle('hidden', t !== tab);
                 const btn = el(`tab-${t}-btn`);
                 if (t === tab) {
@@ -2130,6 +2506,44 @@
                 }
             });
             if (tab === 'semana') cargarVistaSemana();
+            if (tab === 'config') renderConfigTab();
+        }
+
+        function renderConfigTab() {
+            // Render non-working markers
+            const markers = ['descanso','vacaciones','vacacion','libre','permiso','incapacidad','licencia','reposo','feriado','no labora','no trabaja','no data'];
+            const tagsDiv = el('config-no-laboral-tags');
+            if (tagsDiv) {
+                tagsDiv.innerHTML = markers.map(m => 
+                    `<span class="px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold" style="background:rgba(239,68,68,0.08); color:#f87171; border:1px solid rgba(239,68,68,0.15)">${m}</span>`
+                ).join('');
+            }
+
+            // Render machine maps
+            const renderMap = (map, containerId, color) => {
+                const container = el(containerId);
+                if (!container) return;
+                container.innerHTML = Object.entries(map).map(([key, machines]) => {
+                    const machineHtml = machines.map(m => {
+                        const fallback = m.fallback ? `<span class="text-[9px] ml-1 px-1 py-0.5 rounded" style="background:rgba(245,158,11,0.1); color:#fbbf24; border:1px solid rgba(245,158,11,0.2)">fallback</span>` : '';
+                        return `<div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded" style="background:rgba(255,255,255,0.04); border:1px solid var(--hk-border); color:#9ca3af">${m.id}</span>
+                            <span class="text-xs text-gray-300">${m.nombre}</span>
+                            ${fallback}
+                        </div>`;
+                    }).join('');
+                    return `<div class="flex items-start gap-3 p-2 rounded-lg" style="background:var(--hk-surface-2)">
+                        <div class="flex-shrink-0 min-w-[100px]">
+                            <span class="text-xs font-bold text-white px-2 py-1 rounded" style="background:${color}">${key}</span>
+                        </div>
+                        <span class="text-gray-600 mt-0.5">→</span>
+                        <div class="flex flex-col gap-1">${machineHtml}</div>
+                    </div>`;
+                }).join('');
+            };
+
+            renderMap(MAQUINAS_LATAS_MAP, 'config-map-latas', 'rgba(234,179,8,0.2)');
+            renderMap(MAQUINAS_BOTELLAS_MAP, 'config-map-botellas', 'rgba(99,102,241,0.2)');
         }
 
         //     PARSEO DEL EXCEL                                    
@@ -2472,8 +2886,8 @@
             }
 
             if (filaFechasIdx < 0 || fechas.length === 0) {
-                warnings.push(`âš ï¸ Hoja ${linea}: no se encontrÃ³ la fila de fechas.`);
-                console.warn(`[${linea}] No se encontrÃ³ fila de fechas. Primeras 5 filas:`, filas.slice(0, 5));
+                warnings.push(`⚠️ Hoja ${linea}: no se encontró la fila de fechas.`);
+                console.warn(`[${linea}] No se encontró fila de fechas. Primeras 5 filas:`, filas.slice(0, 5));
                 return;
             }
             console.log(`[${linea}] Fila de fechas: idx=${filaFechasIdx}, fechas encontradas=${fechas.length}`, fechas.map(f => f.fecha?.toISOString?.()?.slice(0,10)));
@@ -2490,7 +2904,7 @@
             });
 
             if (fechasSemana.length === 0) {
-                warnings.push(`âš ï¸ Hoja ${linea}: no hay fechas para la semana del ${lunesStr}. Se usan las primeras 7 fechas disponibles.`);
+                warnings.push(`⚠️ Hoja ${linea}: no hay fechas para la semana del ${lunesStr}. Se usan las primeras 7 fechas disponibles.`);
                 fechasSemana.push(...fechas.slice(0, 7));
             }
 
@@ -2498,8 +2912,8 @@
                 const fmt = { day: '2-digit', month: 'short', year: 'numeric' };
                 const desde = fechasSemana[0].fecha.toLocaleDateString('es-EC', fmt);
                 const hasta = fechasSemana[fechasSemana.length - 1].fecha.toLocaleDateString('es-EC', fmt);
-                el('semana-rango').textContent = `${desde} â†’ ${hasta}`;
-                el('semana-aviso').textContent = `(${fechasSemana.length} dÃ­as, hoja ${linea})`;
+                el('semana-rango').textContent = `${desde} → ${hasta}`;
+                el('semana-aviso').textContent = `(${fechasSemana.length} días, hoja ${linea})`;
                 el('semana-detectada').classList.remove('hidden');
             }
 
@@ -2510,7 +2924,7 @@
                 if (!fila) continue;
                 for (let c = 0; c < fila.length; c++) {
                     const v = String(fila[c] || '').toLowerCase();
-                    if (v.includes('cedula') || v.includes('cÃ©dula')) {
+                    if (v.includes('cedula') || v.includes('cédula')) {
                         colCedula = c;
                         filaHeaderIdx = r;
                         break;
@@ -2520,13 +2934,13 @@
             }
 
             if (colCedula < 0) {
-                warnings.push(`âš ï¸ Hoja ${linea}: no se encontrÃ³ columna de CÃ©dula.`);
-                console.warn(`[${linea}] No se encontrÃ³ columna CÃ©dula. Fila buscada cerca de idx=${filaFechasIdx}. Contenido de filas candidatas:`,
+                warnings.push(`⚠️ Hoja ${linea}: no se encontró columna de Cédula.`);
+                console.warn(`[${linea}] No se encontró columna Cédula. Fila buscada cerca de idx=${filaFechasIdx}. Contenido de filas candidatas:`,
                     filas.slice(Math.max(0, filaFechasIdx-3), filaFechasIdx+3));
                 return;
             }
-            console.log(`[${linea}] CÃ©dula en col=${colCedula}, header en fila idx=${filaHeaderIdx}`);
-            console.log(`[${linea}] evaluaciÃ³n separada con offsets:`, colOffset, '| fechasSemana:', fechasSemana.length);
+            console.log(`[${linea}] Cédula en col=${colCedula}, header en fila idx=${filaHeaderIdx}`);
+            console.log(`[${linea}] evaluación separada con offsets:`, colOffset, '| fechasSemana:', fechasSemana.length);
 
             let contadorRegistros = 0;
             for (let r = filaHeaderIdx + 1; r < filas.length; r++) {
@@ -2824,7 +3238,8 @@
         //     VER SEMANA                                          
 
         async function cargarVistaSemana() {
-            const fechaInicio = el('semana-inicio-view').value || getLunesProximo();
+            const numSel = el('semana-num-sel');
+            const fechaInicio = numSel ? numSel.value : getLunesProximo();
             // Calcular fin con componentes locales (evita desfase UTC)
             const [_vy, _vm, _vd] = fechaInicio.split('-').map(Number);
             const finStr = _fechaLocal(new Date(_vy, _vm - 1, _vd + 6));
@@ -2895,41 +3310,43 @@
                 const lc = lineaColors[linea] || { bg: 'rgba(255,255,255,0.05)', border: 'var(--hk-border)', text: '#e5e7eb' };
                 return `
                 <div class="mb-6">
-                    <div class="flex items-center gap-2 mb-2 px-1">
-                        <span class="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded" style="background:${lc.bg}; border:1px solid ${lc.border}; color:${lc.text}">
-                            Línea de ${linea}
-                        </span>
-                        <span class="text-xs text-gray-600">${Object.keys(porMaquina).length} máquinas</span>
+                    <div class="line-header-badge" style="background:${lc.bg}; border:1px solid ${lc.border}; color:${lc.text}">
+                        Línea de ${linea}
                     </div>
-                    <div class="overflow-x-auto">
-                    <table class="text-xs border-collapse w-full" style="min-width:700px">
+                    
+                    <div class="sched-container">
+                    <table class="sched-table">
                         <thead>
-                            <tr style="background:var(--hk-surface)">
-                                <th class="px-3 py-2 text-left text-gray-400 border" style="border-color:var(--hk-border)">Máquina</th>
-                                <th class="px-3 py-2 text-left text-gray-400 border" style="border-color:var(--hk-border)">Turno</th>
-                                ${dias.map(d => `<th class="px-3 py-2 text-center text-gray-400 border" style="border-color:var(--hk-border); min-width:100px">${d.label}</th>`).join('')}
+                            <tr>
+                                <th class="sticky-col" style="text-align:left">Máquina</th>
+                                <th class="sticky-col-2">Turno</th>
+                                ${dias.map(d => `<th>${d.label}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
                         ${Object.entries(porMaquina).map(([maqId, slots]) =>
                             turnos.map((turno, ti) => `
-                            <tr style="border-top:1px solid var(--hk-border); background:${ti%2===0?'var(--hk-surface-2)':'var(--hk-surface)'}">
-                                ${ti === 0 ? `<td class="px-3 py-1.5 font-semibold text-white border" style="border-color:var(--hk-border); vertical-align:middle" rowspan="3">${nombreMaquina[maqId]}</td>` : ''}
-                                <td class="px-2 py-1 border" style="border-color:var(--hk-border); background:${turnoColors[turno]}20">
-                                    <span style="color:${turnoTextColors[turno]}" class="font-semibold">${turno}</span>
+                            <tr class="sched-row">
+                                ${ti === 0 ? `<td class="sticky-col text-white" style="vertical-align:middle; font-weight:600; font-size:0.6rem" rowspan="3">${nombreMaquina[maqId]}</td>` : ''}
+                                <td class="sticky-col-2">
+                                    <span class="turno-label" style="background:${turnoColors[turno]}30; color:${turnoTextColors[turno]}">${turno}</span>
                                 </td>
                                 ${dias.map(d => {
                                     const key = `${d.str}_${turno}`;
                                     const ops = slots[key] || [];
                                     const hasOps = ops.length > 0;
-                                    return `<td class="px-2 py-1 border transition-colors hover:bg-white/5" style="border-color:var(--hk-border)">
-                                        ${hasOps ? ops.map(op => `<div style="color:#86efac; font-size:10px; white-space:nowrap" class="flex items-center gap-1">${ICON.user} ${op}</div>`).join('') : '<span style="color:#374151" class="flex justify-center">—</span>'}
+                                    return `<td style="text-align:center">
+                                        ${hasOps ? ops.map(op => `<div class="op-badge">${op}</div>`).join('') : '<span class="cell-empty">—</span>'}
                                     </td>`;
                                 }).join('')}
-                            </tr>`
-                        ).join('')).join('')}
+                            </tr>`).join('')
+                        ).join('')}
                         </tbody>
                     </table>
+                    </div>
+                    <div class="flex justify-between items-center mt-1 px-1">
+                        <span style="font-size:8px; color:#4b5563; text-transform:uppercase; font-weight:700; letter-spacing:0.05em">eCILT Scheduling</span>
+                        <span style="font-size:8px; color:#4b5563">${Object.keys(porMaquina).length} máquinas</span>
                     </div>
                 </div>`;
             };
@@ -2939,12 +3356,12 @@
             div.innerHTML = ordenLineas
                 .filter(l => porLinea[l])
                 .map(l => renderTabla(l, porLinea[l]))
-                .join('') +
-                `<p class="text-gray-600 text-xs mt-1">Total: ${data.length} turnos</p>`;
+                .join('');
         }
 
         async function borrarSemana() {
-            const fechaInicio = el('semana-inicio-view').value || getLunesProximo();
+            const numSel = el('semana-num-sel');
+            const fechaInicio = numSel ? numSel.value : getLunesProximo();
             // Calcular fin con componentes locales (evita desfase UTC)
             const [_by, _bm, _bd] = fechaInicio.split('-').map(Number);
             const finStr = _fechaLocal(new Date(_by, _bm - 1, _bd + 6));
@@ -3026,6 +3443,7 @@
         window.cargarVistaSemana  = cargarVistaSemana;
         window.borrarSemana       = borrarSemana;
         window.changeView         = changeView;
+        window.actualizarSemanasDelMes = actualizarSemanasDelMes;
         window.fetchData          = fetchData;
         window.openEditor         = openEditor;
         window.renderGTS          = renderGTS;
