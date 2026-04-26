@@ -225,12 +225,15 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
       }
 
       final maquinasIn = maquinas.map((e) => '"$e"').join(',');
-      final hoy = mockNow.toIso8601String().split('T')[0];
+      final now = mockNow;
+      final lunes = now.subtract(Duration(days: now.weekday - 1)).toIso8601String().split('T')[0];
+      final domingo = now.add(Duration(days: 7 - now.weekday)).toIso8601String().split('T')[0];
 
       final responseTurnos = await SupabaseManager.client
           .from('turnos_semana')
           .select('id_operador, turno')
-          .eq('fecha', hoy)
+          .gte('fecha', lunes)
+          .lte('fecha', domingo)
           .filter('id_maquina', 'in', '($maquinasIn)');
 
       final Map<String, String> mapTurnos = {};
@@ -1047,17 +1050,19 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: _abrirSelectorOperador,
-                    icon: const Icon(Icons.badge_outlined, size: 20),
+                    icon: const Icon(Icons.badge_outlined, size: 22),
                     label: const Text('Ingresar sin tarjeta'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _accentGreen,
                       backgroundColor: Colors.white,
                       side: BorderSide(
-                          color: _accentGreen.withValues(alpha: 0.6), width: 1.5),
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          color: _accentGreen.withValues(alpha: 0.4), width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 20),
+                      elevation: 4,
+                      shadowColor: _accentGreen.withValues(alpha: 0.2),
                       textStyle: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600),
+                          fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                     ),
                   ),
                   const SizedBox(height: 36),
@@ -1145,12 +1150,15 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
       }
 
       final maquinasIn = maquinas.map((e) => '"$e"').join(',');
-      final hoy = mockNow.toIso8601String().split('T')[0];
+      final now = mockNow;
+      final lunes = now.subtract(Duration(days: now.weekday - 1)).toIso8601String().split('T')[0];
+      final domingo = now.add(Duration(days: 7 - now.weekday)).toIso8601String().split('T')[0];
 
       final responseTurnos = await SupabaseManager.client
           .from('turnos_semana')
           .select('id_operador, turno')
-          .eq('fecha', hoy)
+          .gte('fecha', lunes)
+          .lte('fecha', domingo)
           .filter('id_maquina', 'in', '($maquinasIn)');
 
       final Map<String, String> mapTurnos = {};
@@ -1202,9 +1210,24 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFF5F5F7),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFFFFFFFF),
+            const Color(0xFFF8F9FA),
+            const Color(0xFFF1F3F4),
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       child: Column(
@@ -1286,19 +1309,31 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(28),
                                   border: Border.all(
-                                    color: activo ? _accentGreen : Colors.transparent,
-                                    width: 2.5,
+                                    color: activo ? _accentGreen : Colors.white,
+                                    width: activo ? 2.5 : 1.0,
                                   ),
                                   boxShadow: [
-                                    BoxShadow(
-                                      color: activo
-                                          ? _accentGreen.withValues(alpha: 0.15)
-                                          : Colors.black.withValues(alpha: 0.07),
-                                      blurRadius: activo ? 16 : 8,
-                                      offset: const Offset(0, 4),
-                                    ),
+                                    if (activo) ...[
+                                      BoxShadow(
+                                        color: _accentGreen.withValues(alpha: 0.25),
+                                        blurRadius: 25,
+                                        offset: const Offset(0, 12),
+                                        spreadRadius: -5,
+                                      ),
+                                      BoxShadow(
+                                        color: _accentGreen.withValues(alpha: 0.15),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ] else ...[
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.05),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
                                   ],
                                 ),
                                 child: Column(
@@ -1338,16 +1373,17 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
                                           if ((op['turno'] ?? '').toString().isNotEmpty) ...[
                                             const SizedBox(height: 4),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                               decoration: BoxDecoration(
-                                                color: _accentGreen.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(8),
+                                                color: _accentGreen.withValues(alpha: 0.08),
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: _accentGreen.withValues(alpha: 0.1), width: 1),
                                               ),
                                               child: Text(
                                                 'Turno ${op['turno']}',
                                                 style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
                                                   color: _accentGreen,
                                                 ),
                                               ),
@@ -1451,9 +1487,10 @@ class _OperadorSelectorSheetState extends State<_OperadorSelectorSheet> {
                     backgroundColor: _accentGreen,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(18),
                     ),
-                    elevation: 2,
+                    elevation: 8,
+                    shadowColor: _accentGreen.withValues(alpha: 0.4),
                   ),
                   onPressed: () {
                     final op = _operadores[_paginaActual];

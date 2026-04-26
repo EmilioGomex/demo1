@@ -196,8 +196,8 @@ class _TareasScreenState extends State<TareasScreen> {
   }
 
   Future<String?> _crearYPrepararJob(
-      String linea, String tipo, String nombreTarea, String nombreOperador) async {
-    final title = "CILT - $linea - $tipo - $nombreTarea";
+      String linea, String maquina, String tipo, String nombreTarea, String nombreOperador) async {
+    final title = "CILT - $linea - $maquina - $tipo - $nombreTarea";
 
     final bodyCreate = {
       "method": "createModular",
@@ -366,9 +366,10 @@ class _TareasScreenState extends State<TareasScreen> {
     final frecuencia = tarea?['frecuencia'] ?? 'Otro';
 
     String? parsableJobId = registro['parsable_job_id'];
+    final maquinaName = _nombresMaquinas;
 
     if (parsableJobId == null) {
-      parsableJobId = await _crearYPrepararJob(linea, tipo, nombreTarea, operadorNombre);
+      parsableJobId = await _crearYPrepararJob(linea, maquinaName, tipo, nombreTarea, operadorNombre);
       if (parsableJobId != null) {
         await SupabaseManager.client
             .from('registro_tareas')

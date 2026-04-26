@@ -86,3 +86,8 @@
   - `Brewing`: Cocimiento, Fermentacion, Filtracion
   - `Utilidades`, `Logistica`, `Ingenieria`: Mismo nombre.
 - **Turnos**: Mañana, Tarde, Noche.
+- **Integración Parsable**: 
+  - La sincronización se realiza mediante la Edge Function `parsable-proxy` (proxy transparente hacia la API de Parsable).
+  - **Formato del Job**: `CILT - [Línea] - [Nombre de Máquina] - [Tipo de Tarea] - [Nombre de Tarea]`.
+  - Acciones sincronizadas: "Completar Tarea" (`completeWithOpts`) y "Marcar Pendiente/Desmarcar" (`uncomplete`). 
+  - *Nota*: Los bloqueos ("No puedo realizarla", ej. *Frecuencia incorrecta*) solo actualizan el registro local en Supabase y aplazan la fecha, no envían evento a Parsable actualmente.

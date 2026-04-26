@@ -183,6 +183,7 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
     if (_procesando) return;
 
     String? razonSeleccionada;
+    String? frecuenciaCorrecta;
     int diasExtension = 1;
     final textController = TextEditingController();
     String textoOtro = '';
@@ -192,8 +193,11 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
       'Sin materiales',
       'Personal insuficiente',
       'Esperando repuesto',
+      'Frecuencia incorrecta',
       'Otro',
     ];
+
+    const frecuencias = ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Semestral', 'Anual'];
 
     final confirmar = await showDialog<bool>(
       context: context,
@@ -215,16 +219,58 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: razones.map((r) => ChoiceChip(
-                    label: Text(r),
-                    selected: razonSeleccionada == r,
-                    selectedColor: _verdeHeineken.withValues(alpha: 0.15),
-                    checkmarkColor: _verdeHeineken,
-                    onSelected: (v) => setStateDialog(() {
-                      razonSeleccionada = v ? r : null;
-                    }),
-                  )).toList(),
+                  children: razones.map((r) {
+                    final esFrecuencia = r == 'Frecuencia incorrecta';
+                    return ChoiceChip(
+                      label: Text(
+                        r, 
+                        style: TextStyle(
+                          color: esFrecuencia && razonSeleccionada == r ? Colors.red.shade900 : null,
+                          fontWeight: esFrecuencia ? FontWeight.w500 : null,
+                        )
+                      ),
+                      selected: razonSeleccionada == r,
+                      selectedColor: esFrecuencia ? Colors.red.shade100 : _verdeHeineken.withValues(alpha: 0.15),
+                      checkmarkColor: esFrecuencia ? Colors.red.shade700 : _verdeHeineken,
+                      side: esFrecuencia 
+                          ? BorderSide(color: razonSeleccionada == r ? Colors.red.shade400 : Colors.red.shade200) 
+                          : null,
+                      backgroundColor: esFrecuencia ? Colors.red.shade50 : null,
+                      onSelected: (v) => setStateDialog(() {
+                        razonSeleccionada = v ? r : null;
+                      }),
+                    );
+                  }).toList(),
                 ),
+                if (razonSeleccionada == 'Frecuencia incorrecta') ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade100),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Selecciona la frecuencia correcta:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: frecuencias.map((f) => ChoiceChip(
+                            label: Text(f),
+                            selected: frecuenciaCorrecta == f,
+                            selectedColor: Colors.red.shade200,
+                            checkmarkColor: Colors.red.shade900,
+                            onSelected: (v) => setStateDialog(() => frecuenciaCorrecta = v ? f : null),
+                          )).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (razonSeleccionada == 'Otro') ...[
                   const SizedBox(height: 12),
                   TextField(
@@ -266,7 +312,8 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
                 foregroundColor: Colors.white,
               ),
               onPressed: (razonSeleccionada == null ||
-                      (razonSeleccionada == 'Otro' && textoOtro.isEmpty))
+                      (razonSeleccionada == 'Otro' && textoOtro.isEmpty) ||
+                      (razonSeleccionada == 'Frecuencia incorrecta' && frecuenciaCorrecta == null))
                   ? null
                   : () => Navigator.pop(ctx, true),
               child: const Text('Aplazar tarea'),
@@ -278,7 +325,9 @@ class _PasosTareaScreenState extends State<PasosTareaScreen> {
 
     final motivo = razonSeleccionada == 'Otro'
         ? textController.text.trim()
-        : razonSeleccionada ?? '';
+        : razonSeleccionada == 'Frecuencia incorrecta'
+            ? 'Frecuencia incorrecta (Sugerida: $frecuenciaCorrecta)'
+            : razonSeleccionada ?? '';
     textController.dispose();
 
     if (confirmar != true || !mounted) return;
