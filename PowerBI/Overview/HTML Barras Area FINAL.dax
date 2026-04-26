@@ -1,0 +1,141 @@
+HTML Barras Area FINAL = 
+
+VAR _pctPack = COALESCE([Cumplimiento Packaging], 0)
+VAR _pctUtil = COALESCE([Cumplimiento Utilidades], 0)
+VAR _pctBrew = COALESCE([Cumplimiento Brewing], 0)
+
+/* Áreas activas (implementadas) */
+VAR _packActiva = NOT ISBLANK([Cumplimiento Packaging])
+VAR _utilActiva = NOT ISBLANK([Cumplimiento Utilidades])
+VAR _brewActiva = NOT ISBLANK([Cumplimiento Brewing])
+
+VAR _barPack = FORMAT(_pctPack * 100, "0")
+VAR _barUtil = FORMAT(_pctUtil * 100, "0")
+VAR _barBrew = FORMAT(_pctBrew * 100, "0")
+
+/* COLORES CORPORATIVOS */
+VAR _Green  = "#00A651"
+VAR _Red    = "#D32F2F"
+VAR _Yellow = "#F9A825"
+VAR _Gray   = "#D1D5DB"
+
+VAR _colPack = IF(_pctPack < 0.75, _Red, IF(_pctPack < 0.80, _Yellow, _Green))
+VAR _colUtil = IF(_pctUtil < 0.75, _Red, IF(_pctUtil < 0.80, _Yellow, _Green))
+VAR _colBrew = IF(_pctBrew < 0.75, _Red, IF(_pctBrew < 0.80, _Yellow, _Green))
+
+VAR _ctxPack = IF(_pctPack < 0.75, "RIESGO", IF(_pctPack < 0.80, "ALERTA", "EN META"))
+VAR _ctxUtil = IF(_pctUtil < 0.75, "RIESGO", IF(_pctUtil < 0.80, "ALERTA", "EN META"))
+VAR _ctxBrew = IF(_pctBrew < 0.75, "RIESGO", IF(_pctBrew < 0.80, "ALERTA", "EN META"))
+
+/* Filas por área */
+VAR _rowPack =
+    "<div class='row " & IF(_pctPack < 0.75, "bad", "") & "'>"
+    & "<div class='name'>Packaging</div>"
+    & "<div class='track'><div class='fill' style='width:" & _barPack & "%;background:" & _colPack & "'></div></div>"
+    & "<div class='metrics'>"
+    & "  <div class='pct' style='color:" & _colPack & "'>" & FORMAT(_pctPack, "0.0%") & "</div>"
+    & "  <div class='ctx' style='color:" & _colPack & "'>" & _ctxPack & "</div>"
+    & "</div>"
+    & "</div>"
+
+VAR _rowUtil =
+    IF(_utilActiva,
+        "<div class='row " & IF(_pctUtil < 0.75, "bad", "") & "'>"
+        & "<div class='name'>Utilidades</div>"
+        & "<div class='track'><div class='fill' style='width:" & _barUtil & "%;background:" & _colUtil & "'></div></div>"
+        & "<div class='metrics'>"
+        & "  <div class='pct' style='color:" & _colUtil & "'>" & FORMAT(_pctUtil, "0.0%") & "</div>"
+        & "  <div class='ctx' style='color:" & _colUtil & "'>" & _ctxUtil & "</div>"
+        & "</div>"
+        & "</div>",
+        "<div class='row soon'>"
+        & "<div class='name'>Utilidades</div>"
+        & "<div class='track'><div class='fill' style='width:0%'></div></div>"
+        & "<div class='metrics'>"
+        & "  <div class='pct' style='color:#9CA3AF'>—</div>"
+        & "  <div class='ctx' style='color:#9CA3AF'>PRONTO</div>"
+        & "</div>"
+        & "</div>"
+    )
+
+VAR _rowBrew =
+    IF(_brewActiva,
+        "<div class='row " & IF(_pctBrew < 0.75, "bad", "") & "'>"
+        & "<div class='name'>Brewing</div>"
+        & "<div class='track'><div class='fill' style='width:" & _barBrew & "%;background:" & _colBrew & "'></div></div>"
+        & "<div class='metrics'>"
+        & "  <div class='pct' style='color:" & _colBrew & "'>" & FORMAT(_pctBrew, "0.0%") & "</div>"
+        & "  <div class='ctx' style='color:" & _colBrew & "'>" & _ctxBrew & "</div>"
+        & "</div>"
+        & "</div>",
+        "<div class='row soon'>"
+        & "<div class='name'>Brewing</div>"
+        & "<div class='track'><div class='fill' style='width:0%'></div></div>"
+        & "<div class='metrics'>"
+        & "  <div class='pct' style='color:#9CA3AF'>—</div>"
+        & "  <div class='ctx' style='color:#9CA3AF'>PRONTO</div>"
+        & "</div>"
+        & "</div>"
+    )
+
+RETURN
+"<style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI', sans-serif;background:transparent;}
+    
+    .wrap{
+        width:100%;height:210px;background:#FFFFFF;
+        border-radius:12px;border:1px solid #E3E3E3;
+        border-top:3px solid " & _Green & ";
+        padding:12px;display:flex;flex-direction:column;
+        overflow:hidden;
+    }
+    
+    .card-lbl{
+        font-size:10px;font-weight:600;text-transform:uppercase;
+        color:#6B7280;margin-bottom:10px;letter-spacing:0.5px;
+    }
+    
+    .rows{display:flex;flex-direction:column;gap:8px;flex:1;}
+    
+    .row{
+        display:flex;align-items:center;gap:12px;
+        padding:8px 12px;border-radius:10px;
+        background:#F9FAFB;border:1px solid #E5E7EB;
+        transition: all 0.3s ease;
+    }
+    
+    .row.bad{
+        background: rgba(211, 47, 47, 0.05);
+        border-color: rgba(211, 47, 47, 0.2);
+    }
+    
+    .row.soon{opacity:0.6;background:#F3F4F6;border-color:transparent;}
+    
+    .name{width:80px;font-size:11px;font-weight:600;color:#374151;}
+    
+    .track{flex:1;height:6px;background:#E5E7EB;border-radius:3px;overflow:hidden;}
+    
+    .fill{
+        height:100%;border-radius:3px;transform-origin:left;
+        animation:growBar 0.8s ease-out forwards;
+    }
+    
+    @keyframes growBar{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+    
+    .metrics{width:90px;display:flex;flex-direction:column;align-items:flex-end;}
+    
+    .pct{font-size:14px;font-weight:700;line-height:1;}
+    
+    .ctx{font-size:8px;font-weight:700;margin-top:2px;}
+</style>
+
+<div class='wrap'>
+  <div class='card-lbl'>CUMPLIMIENTO POR ÁREA</div>
+  <div class='rows'>
+    " & _rowPack & "
+    " & _rowUtil & "
+    " & _rowBrew & "
+  </div>
+</div>"
+

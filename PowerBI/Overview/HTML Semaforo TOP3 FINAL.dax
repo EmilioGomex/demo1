@@ -57,8 +57,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-ser
 .wrap{width:100%;height:210px;background:#FFFFFF;border-radius:10px;border:1px solid #E3E3E3;border-top:3px solid " & IF(_hasProblem, "#D32F2F", "#00A651") & ";padding:12px;display:flex;flex-direction:column;}
 .lbl{font-size:10px;font-weight:600;text-transform:uppercase;color:#6b6b6b;margin-bottom:8px;}
 .rows{display:flex;flex-direction:column;gap:8px;flex:1;}
-.row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#FAFAFA;transition:all 0.2s ease;cursor:pointer;}
-.row:hover{background:#F1F1F1; transform:translateX(4px); border:1px solid #DDD;}
+.row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#FAFAFA;transition:all 0.2s ease;}
+.row:hover{background:#F3F4F6;}
 .row.bad{background:rgba(211,47,47,0.05);border:1px solid rgba(211,47,47,0.15);}
 .ind{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .info{width:110px;flex-shrink:0;}

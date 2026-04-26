@@ -1,0 +1,156 @@
+HTML Tabla Actividades = 
+
+VAR _top10 =
+    TOPN(
+        10,
+        FILTER(
+            'Registro Tareas',
+            LOOKUPVALUE(
+                Maquinas[implementado],
+                Maquinas[id_maquina],
+                'Registro Tareas'[id_maquina]
+            ) = TRUE()
+            && 'Registro Tareas'[estado] <> "Pendiente"
+        ),
+        'Registro Tareas'[fecha_registro], DESC
+    )
+
+VAR _filas =
+    CONCATENATEX(
+        _top10,
+        VAR _idtarea = 'Registro Tareas'[id_tarea]
+        VAR _idmaq   = 'Registro Tareas'[id_maquina]
+        VAR _idop    = 'Registro Tareas'[id_operador]
+        VAR _est     = 'Registro Tareas'[estado]
+        VAR _fecha   = FORMAT('Registro Tareas'[fecha_periodo], "DD MMM")
+
+        VAR _tarea = LOOKUPVALUE(Tareas[nombre_tarea], Tareas[id_tarea], _idtarea)
+        VAR _tipo  = LOOKUPVALUE(Tareas[tipo],         Tareas[id_tarea], _idtarea)
+        VAR _freq  = LOOKUPVALUE(Tareas[frecuencia],   Tareas[id_tarea], _idtarea)
+        VAR _maq   = LOOKUPVALUE(Maquinas[nombre],     Maquinas[id_maquina], _idmaq)
+        VAR _lin   = LOOKUPVALUE(Maquinas[linea],      Maquinas[id_maquina], _idmaq)
+        VAR _op    = LOOKUPVALUE(Operadores[nombreoperador], Operadores[id_operador], _idop)
+
+        VAR _tareaLbl = IF(ISBLANK(_tarea), "Sin nombre", _tarea)
+        VAR _tipoLbl  = IF(ISBLANK(_tipo),  "—", LEFT(_tipo, 4))
+        VAR _freqLbl  = IF(ISBLANK(_freq),  "—", _freq)
+        VAR _maqLbl   = IF(ISBLANK(_maq),   _idmaq, _maq)
+        VAR _linLbl   = IF(ISBLANK(_lin),   "—", _lin)
+        VAR _opLbl    = IF(_idop = "Compartida", "Compartida", IF(ISBLANK(_op), "—", _op))
+
+        VAR _ecls  = IF(_est = "Completado", "ep-c", IF(_est = "Atrasado", "ep-a", "ep-p"))
+        VAR _borde = IF(_est = "Atrasado", "#D32F2F", IF(_est = "Pendiente", "#0078D4", "#00A651"))
+
+        RETURN
+            "<div class='row' style='border-left:3px solid " & _borde & "'>"
+            & "<div class='c1'><div class='tn'>" & _tareaLbl & "</div><div class='ts'>" & _maqLbl & " · " & _linLbl & "</div></div>"
+            & "<div class='c2'><span class='tag'>" & _tipoLbl & "</span></div>"
+            & "<div class='c3'>" & _freqLbl & "</div>"
+            & "<div class='c4'>" & _opLbl & "</div>"
+            & "<div class='c5'>" & _fecha & "</div>"
+            & "<div class='c6'><span class='" & _ecls & "'>" & _est & "</span></div>"
+            & "</div>",
+        ""
+    )
+
+/* COLORES CORPORATIVOS */
+VAR _Green  = "#00A651"
+VAR _Red    = "#D32F2F"
+VAR _Blue   = "#0078D4"
+
+RETURN
+"<style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI', sans-serif;background:transparent;}
+    
+    .wrap{
+        width:100%;height:100vh;background:#FFFFFF;
+        border-radius:12px;border:1px solid #E3E3E3;
+        border-top:3px solid " & _Green & ";
+        padding:10px 12px;display:flex;flex-direction:column;
+        overflow:hidden;
+    }
+    
+    .lbl{
+        font-size:9px;font-weight:600;text-transform:uppercase;
+        color:#6B7280;margin-bottom:8px;letter-spacing:0.5px;
+    }
+    
+    .hdr{
+        display:grid;grid-template-columns: 2fr 0.5fr 0.7fr 1.1fr 0.6fr 0.8fr;
+        gap:10px;padding:6px 12px;border-bottom:1px solid #F3F4F6;
+        background:#FFFFFF;
+    }
+    
+    .hc{font-size:8px;font-weight:700;text-transform:uppercase;color:#9CA3AF;letter-spacing:0.5px;}
+    
+    .rows{
+        flex:1;overflow-y:auto;display:flex;flex-direction:column;
+        gap:4px;padding-top:6px;padding-right:2px;
+    }
+    
+    /* Scrollbar minimalista */
+    .rows::-webkit-scrollbar{width:3px;}
+    .rows::-webkit-scrollbar-track{background:transparent;}
+    .rows::-webkit-scrollbar-thumb{background:#E5E7EB;border-radius:10px;}
+    
+    .row{
+        display:grid;grid-template-columns: 2fr 0.5fr 0.7fr 1.1fr 0.6fr 0.8fr;
+        gap:10px;padding:6px 12px;border-radius:8px;
+        background:#F9FAFB;align-items:center;transition:background 0.2s;
+    }
+    
+    .row:hover{background:#F3F4F6;}
+    
+    .tn{font-size:10px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .ts{font-size:8px;color:#9CA3AF;margin-top:1px;}
+    
+    .c2,.c3,.c4,.c5{font-size:9px;color:#4B5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    
+    .tag{
+        font-size:8px;padding:1px 6px;border-radius:4px;
+        background:#E5E7EB;color:#4B5563;font-weight:700;text-transform:uppercase;
+    }
+    
+    .ep-c{
+        font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;
+        background:rgba(0,166,81,0.08);color:" & _Green & ";border:1px solid rgba(0,166,81,0.15);
+    }
+    
+    .ep-a{
+        font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;
+        background:rgba(211,47,47,0.08);color:" & _Red & ";border:1px solid rgba(211,47,47,0.15);
+    }
+    
+    .foot{
+        display:flex;gap:15px;padding-top:8px;
+        border-top:1px solid #F3F4F6;margin-top:8px;
+    }
+    
+    .fi{display:flex;align-items:center;gap:4px;}
+    .fl{font-size:8px;color:#9CA3AF;font-weight:600;}
+    .fv{font-size:10px;font-weight:700;color:#111827;}
+</style>
+
+<div class='wrap'>
+  <div class='lbl'>Últimas Actividades</div>
+  
+  <div class='hdr'>
+    <div class='hc'>Tarea / Máquina</div>
+    <div class='hc'>Tipo</div>
+    <div class='hc'>Frec.</div>
+    <div class='hc'>Operador</div>
+    <div class='hc'>Fecha</div>
+    <div class='hc'>Estado</div>
+  </div>
+  
+  <div class='rows'>" & _filas & "</div>
+  
+  <div class='foot'>
+    <div class='fi'><span class='fl'>TOTAL</span><span class='fv'>" & FORMAT([Total Registros],"#,0") & "</span></div>
+    <div class='fi'><span class='fl' style='color:" & _Green & "'>✓</span><span class='fv'>" & FORMAT([Total Completadas],"#,0") & "</span></div>
+    <div class='fi'><span class='fl' style='color:" & _Red & "'>⚠</span><span class='fv'>" & FORMAT([Total Atrasadas],"#,0") & "</span></div>
+    <div class='fi'><span class='fl' style='color:" & _Blue & "'>·</span><span class='fv'>" & FORMAT([Total Pendientes],"#,0") & "</span></div>
+  </div>
+</div>"
+

@@ -1,0 +1,115 @@
+Cumplimiento Frecuencia Area = 
+VAR _area = COALESCE(SELECTEDVALUE('Areas Filtro'[area]), "Todas")
+
+/* CÁLCULO POR FRECUENCIA */
+VAR _tableFreq = 
+    SUMMARIZE(
+        'Registro Tareas',
+        'Registro Tareas'[frecuencia],
+        "Pct", [% Cumplimiento],
+        "Total", [Total Registros]
+    )
+
+/* COLORES CORPORATIVOS (DESIGN_SYSTEM.md) */
+VAR _Green  = "#00A651"
+VAR _Red    = "#D32F2F"
+VAR _Amber  = "#F9A825"
+VAR _BgCard = "#FFFFFF"
+VAR _BgPill = "#F9FAFB"
+
+/* GENERACIÓN DE FILAS HTML */
+VAR _rows = 
+    CONCATENATEX(
+        _tableFreq,
+        VAR _p = [Pct]
+        VAR _col = IF(_p < 0.75, _Red, IF(_p < 0.80, _Amber, _Green))
+        VAR _bar = FORMAT(_p * 100, "0")
+        RETURN
+        "<div class='row'>
+            <div class='name'>" & 'Registro Tareas'[frecuencia] & "</div>
+            <div class='track'><div class='fill' style='width:" & _bar & "%; background:" & _col & "'></div></div>
+            <div class='metrics'>
+                <span class='pct' style='color:" & _col & "'>" & FORMAT(_p, "0.0%") & "</span>
+                <span class='total'>" & FORMAT([Total], "#,0") & " tareas</span>
+            </div>
+        </div>",
+        ""
+    )
+
+RETURN
+"<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+        width: 100%; height: 100%; overflow: hidden;
+        background: transparent; font-family: 'Segoe UI', sans-serif;
+    }
+    
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
+
+    .wrap {
+        display: flex; flex-direction: column; width: 100%; height: 100%; 
+        padding: 12px; background: " & _BgCard & "; border-radius: 12px;
+        border: 1px solid #E3E3E3; position: relative;
+    }
+    
+    .wrap::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        background: linear-gradient(90deg, " & _Amber & ", " & _Amber & ");
+    }
+    
+    .header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 15px;
+    }
+    
+    .title {
+        font-size: 10px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.5px; color: #6B7280;
+    }
+    
+    .help { font-size: 8px; color: " & _Amber & "; font-weight: 600; cursor: default; }
+
+    .list {
+        flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+        padding-right: 4px;
+    }
+    
+    .row {
+        display: flex; align-items: center; gap: 12px; padding: 4px 0;
+    }
+    
+    .name {
+        width: 70px; font-size: 11px; font-weight: 600; color: #374151;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    
+    .track {
+        flex: 1; height: 6px; background: " & _BgPill & "; border-radius: 3px; overflow: hidden;
+    }
+    
+    .fill {
+        height: 100%; border-radius: 3px; transform-origin: left;
+        animation: growBar 0.8s ease-out forwards;
+    }
+    
+    .metrics {
+        width: 100px; display: flex; align-items: baseline; justify-content: flex-end; gap: 6px;
+    }
+    
+    .pct { font-size: 13px; font-weight: 700; }
+    .total { font-size: 8px; color: #9CA3AF; }
+    
+    @keyframes growBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+</style>
+
+<div class='wrap'>
+    <div class='header'>
+        <div class='title'>CUMPLIMIENTO POR FRECUENCIA</div>
+        <div class='help'>¿Cuál falla más?</div>
+    </div>
+    <div class='list'>
+        " & _rows & "
+    </div>
+</div>"

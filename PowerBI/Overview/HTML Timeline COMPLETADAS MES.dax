@@ -1,0 +1,119 @@
+HTML Timeline COMPLETADAS MES V4 = 
+
+VAR _hoy     = TODAY()
+VAR _mesHoy  = MONTH(_hoy)
+VAR _anio    = YEAR(_hoy)
+
+VAR _datos =
+    ADDCOLUMNS(
+        GENERATESERIES(1,12,1),
+        "nom",
+        SWITCH([Value],
+            1,"ENE",2,"FEB",3,"MAR",4,"ABR",
+            5,"MAY",6,"JUN",7,"JUL",8,"AGO",
+            9,"SEP",10,"OCT",11,"NOV",12,"DIC"
+        ),
+        "val",
+        VAR _m = [Value]
+        RETURN
+        CALCULATE(
+            [Total Completadas],
+            'Registro Tareas'[Anio] = _anio,
+            'Registro Tareas'[Mes]  = _m
+        )
+    )
+
+VAR _maxVal     = MAXX(_datos, [val])
+VAR _totalAnual = SUMX(_datos, [val])
+
+/* COLORES CORPORATIVOS */
+VAR _Green  = "#00A651"
+VAR _Blue   = "#0078D4"
+VAR _Gray   = "#9CA3AF"
+
+VAR _barras =
+    CONCATENATEX(
+        _datos,
+        VAR _n        = [Value]
+        VAR _val      = [val]
+        VAR _nomMes   = [nom]
+
+        VAR _h =
+            IF(_maxVal = 0, 4,
+               ROUND(DIVIDE(_val, _maxVal, 0) * 85, 0))
+
+        VAR _colorBar =
+            IF(_n = _mesHoy, _Blue, _Green)
+
+        RETURN
+        "<div class='col'>"
+        & "<div class='bar-wrap'>"
+        & "  <div class='bar' style='height:" & _h & "%;background:" & _colorBar & "'></div>"
+        & "</div>"
+        & "<div class='val' style='color:" & _colorBar & "'>" & IF(_val > 0, FORMAT(_val,"#,0"), "") & "</div>"
+        & "<div class='lbl'>" & _nomMes & "</div>"
+        & "</div>",
+        "",
+        [Value]
+    )
+
+RETURN
+"<style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI', sans-serif;background:transparent;}
+    
+    .wrap{
+        width:100%;height:280px;background:#FFFFFF;
+        border-radius:12px;border:1px solid #E3E3E3;
+        border-top:3px solid " & _Green & ";
+        padding:12px 16px;display:flex;flex-direction:column;
+        overflow:hidden;
+    }
+    
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+    
+    .title{
+        font-size:10px;font-weight:600;text-transform:uppercase;
+        color:#6B7280;letter-spacing:0.5px;
+    }
+    
+    .total{font-size:18px;font-weight:700;color:#111827;}
+    
+    .chart{
+        display:flex;align-items:flex-end;justify-content:space-between;
+        flex:1;gap:4px;padding-top:10px;
+    }
+    
+    .col{
+        flex:1;display:flex;flex-direction:column;
+        justify-content:flex-end;align-items:center;height:100%;
+    }
+    
+    .bar-wrap{
+        flex:1;width:100%;display:flex;
+        align-items:flex-end;justify-content:center;
+    }
+    
+    .bar{
+        width:70%;border-radius:4px 4px 0 0;
+        transform-origin:bottom;
+        animation:growUp 0.8s ease-out forwards;
+        opacity:0.9;
+    }
+    
+    @keyframes growUp{from{transform:scaleY(0);opacity:0;}to{transform:scaleY(1);opacity:0.9;}}
+    
+    .bar:hover{opacity:1;}
+    
+    .val{font-size:9px;font-weight:700;margin-top:4px;height:12px;}
+    
+    .lbl{font-size:8px;font-weight:600;color:#9CA3AF;margin-top:2px;text-transform:uppercase;}
+</style>
+
+<div class='wrap'>
+  <div class='header'>
+    <div class='title'>TAREAS COMPLETADAS POR MES</div>
+    <div class='total'>" & FORMAT(_totalAnual,"#,0") & "</div>
+  </div>
+  <div class='chart'>" & _barras & "</div>
+</div>"

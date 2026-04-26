@@ -1,0 +1,436 @@
+        HTML Cards + Detalle = 
+        VAR _areaActual = SELECTEDVALUE('Areas Filtro'[area])
+        VAR _areaLabel  = COALESCE(_areaActual, "Todas las áreas")
+        VAR _areaJS     = IF(_areaActual = "Todas" || ISBLANK(_areaActual), "", _areaActual)
+
+        -- ✅ Iterar Maquinas, no Semaforo Maquina
+        VAR _filas =
+            CONCATENATEX(
+                FILTER(Maquinas, Maquinas[implementado] = TRUE() && Maquinas[nombre] <> "Lavadora de Cajas"),
+                VAR _id   = Maquinas[id_maquina]
+                VAR _nomRaw = Maquinas[nombre]
+                VAR _nom = IF(CONTAINSSTRING(_nomRaw, "Inspector de"), "IBV", _nomRaw)
+                VAR _lin  = Maquinas[linea]
+                VAR _area = Maquinas[area]
+                VAR _pct  = CALCULATE([Cumplimiento Maquina %],  'Registro Tareas'[id_maquina] = _id)
+                VAR _comp = CALCULATE([Total Completadas],        'Registro Tareas'[id_maquina] = _id)
+                VAR _tot  = CALCULATE([Total Registros],          'Registro Tareas'[id_maquina] = _id)
+                VAR _atr  = CALCULATE([Total Atrasadas],          'Registro Tareas'[id_maquina] = _id)
+                VAR _pendVigentes =
+                    CALCULATE(
+                        COUNTROWS('Registro Tareas'),
+                        'Registro Tareas'[id_maquina]   = _id,
+                        'Registro Tareas'[estado]       = "Pendiente",
+                        'Registro Tareas'[fecha_limite] >= NOW()
+                    )
+                VAR _pendVencidos =
+                    CALCULATE(
+                        COUNTROWS('Registro Tareas'),
+                        'Registro Tareas'[id_maquina]   = _id,
+                        'Registro Tareas'[estado]       = "Pendiente",
+                        'Registro Tareas'[fecha_limite] < NOW()
+                    )
+                VAR _atrMaq =
+                    CALCULATE(
+                        COUNTROWS('Registro Tareas'),
+                        'Registro Tareas'[id_maquina] = _id,
+                        'Registro Tareas'[estado]     = "Atrasado"
+                    )
+                VAR _esCritico  = _atrMaq > 0
+                VAR _esEnCurso  = NOT _esCritico && (_pendVigentes > 0 || _pendVencidos > 0)
+                VAR _col =
+                    IF(_esCritico, "#D32F2F",
+                    IF(_esEnCurso, "#F9A825",
+                    "#00A651"))
+                VAR _est =
+                    IF(_esCritico, "CRÍTICO",
+                    IF(_esEnCurso, "EN CURSO",
+                    "OK"))
+                VAR _bar = FORMAT(_pct * 100, "0")
+                VAR _bc =
+                    IF(_esCritico, "r",
+                    IF(_esEnCurso, "a",
+                    "g"))
+                RETURN
+                    "<div class='mc' data-id='" & _id & "' data-nom='" & _nom & "' data-lin='" & _lin & "' data-area='" & _area & "' data-color='" & _col & "' onclick='selectMaq(this)'>"
+                    & "<div class='mc-accent' style='background:" & _col & "'></div>"
+                    & "<div class='mcb'>"
+                        & "<div class='mc-top'>"
+                            & "<span class='mc-area-tag'>" & _area & "</span>"
+                            & IF(_atr > 0, "<span class='mc-atr-badge'>&Delta; " & FORMAT(_atr, "0") & "</span>", "")
+                        & "</div>"
+                        & "<div class='mc-name' title='" & _nom & "'>" & _nom & "</div>"
+                        & "<div class='mc-main'>"
+                            & "<div class='mc-val-box'>"
+                                & "<div class='mc-pct' style='color:" & _col & "'>" & FORMAT(COALESCE(_pct, 0), "0.0%") & "</div>"
+                                & "<div class='mc-lbl'>CUMPLIMIENTO</div>"
+                            & "</div>"
+                        & "</div>"
+                        & "<div class='mc-bottom'>"
+                            & "<div class='mc-status-pill' style='background:" & _col & "15; color:" & _col & "'>" & _est & "</div>"
+                            & "<div class='mc-count'>" & FORMAT(_comp, "0") & " / " & FORMAT(_tot, "0") & "</div>"
+                        & "</div>"
+                        & "<div class='mc-progress'><div class='mc-bar' style='width:" & _bar & "%; background:" & _col & "'></div></div>"
+                    & "</div>"
+                    & "</div>",
+                ""
+            )
+
+        -- ✅ No implementadas
+        VAR _noImpl =
+            CONCATENATEX(
+                FILTER(Maquinas, Maquinas[implementado] = FALSE()),
+                VAR _nom  = Maquinas[nombre]
+                VAR _lin  = Maquinas[linea]
+                VAR _area = Maquinas[area]
+                RETURN
+                    "<div class='mc nd' data-lin='" & _lin & "' data-area='" & _area & "'>"
+                    & "<div class='mc-accent' style='background:#E5E7EB'></div>"
+                    & "<div class='mcb'>"
+                        & "<div class='mc-top'>"
+                            & "<span class='mc-area-tag'>" & _area & "</span>"
+                        & "</div>"
+                        & "<div class='mc-name' title='" & _nom & "'>" & _nom & "</div>"
+                        & "<div class='mc-main'>"
+                            & "<div class='mc-val-box'>"
+                                & "<div class='mc-pct' style='color:#9CA3AF'>—</div>"
+                                & "<div class='mc-lbl'>PRÓXIMAMENTE</div>"
+                            & "</div>"
+                        & "</div>"
+                        & "<div class='mc-bottom'>"
+                            & "<div class='mc-status-pill' style='background:#F3F4F6; color:#9CA3AF'>SIN DATOS</div>"
+                        & "</div>"
+                        & "<div class='mc-progress'><div class='mc-bar' style='width:0%; background:#E5E7EB'></div></div>"
+                    & "</div>"
+                    & "</div>",
+                ""
+            )
+
+        -- ✅ SECCIÓN 1: Atrasadas + Aplazadas
+        VAR _filasAtr =
+            CONCATENATEX(
+                TOPN(2000,
+                    FILTER('Registro Tareas',
+                        (
+                            'Registro Tareas'[estado] = "Atrasado" || 
+                            ('Registro Tareas'[estado] = "Pendiente" && 'Registro Tareas'[veces_aplazada] > 0)
+                        ) &&
+                        (ISBLANK(_areaActual) || _areaActual = "Todas" || RELATED(Maquinas[area]) = _areaActual) &&
+                        RELATED(Maquinas[implementado]) = TRUE()
+                    ),
+                    'Registro Tareas'[fecha_periodo], ASC
+                ),
+                VAR _idtarea = 'Registro Tareas'[id_tarea]
+                VAR _idmaq   = 'Registro Tareas'[id_maquina]
+                VAR _fecha   = FORMAT('Registro Tareas'[fecha_limite], "DD MMM")
+                VAR _periodo = 'Registro Tareas'[fecha_periodo]
+                VAR _limite  = 'Registro Tareas'[fecha_limite]
+                VAR _estado  = 'Registro Tareas'[estado]
+                VAR _motivo  = 'Registro Tareas'[motivo_bloqueo]
+                VAR _veces   = 'Registro Tareas'[veces_aplazada]
+                VAR _turno   = 'Registro Tareas'[turno]
+                VAR _tarea   = LOOKUPVALUE(Tareas[nombre_tarea], Tareas[id_tarea],     _idtarea)
+                VAR _tipo    = LOOKUPVALUE(Tareas[tipo],         Tareas[id_tarea],     _idtarea)
+                VAR _freq    = LOOKUPVALUE(Tareas[frecuencia],   Tareas[id_tarea],     _idtarea)
+                VAR _maqRaw  = LOOKUPVALUE(Maquinas[nombre],     Maquinas[id_maquina], _idmaq)
+                VAR _maq     = IF(CONTAINSSTRING(_maqRaw, "Inspector de"), "IBV", _maqRaw)
+                VAR _lin     = LOOKUPVALUE(Maquinas[linea],      Maquinas[id_maquina], _idmaq)
+                VAR _impl    = LOOKUPVALUE(Maquinas[implementado], Maquinas[id_maquina], _idmaq)
+                VAR _implVal = IF(_impl = TRUE(), "1", "0")
+                -- 🔄 NUEVO: Lookup operador
+                VAR _idop    = 'Registro Tareas'[id_operador]
+                VAR _opName  = LOOKUPVALUE(Operadores[nombreoperador], Operadores[id_operador], _idop)
+                VAR _opFoto  = LOOKUPVALUE(Operadores[foto_operador], Operadores[id_operador], _idop)
+                VAR _opDisplay = IF(ISBLANK(_opName), "Compartido", _opName)
+                VAR _tareaLbl   = IF(ISBLANK(_tarea), "Sin nombre", _tarea)
+                VAR _tipoLbl    = IF(ISBLANK(_tipo),  "—", LEFT(_tipo, 4))
+                VAR _freqLbl    = IF(ISBLANK(_freq),  "—", _freq)
+                VAR _maqLbl     = IF(ISBLANK(_maq),   _idmaq, _maq)
+                VAR _linLbl     = IF(ISBLANK(_lin),   "", _lin)
+                VAR _turnoLbl   = IF(ISBLANK(_turno), "Todo el día", _turno)
+                VAR _dias       = FORMAT(DATEDIFF(_limite, TODAY(), DAY), "0")
+                VAR _esAplaz    = _veces > 0
+                VAR _borderColor = IF(_esAplaz, "#F9A825", "#D32F2F")
+                VAR _badgeClass  = IF(_esAplaz, "ep-ap", "ep-a")
+                VAR _badgeLbl    = IF(_esAplaz, "Aplazado", "Atrasado")
+                VAR _subLbl      = IF(_esAplaz,
+                    _maqLbl & " · " & FORMAT(_veces,"0") & "x aplazada",
+                    _maqLbl & " · " & _dias & "d atr."
+                )
+                VAR _motivoSafe = IF(ISBLANK(_motivo), "Sin motivo registrado", _motivo)
+                RETURN
+                    "<div class='drow' onclick='onRowClick(this)' data-m='" & _idmaq & "' data-l='" & _linLbl & "' data-i='" & _implVal & "' data-mo='" & _motivoSafe & "' data-a='" & IF(_esAplaz,"1","0") & "' data-t='" & _tareaLbl & "' data-n='" & _maqLbl & "' data-o='" & COALESCE(_opName,"Sin asignar") & "' data-of='" & COALESCE(_opFoto,"") & "' data-e='" & _badgeLbl & "' data-tf='" & COALESCE(_tipo,"—") & "' data-f='" & _freqLbl & "' data-fp='" & FORMAT(_periodo,"DD/MM/YYYY") & "' data-fl='" & FORMAT(_limite,"DD/MM/YYYY") & "' data-fc='—' data-tr='" & _turnoLbl & "' style='border-left:2px solid " & _borderColor & "'>"
+                    & "<div class=c1><div class=t-main>" & _tareaLbl & "</div><div class=t-sub>" & _subLbl & "</div></div>"
+                    & "<div class=c2><span class=tag>" & _tipoLbl & "</span></div>"
+                    & "<div class=c3>" & _freqLbl & "</div>"
+                    & "<div class=c4>" & _fecha & "</div>"
+                    & "<div class=c5><span class='" & _badgeClass & "'>" & _badgeLbl & "</span></div>"
+                    & "<div class=c6>" & _opDisplay & "</div>"
+                    & "</div>",
+                ""
+            )
+
+        VAR _filasP =
+            CONCATENATEX(
+                FILTER('Registro Tareas',
+                    'Registro Tareas'[estado]         = "Pendiente" &&
+                    'Registro Tareas'[veces_aplazada] = 0 &&
+                    (ISBLANK(_areaActual) || _areaActual = "Todas" || RELATED(Maquinas[area]) = _areaActual)
+                ),
+                VAR _idtarea = 'Registro Tareas'[id_tarea]
+                VAR _idmaq   = 'Registro Tareas'[id_maquina]
+                VAR _periodo = 'Registro Tareas'[fecha_periodo]
+                VAR _limite  = 'Registro Tareas'[fecha_limite]
+                VAR _idop    = 'Registro Tareas'[id_operador]
+                VAR _opName  = LOOKUPVALUE(Operadores[nombreoperador], Operadores[id_operador], _idop)
+                VAR _opFoto = LOOKUPVALUE(Operadores[foto_operador], Operadores[id_operador], _idop)
+                VAR _opDisplay = IF(ISBLANK(_opName), "Compartido", _opName)
+                VAR _tarea   = LOOKUPVALUE(Tareas[nombre_tarea], Tareas[id_tarea],     _idtarea)
+                VAR _tipo    = LOOKUPVALUE(Tareas[tipo],         Tareas[id_tarea],     _idtarea)
+                VAR _freq    = LOOKUPVALUE(Tareas[frecuencia],   Tareas[id_tarea],     _idtarea)
+                VAR _maqRaw  = LOOKUPVALUE(Maquinas[nombre],     Maquinas[id_maquina], _idmaq)
+                VAR _maq     = IF(CONTAINSSTRING(_maqRaw, "Inspector de"), "IBV", _maqRaw)
+                VAR _lin     = LOOKUPVALUE(Maquinas[linea],      Maquinas[id_maquina], _idmaq)
+                VAR _tareaLbl = IF(ISBLANK(_tarea), "Sin nombre", _tarea)
+                VAR _tipoLbl  = IF(ISBLANK(_tipo),  "—", LEFT(_tipo, 4))
+                VAR _freqLbl  = IF(ISBLANK(_freq),  "—", _freq)
+                VAR _maqLbl   = IF(ISBLANK(_maq),   _idmaq, _maq)
+                VAR _linLbl   = IF(ISBLANK(_lin),   "", _lin)
+                VAR _implVal  = IF(LOOKUPVALUE(Maquinas[implementado], Maquinas[id_maquina], _idmaq) = TRUE(), "1", "0")
+                RETURN
+                    "<div class='drow' onclick='onRowClick(this)' data-m='" & _idmaq & "' data-l='" & _linLbl & "' data-i='" & _implVal & "' data-t='" & _tareaLbl & "' data-n='" & _maqLbl & "' data-o='" & COALESCE(_opName,"Pendiente") & "' data-of='" & COALESCE(_opFoto,"") & "' data-e='Pendiente' data-tf='" & COALESCE(_tipo,"—") & "' data-f='" & _freqLbl & "' data-fp='" & FORMAT(_periodo,"DD/MM/YYYY") & "' data-fl='" & FORMAT(_limite,"DD/MM/YYYY") & "' data-fc='—' data-tr='Todo el día' data-mo='' style='border-left:2px solid #0078D4'>"
+                    & "<div class=c1><div class=t-main>" & _tareaLbl & "</div><div class=t-sub>" & _maqLbl & "</div></div>"
+                    & "<div class=c2><span class=tag>" & _tipoLbl & "</span></div>"
+                    & "<div class=c3>" & _freqLbl & "</div>"
+                    & "<div class=c4>" & FORMAT(_limite, "DD MMM") & "</div>"
+                    & "<div class=c5><span class=ep-p>Pendiente</span></div>"
+                    & "<div class=c6>" & _opDisplay & "</div>"
+                    & "</div>",
+                ""
+            )
+
+        VAR _filasComp =
+            CONCATENATEX(
+                TOPN(500,
+                    FILTER('Registro Tareas', 
+                        'Registro Tareas'[estado] = "Completado" &&
+                        (ISBLANK(_areaActual) || _areaActual = "Todas" || RELATED(Maquinas[area]) = _areaActual) &&
+                        RELATED(Maquinas[implementado]) = TRUE()
+                    ),
+                    'Registro Tareas'[fecha_completado], DESC
+                ),
+                VAR _idtarea = 'Registro Tareas'[id_tarea]
+                VAR _idmaq   = 'Registro Tareas'[id_maquina]
+                VAR _periodo = 'Registro Tareas'[fecha_periodo]
+                VAR _limite  = 'Registro Tareas'[fecha_limite]
+                VAR _tarea   = LOOKUPVALUE(Tareas[nombre_tarea], Tareas[id_tarea],     _idtarea)
+                VAR _tipo    = LOOKUPVALUE(Tareas[tipo],         Tareas[id_tarea],     _idtarea)
+                VAR _foto    = 'Registro Tareas'[foto_evidencia]
+                VAR _fcomp   = 'Registro Tareas'[fecha_completado]
+                VAR _idop    = 'Registro Tareas'[id_operador]
+                VAR _opName  = LOOKUPVALUE(Operadores[nombreoperador], Operadores[id_operador], _idop)
+                VAR _opFoto  = LOOKUPVALUE(Operadores[foto_operador], Operadores[id_operador], _idop)
+                VAR _opDisplay = IF(ISBLANK(_opName), "Compartido", _opName)
+                VAR _freq    = LOOKUPVALUE(Tareas[frecuencia],   Tareas[id_tarea],     _idtarea)
+                VAR _maqRaw  = LOOKUPVALUE(Maquinas[nombre],     Maquinas[id_maquina], _idmaq)
+                VAR _maq     = IF(CONTAINSSTRING(_maqRaw, "Inspector de"), "IBV", _maqRaw)
+                VAR _lin     = LOOKUPVALUE(Maquinas[linea],      Maquinas[id_maquina], _idmaq)
+                VAR _turno   = 'Registro Tareas'[turno]
+                VAR _tareaLbl   = IF(ISBLANK(_tarea), "Sin nombre", _tarea)
+                VAR _tipoLbl    = IF(ISBLANK(_tipo),  "—", LEFT(_tipo, 4))
+                VAR _freqLbl    = IF(ISBLANK(_freq),  "—", _freq)
+                VAR _maqLbl     = IF(ISBLANK(_maq),   _idmaq, _maq)
+                VAR _linLbl     = IF(ISBLANK(_lin),   "", _lin)
+                VAR _turnoLbl   = IF(ISBLANK(_turno), "Todo el día", _turno)
+                VAR _tieneFoto  = NOT ISBLANK(_foto)
+                VAR _camIcon    =
+                    IF(_tieneFoto,
+                        "<span class=cam-btn onclick='showEvidencia(this)' data-url='" & _foto & "' data-tarea='" & _tareaLbl & "'>&#128247;</span>",
+                        "<span class=cam-no>&#x1F4F7;</span>"
+                    )
+                RETURN
+                    "<div class='drow' onclick='onRowClick(this)' data-m='" & _idmaq & "' data-l='" & _linLbl & "' data-t='" & _tareaLbl & "' data-n='" & _maqLbl & "' data-o='" & COALESCE(_opName,"—") & "' data-of='" & COALESCE(_opFoto,"") & "' data-e='Completado' data-tf='" & COALESCE(_tipo,"—") & "' data-f='" & _freqLbl & "' data-fp='" & FORMAT(_periodo,"DD/MM/YYYY") & "' data-fl='" & FORMAT(_limite,"DD/MM/YYYY") & "' data-fc='" & IF(ISBLANK(_fcomp),"—",FORMAT(_fcomp,"DD/MM HH:mm")) & "' data-tr='" & _turnoLbl & "' data-mo='' style='border-left:2px solid #00A651'>"
+                    & "<div class=c1><div class=t-main>" & _tareaLbl & "</div><div class=t-sub>" & _maqLbl & "</div></div>"
+                    & "<div class=c2><span class=tag>" & _tipoLbl & "</span></div>"
+                    & "<div class=c3>" & _freqLbl & "</div>"
+                    & "<div class=c4>" & FORMAT(_limite, "DD MMM") & "</div>"
+                    & "<div class='c5 c5-comp'><span class=ep-c>Completado</span> " & _camIcon & "</div>"
+                    & "<div class=c6>" & _opDisplay & "</div>"
+                    & "</div>",
+                ""
+            )
+
+        VAR _detalleFilas = _filasAtr & _filasP & _filasComp
+        VAR _comp  = [Total Completadas]
+        VAR _atr   = [Total Atrasadas]
+        VAR _total = [Total Registros]
+
+        RETURN
+        "<style>"
+        & "* {margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}"
+        & "html,body{width:100vw;height:100vh;background:transparent;overflow:hidden;margin:0;padding:0;}"
+        & ".wrap{width:100vw;height:100vh;display:flex;flex-direction:column;gap:6px;padding:10px;overflow:hidden;}"
+        & ".g-hdr{display:flex;align-items:baseline;justify-content:space-between;flex-shrink:0;margin-bottom:2px;padding:0 4px;}"
+        & ".g-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;}"
+        & ".g-ctx{font-size:9.5px;color:#9CA3AF;font-style:normal;font-weight:400;}"
+        & ".lin-tabs{display:flex;gap:6px;flex-shrink:0;min-height:28px;flex-wrap:wrap;margin-bottom:0px;}"
+        & ".ltab{padding:5px 16px;border-radius:20px;border:1px solid #E5E7EB;background:#fff;font-size:9px;font-weight:600;color:#6B7280;cursor:pointer;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);}"
+        & ".ltab:hover{border-color:#00A651;color:#00A651;background:rgba(0,166,81,0.02);box-shadow:0 2px 5px rgba(0,0,0,0.03);}"
+        & ".ltab.active{background:#00A651;color:#fff;border-color:#00A651;box-shadow:0 2px 8px rgba(0,166,81,0.15);}"
+        & ".cards-zone{display:flex;align-items:center;gap:8px;flex-shrink:0;height:110px;margin-bottom:0px;}"
+        & ".nav-btn{width:26px;height:26px;border-radius:50%;border:1px solid #E5E7EB;background:#fff;cursor:pointer;font-size:10px;color:#6B7280;flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.04);}"
+        & ".nav-btn:hover{border-color:#00A651;color:#00A651;background:#fff;box-shadow:0 3px 6px rgba(0,0,0,0.08);}"
+        & ".maq-row{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;flex:1;height:100%;scroll-behavior:smooth;padding:2px 2px 10px 2px;align-items:stretch;}"
+        & ".maq-row::-webkit-scrollbar{height:4px;}"
+        & ".maq-row::-webkit-scrollbar-thumb{background:#E5E7EB;border-radius:2px;}"
+        & ".mc{background:#fff;border:1px solid #E5E7EB;border-radius:8px;min-width:130px;max-width:130px;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);cursor:pointer;position:relative;height:100%;}"
+        & ".mc:hover{transform:translateY(-1px);border-color:#D1D5DB;box-shadow:0 4px 10px rgba(0,0,0,0.06);}"
+        & ".mc.selected{box-shadow:0 0 0 2px rgba(0,0,0,0.05);}"
+        & ".hidden{display:none !important;}"
+        & ".nd{border-style:dashed;opacity:.6;cursor:default;background:#F9FAFB;}"
+        & ".nd:hover{transform:none;box-shadow:none;border-color:#E5E7EB;}"
+        & ".mc-accent{height:3px;flex-shrink:0;width:100%;}"
+        & ".mcb{padding:6px 10px 4px 10px;display:flex;flex-direction:column;flex:1;gap:2px;}"
+        & ".mc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:0px;}"
+        & ".mc-area-tag{font-size:6.5px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;background:#F3F4F6;padding:1px 5px;border-radius:3px;}"
+        & ".mc-atr-badge{font-size:7.5px;font-weight:700;color:#fff;background:#D32F2F;padding:0px 4px;border-radius:3px;box-shadow:0 1px 3px rgba(211,47,47,0.2);}"
+        & ".mc-name{font-size:10px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}"
+        & ".mc-main{flex:1;display:flex;flex-direction:column;justify-content:center;padding:1px 0;}"
+        & ".mc-val-box{display:flex;flex-direction:column;align-items:flex-start;}"
+        & ".mc-pct{font-size:16px;font-weight:700;line-height:1;letter-spacing:-0.5px;}"
+        & ".mc-lbl{font-size:6.5px;color:#9CA3AF;font-weight:600;letter-spacing:0.2px;margin-top:1px;}"
+        & ".mc-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:2px;}"
+        & ".mc-status-pill{font-size:7px;font-weight:700;padding:1px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:0.2px;}"
+        & ".mc-count{font-size:7.5px;color:#9CA3AF;font-weight:600;}"
+        & ".mc-progress{height:2px;background:#F3F4F6;width:100%;margin-top:auto;flex-shrink:0;}"
+        & ".mc-bar{height:100%;transition:width 0.8s cubic-bezier(0.4, 0, 0.2, 1);}"
+        & ".mc-nd{font-size:7.5px;color:#9CA3AF;font-style:italic;}"
+        & ".table-zone{flex:1;min-height:0;background:#fff;border-radius:12px;border:1px solid #E5E7EB;display:flex;flex-direction:column;overflow:hidden;padding:8px 12px;}"
+        & ".t-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-shrink:0;}"
+        & ".t-hdr-title{font-size:10px;font-weight:700;color:#111827;text-transform:uppercase;}"
+        & ".t-hdr-sub{font-size:9px;color:#9CA3AF;font-style:italic;}"
+        & ".clear-btn{margin-left:auto;font-size:9px;color:#00A651;font-weight:700;cursor:pointer;padding:4px 12px;border-radius:6px;border:1px solid rgba(0,166,81,.2);background:rgba(0,166,81,.04);display:none;transition:all 0.2s;}"
+        & ".thdr{display:grid;grid-template-columns:2.5fr .6fr .8fr .7fr .9fr 130px;gap:12px;padding:2px 12px;font-size:8px;font-weight:700;text-transform:uppercase;color:#9CA3AF;border-bottom:1px solid #F3F4F6;margin-bottom:2px;flex-shrink:0;}"
+        & ".thdr div:nth-child(6){text-align:center;}"
+        & ".dscroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;}"
+        & ".dscroll::-webkit-scrollbar{width:4px;}"
+        & ".dscroll::-webkit-scrollbar-thumb{background:#E5E7EB;border-radius:2px;}"
+        & ".drow{display:grid;grid-template-columns:2.5fr .6fr .8fr .7fr .9fr 130px;gap:12px;padding:4px 12px;align-items:center;border-radius:8px;background:#F9FAFB;margin-bottom:4px;cursor:pointer;transition:background 0.2s;}"
+        & ".drow:hover{background:#F3F4F6;}"
+        & ".c1{min-width:0;}"
+        & ".t-main{font-size:10px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
+        & ".t-sub{font-size:8px;color:#9CA3AF;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
+        & ".c2,.c3,.c4{font-size:9px;color:#4B5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
+        & ".c6{font-size:9px;color:#4B5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}"
+        & ".tag{font-size:8px;padding:1px 6px;border-radius:4px;background:rgba(0,0,0,.06);color:#4B5563;font-weight:700;}"
+        & ".ep-c{font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(0,166,81,0.08);color:#00A651;border:1px solid rgba(0,166,81,0.15);}"
+        & ".ep-a{font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(211,47,47,0.08);color:#D32F2F;border:1px solid rgba(211,47,47,0.15);}"
+        & ".ep-ap{font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(249,168,37,0.08);color:#F9A825;border:1px solid rgba(249,168,37,0.15);}"
+        & ".ep-p{font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(0,120,212,0.08);color:#0078D4;border:1px solid rgba(0,120,212,0.15);}"
+        & ".c5-comp{display:flex;align-items:center;gap:6px;}"
+        & ".cam-btn{font-size:12px;cursor:pointer;opacity:.7;}"
+        & ".cam-no{font-size:12px;opacity:.1;cursor:default;}"
+        & ".foot{display:flex;gap:12px;padding:8px 4px 0 4px;border-top:1px solid #F3F4F6;margin-top:auto;flex-shrink:0;flex-wrap:wrap;}"
+        & ".fi{display:flex;align-items:baseline;gap:4px;}"
+        & ".fl{font-size:8.5px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.3px;}"
+        & ".fv{font-size:11px;font-weight:700;color:#111827;}"
+        & ".st-tabs{display:flex;gap:4px;margin-left:auto;}"
+        & ".st-tab{padding:2px 8px;border-radius:6px;font-size:8px;font-weight:700;color:#6B7280;background:#F9FAFB;border:1px solid #E5E7EB;cursor:pointer;transition:all 0.15s;}"
+        & ".st-tab:hover{background:#F3F4F6;}"
+        & ".st-tab.active{background:#111827;color:#fff;border-color:#111827;}"
+        & ".st-tab.atrasado.active{background:#D32F2F;border-color:#D32F2F;}"
+        & ".st-tab.aplazado.active{background:#F9A825;border-color:#F9A825;}"
+        & ".st-tab.pendiente.active{background:#0078D4;border-color:#0078D4;}"
+        & ".st-tab.completado.active{background:#00A651;border-color:#00A651;}"
+        & ".m-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(2px);}"
+        & ".m-ov.show{display:flex;}"
+        & ".m-box{background:#fff;border-radius:16px;padding:18px 22px;width:340px;box-shadow:0 20px 50px rgba(0,0,0,.3);border-top:4px solid #00A651;position:relative;}"
+        & ".m-tit{font-size:12px;font-weight:700;color:#111827;margin-bottom:4px;line-height:1.3;}"
+        & ".m-badge{display:inline-block;font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;}"
+        & ".m-op-card{display:flex;align-items:center;gap:10px;background:#F9FAFB;padding:8px 12px;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:12px;}"
+        & ".m-op-img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#E5E7EB;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.1);}"
+        & ".m-op-name{font-size:10.5px;font-weight:600;color:#111827;}"
+        & ".m-op-lbl{font-size:7.5px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;}"
+        & ".m-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}"
+        & ".m-lab{font-size:7.5px;font-weight:700;color:#9CA3AF;text-transform:uppercase;margin-bottom:1px;letter-spacing:0.3px;}"
+        & ".m-val{font-size:10.5px;font-weight:600;color:#374151;}"
+        & ".m-motivo-section{margin-top:12px;background:#FFFBEB;border:1px solid #FEF3C7;border-radius:10px;padding:8px 10px;}"
+        & ".m-mot-lbl{font-size:7.5px;font-weight:700;color:#D97706;text-transform:uppercase;margin-bottom:4px;}"
+        & ".m-mot{font-size:10.5px;color:#374151;line-height:1.4;}"
+        & ".m-cls{margin-top:14px;width:100%;padding:8px;border-radius:10px;border:none;background:#F3F4F6;color:#111827;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;}"
+        & ".m-cls:hover{background:#E5E7EB;}"
+        & ".ev-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}"
+        & ".ev-ov.show{display:flex;}"
+        & ".ev-box{background:#fff;border-radius:16px;overflow:hidden;max-width:500px;width:94%;box-shadow:0 25px 60px rgba(0,0,0,0.5);}"
+        & ".ev-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #F3F4F6;}"
+        & ".ev-head-title{font-size:12px;font-weight:700;color:#111827;}"
+        & ".ev-head-sub{font-size:9.5px;color:#9CA3AF;margin-top:1px;}"
+        & ".ev-cls{background:none;border:none;font-size:18px;color:#9CA3AF;cursor:pointer;padding:4px;line-height:1;transition:color 0.2s;}"
+        & ".ev-cls:hover{color:#ef4444;}"
+        & ".ev-img-wrap{background:#111827;display:flex;align-items:center;justify-content:center;min-height:300px;max-height:500px;overflow:hidden;}"
+        & ".ev-img{max-width:100%;max-height:500px;display:block;object-fit:contain;}"
+        & ".ev-foot{padding:12px;background:#F9FAFB;font-size:9px;color:#9CA3AF;text-align:center;border-top:1px solid #F3F4F6;}"
+        & ".ev-no-img{color:#fff;text-align:center;padding:40px;}"
+        & ".ev-no-ico{font-size:32px;margin-bottom:10px;opacity:0.3;}"
+        & "</style>"
+
+        & "<div class=wrap>"
+        & "<div class=g-hdr>"
+        & "<span class=g-title>Máquinas ECILT · " & _areaLabel & "</span>"
+        & "<span class=g-ctx>" & FORMAT(_total,"0") & " registros · " & FORMAT([% Cumplimiento],"0.0%") & " cumplimiento global</span>"
+        & "</div>"
+        & "<div class=lin-tabs id=lin-tabs></div>"
+        & "<div class=cards-zone>"
+        & "<button class=nav-btn onclick=""document.getElementById('maq-row').scrollBy({left:-300,behavior:'smooth'})"">◀</button>"
+        & "<div class=maq-row id=maq-row>" & _filas & _noImpl & "</div>"
+        & "<button class=nav-btn onclick=""document.getElementById('maq-row').scrollBy({left:300,behavior:'smooth'})"">▶</button>"
+        & "</div>"
+        & "<div class=table-zone>"
+        & "<div class=t-hdr>"
+        & "<div><div id=t-title class=t-hdr-title>Últimas actividades</div><div id=t-sub class=t-hdr-sub></div></div>"
+        & "<div class=st-tabs id=st-tabs>"
+        & "<div class='st-tab active' onclick='selectStatus(this,null)'>Todas</div>"
+        & "<div class='st-tab atrasado' onclick='selectStatus(this,""Atrasado"")'>Atrasadas</div>"
+        & "<div class='st-tab aplazado' onclick='selectStatus(this,""Aplazado"")'>Aplazadas</div>"
+        & "<div class='st-tab pendiente' onclick='selectStatus(this,""Pendiente"")'>Pendientes</div>"
+        & "<div class='st-tab completado' onclick='selectStatus(this,""Completado"")'>Completadas</div>"
+        & "</div>"
+        & "<div id=clear-btn class=clear-btn onclick='clearMaq()'>Ver todas</div>"
+        & "</div>"
+        & "<div class=thdr><div>Tarea</div><div>Tipo</div><div>Frec.</div><div>Fecha</div><div>Estado</div><div>Operador</div></div>"
+        & "<div class=dscroll id=dscroll>" & _detalleFilas & "</div>"
+        & "<div class=foot>"
+        & "<div class=fi><span class=fl>Visible</span><span class=fv id=f-tot>0</span></div>"
+        & "<div class=fi><span class=fl style=color:#00A651>Completadas</span><span class=fv style=color:#00A651 id=f-comp>0</span></div>"
+        & "<div class=fi><span class=fl style=color:#D32F2F>Atrasadas</span><span class=fv style=color:#D32F2F id=f-atr>0</span></div>"
+        & "<div class=fi><span class=fl style=color:#F9A825>Aplazadas</span><span class=fv style=color:#F9A825 id=f-apl>0</span></div>"
+        & "</div>"
+        & "</div>"
+        & "</div>"
+
+        & "<script>"
+        & "var AREAS={'Packaging':['Latas','Botellas'],'Utilidades':['Utilidades'],'Brewing':['Cocimiento','Fermentacion','Filtracion']};"
+        & "var selArea='" & _areaJS & "';"
+        & "var selLin=null;var selMaq=null;var selStat=null;"
+        & "document.addEventListener('DOMContentLoaded',function(){init();});"
+        & "if(document.readyState!=='loading'){init();}"
+        & "function init(){var linSet={};document.querySelectorAll('.mc[data-lin]').forEach(function(c){linSet[c.getAttribute('data-lin')]=c.getAttribute('data-area');});window._linMap=linSet;applyArea(selArea);}"
+        & "function applyArea(area){var linTabsEl=document.getElementById('lin-tabs');linTabsEl.innerHTML='';var lins=[];Object.keys(window._linMap||{}).forEach(function(l){var a=window._linMap[l];if(!area||a===area)lins.push(l);});lins.sort();lins.forEach(function(l){var b=document.createElement('div');b.className='ltab';b.textContent=l;b.setAttribute('data-lin',l);b.onclick=function(){selectLin(this);};linTabsEl.appendChild(b);});filterCards(area,'');filterRows(area,'',null);var vis=document.querySelectorAll('.mc:not(.hidden):not(.nd)');if(vis.length===1)selectMaq(vis[0]);}"
+        & "function selectLin(tab){var lin=tab.getAttribute('data-lin');if(selLin===lin){selLin=null;selMaq=null;document.querySelectorAll('.ltab').forEach(function(t){t.classList.remove('active');});filterCards(selArea,'');filterRows(selArea,'',null);document.getElementById('t-title').textContent='Últimas actividades · '+(selArea||'Todas las áreas');document.getElementById('clear-btn').style.display='none';return;}selLin=lin;selMaq=null;document.querySelectorAll('.ltab').forEach(function(t){t.classList.remove('active');});tab.classList.add('active');filterCards(selArea,lin);filterRows(selArea,lin,null);document.getElementById('t-title').textContent='Últimas actividades · '+lin;document.getElementById('clear-btn').style.display='none';var vis=document.querySelectorAll('.mc:not(.hidden):not(.nd)');if(vis.length===1)selectMaq(vis[0]);}"
+        & "function selectMaq(card){if(card.classList.contains('nd'))return;var id=card.getAttribute('data-id');var nom=card.getAttribute('data-nom');var color=card.getAttribute('data-color');if(selMaq===id){clearMaq();return;}selMaq=id;document.querySelectorAll('.mc').forEach(function(c){c.classList.remove('selected');c.style.borderColor='';c.style.boxShadow='';});card.classList.add('selected');card.style.borderColor=color;card.style.boxShadow='0 0 0 2px '+color+'30';filterRows(selArea,selLin,id);var shown=document.querySelectorAll('.drow:not(.hidden)').length;document.getElementById('t-title').textContent=nom;document.getElementById('t-sub').textContent=shown+' registros';document.getElementById('clear-btn').style.display='block';document.getElementById('dscroll').scrollTop=0;}"
+        & "function clearMaq(){selMaq=null;document.querySelectorAll('.mc').forEach(function(c){c.classList.remove('selected');c.style.borderColor='';c.style.boxShadow='';});filterRows(selArea,selLin,null);var tit=selLin?selLin:(selArea||'Todas las áreas');document.getElementById('t-title').textContent='Últimas actividades · '+tit;document.getElementById('t-sub').textContent='⚠ Atrasadas · Pendientes · Completadas';document.getElementById('clear-btn').style.display='none';document.getElementById('dscroll').scrollTop=0;}"
+        & "function filterCards(area,lin){document.querySelectorAll('.mc').forEach(function(c){var clin=c.getAttribute('data-lin');var carea=c.getAttribute('data-area');var show;if(lin)show=clin===lin;else if(area)show=carea===area;else show=true;c.classList.toggle('hidden',!show);});}"
+        & "function selectStatus(tab,stat){selStat=stat;document.querySelectorAll('.st-tab').forEach(function(t){t.classList.remove('active');});tab.classList.add('active');filterRows(selArea,selLin,selMaq);}"
+        & "function filterRows(area,lin,maqId){document.querySelectorAll('.drow').forEach(function(r){var rmaq=r.getAttribute('data-m');var rlin=r.getAttribute('data-l');var rarea=window._linMap?window._linMap[rlin]||'':'';var rimpl=r.getAttribute('data-i');var rest=r.getAttribute('data-e');var rapl=r.getAttribute('data-a');var show;if(maqId)show=String(rmaq)===String(maqId);else if(lin)show=String(rlin)===String(lin);else if(area)show=String(rarea)===String(area);else show=rimpl==='1';if(show&&selStat){if(selStat==='Aplazado')show=rapl==='1';else show=rest===selStat;}r.classList.toggle('hidden',!show);});updateSummary();}"
+        & "function updateSummary(){var rows=document.querySelectorAll('.drow:not(.hidden)');var t=0,c=0,a=0,ap=0;rows.forEach(function(r){var e=r.getAttribute('data-e');var apl=r.getAttribute('data-a');t++;if(e==='Completado')c++;if(e==='Atrasado')a++;if(apl==='1')ap++;});document.getElementById('f-tot').textContent=t;document.getElementById('f-comp').textContent=c;document.getElementById('f-atr').textContent=a;document.getElementById('f-apl').textContent=ap;}"
+        & "document.body.insertAdjacentHTML('beforeend','<div class=m-ov id=m-ov><div class=m-box><div class=m-tit id=md-tarea></div><div class=m-badge id=md-badge></div><div class=m-op-card><img id=md-img class=m-op-img><div><div class=m-op-lbl>Operador</div><div class=m-op-name id=md-op></div></div></div><div class=m-grid><div><div class=m-lab>Máquina</div><div class=m-val id=md-maq></div></div><div><div class=m-lab>Línea</div><div class=m-val id=md-lin></div></div><div><div class=m-lab>Tipo Tarea</div><div class=m-val id=md-tipo></div></div><div><div class=m-lab>Frecuencia</div><div class=m-val id=md-freq></div></div><div><div class=m-lab>Programado</div><div class=m-val id=md-fplan></div></div><div><div class=m-lab>Límite</div><div class=m-val id=md-flim></div></div><div><div class=m-lab>Ejecución</div><div class=m-val id=md-fcomp></div></div><div><div class=m-lab>Turno</div><div class=m-val id=md-turno></div></div><div><div class=m-lab>Estado</div><div class=m-val id=md-est></div></div></div><div id=md-mot-box class=m-motivo-section style=display:none><div class=m-mot-lbl>Motivo / Observación</div><div class=m-mot id=md-mot></div></div><button class=m-cls onclick=closeMotivo()>Cerrar</button></div></div><div class=ev-ov id=ev-ov><div class=ev-box><div class=ev-head><div><div class=ev-head-title>Evidencia de cumplimiento</div><div class=ev-head-sub id=ev-sub></div></div><button class=ev-cls onclick=closeEvidencia()>&#x2715;</button></div><div class=ev-img-wrap id=ev-img-wrap></div><div class=ev-foot>Foto registrada por el operador al completar la tarea</div></div></div>');"
+        & "document.getElementById('m-ov').addEventListener('click',function(e){if(e.target===this)closeMotivo();});"
+        & "document.getElementById('ev-ov').addEventListener('click',function(e){if(e.target===this)closeEvidencia();});"
+        & "function onRowClick(row){var d=row.dataset;document.getElementById('md-tarea').textContent=d.t||'';var b=document.getElementById('md-badge');b.textContent=d.e||'';var colors={'Atrasado':'#D32F2F','Aplazado':'#F9A825','Pendiente':'#0078D4','Completado':'#00A651'};var c=colors[d.e]||'#6B7280';b.style.background=c+'18';b.style.color=c;document.getElementById('md-op').textContent=d.o||'Sin asignar';var img=document.getElementById('md-img');img.src=d.of||'';img.onerror=function(){this.src='https://ui-avatars.com/api/?name='+(d.o||'OP').replace(/ /g,'+')+'&background=random&size=76';};document.getElementById('md-maq').textContent=d.n||'';document.getElementById('md-lin').textContent=d.l||'';document.getElementById('md-tipo').textContent=d.tf||'';document.getElementById('md-freq').textContent=d.f||'';document.getElementById('md-fplan').textContent=d.fp||'';document.getElementById('md-flim').textContent=d.fl||'';document.getElementById('md-fcomp').textContent=d.fc||'';document.getElementById('md-turno').textContent=d.tr||'';var est=document.getElementById('md-est');est.textContent=d.e||'';est.style.color=c;var mb=document.getElementById('md-mot-box');if(d.mo&&d.mo!==''){mb.style.display='block';document.getElementById('md-mot').textContent=d.mo;}else{mb.style.display='none';}document.getElementById('m-ov').classList.add('show');}"
+        & "function closeMotivo(){document.getElementById('m-ov').classList.remove('show');}"
+        & "function showEvidencia(el){event.stopPropagation();var url=el.getAttribute('data-url');var tarea=el.getAttribute('data-tarea');document.getElementById('ev-sub').textContent=tarea;var wrap=document.getElementById('ev-img-wrap');if(url&&url.length>0){var img=document.createElement('img');img.className='ev-img';img.id='ev-img-el';img.src=url;img.onerror=function(){this.parentNode.innerHTML='<div class=ev-no-img><div class=ev-no-ico></div><div class=ev-no-txt>No se pudo cargar la imagen</div></div>';};wrap.innerHTML='';wrap.appendChild(img);}else{wrap.innerHTML='<div class=ev-no-img><div class=ev-no-ico></div><div class=ev-no-txt>No se ha cargado evidencia para esta tarea</div></div>';}document.getElementById('ev-ov').classList.add('show');}"
+        & "function closeEvidencia(){document.getElementById('ev-ov').classList.remove('show');document.getElementById('ev-img-wrap').innerHTML='';}"
+        & "</script>"
+
+
+

@@ -2,6 +2,12 @@
 
 > Sistema de gestión de tareas CILT (Cleaning, Inspection, Lubrication, Tightening) para planta Heineken.
 
+## Sistema de Diseño (Emerald Apex)
+Todos los desarrollos visuales deben seguir el estándar definido en [DESIGN_SYSTEM.md](file:///c:/eCILT/demo1/docs/DESIGN_SYSTEM.md).
+- **Tipografía:** `Segoe UI` (Estándar para todo el dashboard).
+- **Estética:** Minimalista Industrial (Emerald Apex), sincronizada en KPIs, Dona, Semáforo, Barras por Área, Timeline y Tablas.
+- **UX:** Sin efectos de movimiento en hover (solo cambios de color sutiles).
+
 ## Arquitectura
 
 | Componente | Stack | Ruta |
@@ -91,3 +97,34 @@
   - **Formato del Job**: `CILT - [Línea] - [Nombre de Máquina] - [Tipo de Tarea] - [Nombre de Tarea]`.
   - Acciones sincronizadas: "Completar Tarea" (`completeWithOpts`) y "Marcar Pendiente/Desmarcar" (`uncomplete`). 
   - *Nota*: Los bloqueos ("No puedo realizarla", ej. *Frecuencia incorrecta*) solo actualizan el registro local en Supabase y aplazan la fecha, no envían evento a Parsable actualmente.
+
+---
+
+## Patrones de Visualización en Power BI (DAX)
+
+### Estándar Visual (vFinal 2026-04-26)
+- **Tipografía**: Siempre `Segoe UI, sans-serif`.
+- **Iconografía**: **No usar iconos SVG** complejos. Representar estados con círculos sólidos (`.dot`) o barras de color.
+- **Colores de Estado**:
+  - **Meta/OK**: `#00A651` (Verde Heineken)
+  - **Alerta**: `#F9A825` (Amarillo)
+  - **Riesgo**: `#D32F2F` (Rojo)
+- **Visuales Complejos**:
+  - **HTML Cards + Detalle**: Integra tarjetas de máquinas con una tabla de actividades dinámica. Filtra por estado (Atrasado, Pendiente, Completado) y máquina.
+  - **Límites de Datos**: Para asegurar el rendimiento con grandes volúmenes, la tabla de "Atrasadas" carga hasta **2,000 filas** (TOPN).
+- **Abandono de Negritas Pesadas**: Se prohíbe el uso de `font-weight: 800`. El estándar es `600` (títulos) y `700` (etiquetas).
+- **Nombres de Visualización (Overrides)**: 
+  - `Inspector de botellas vacias` -> Se visualiza como **IBV** para optimizar espacio.
+- **Interactividad**: Solo usar cambios de fondo sutiles (`#F3F4F6`).
+- **Operadores**: Si el `id_operador` es nulo, mostrar **"Compartido"**. Los nombres deben estar **centrados** en su columna.
+
+### Lógica de Desempeño
+- **Origen de Datos**: Se utiliza la tabla `Registro Tareas` para cálculos en tiempo real. Esto permite que el visual reaccione dinámicamente a cualquier filtro de fecha, línea o área aplicado en el reporte.
+- **Cálculo de Cumplimiento**: 
+  - **Total**: `COUNTROWS('Registro Tareas')`
+  - **Completadas**: `CALCULATE(COUNTROWS('Registro Tareas'), 'Registro Tareas'[estado] = "Completado")`
+  - **Porcentaje**: `DIVIDE(Completadas, Total, 0)`
+- **Filtrado de Relevancia**: Se consideran solo máquinas con `maquinas[implementado] = TRUE` y con carga de trabajo (`Total > 0`).
+- **Priorización (TOP 3)**: Se utiliza `TOPN(3, ..., [Porcentaje], ASC)` para identificar las 3 máquinas con el desempeño más bajo.
+
+

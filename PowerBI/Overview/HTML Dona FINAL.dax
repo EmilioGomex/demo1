@@ -1,0 +1,258 @@
+HTML Dona FINAL = 
+
+VAR _comp  = COALESCE([Total Completadas],0)
+VAR _atr   = COALESCE([Total Atrasadas],0)
+VAR _pend  = COALESCE([Total Pendientes],0)
+VAR _total = COALESCE([Total Registros],0)
+
+VAR _pctNum = COALESCE([% Cumplimiento],0)
+VAR _pct   = FORMAT(_pctNum, "0.0%")
+
+/* COLORES CORPORATIVOS */
+VAR _Green  = "#00A651"
+VAR _Red    = "#D32F2F"
+VAR _Gray   = "#D1D5DB"
+
+VAR _ColorCentro =
+    IF(_pctNum < 0.75, _Red,
+    IF(_pctNum < 0.80, "#F9A825", _Green))
+
+VAR _compPct = FORMAT(DIVIDE(_comp,_total,0)*100,"0.0")
+VAR _atrPct  = FORMAT(DIVIDE(_atr,_total,0)*100,"0.0")
+VAR _pendPct = FORMAT(DIVIDE(_pend,_total,0)*100,"0.0")
+
+RETURN
+"<style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI', sans-serif;background:transparent;}
+
+    .wrap{
+        width:100%;
+        height:210px;
+        background:#FFFFFF;
+        border-radius:12px;
+        border:1px solid #E3E3E3;
+        border-top:3px solid " & _Green & ";
+        padding:14px 18px;
+        display:flex;
+        flex-direction:column;
+    }
+
+    .card-lbl{
+        font-size:10px;
+        font-weight:600;
+        text-transform:uppercase;
+        color:#6B7280;
+        margin-bottom:12px;
+    }
+
+    .body{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        flex:1;
+        gap:15px;
+    }
+
+    .donut-wrap{
+        position:relative;
+        width:140px;
+        height:140px;
+        flex-shrink:0;
+    }
+
+    .donut-center{
+        position:absolute;
+        inset:0;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .dc-num{
+        font-size:26px;
+        font-weight:700;
+        color:" & _ColorCentro & ";
+        line-height:1;
+    }
+
+    .dc-lbl{
+        font-size:8px;
+        color:#9CA3AF;
+        text-transform:uppercase;
+        font-weight:700;
+        margin-top:2px;
+    }
+
+    .legend{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        flex:1;
+    }
+
+    .pill{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:8px 12px;
+        border-radius:10px;
+        background:#F9FAFB;
+        border:1px solid #E5E7EB;
+    }
+
+    .left{
+        display:flex;
+        align-items:center;
+        gap:8px;
+    }
+
+    .dot{
+        width:10px;
+        height:10px;
+        border-radius:50%;
+        flex-shrink:0;
+    }
+
+    .lbl{
+        font-size:11px;
+        color:#6B6B6B;
+    }
+
+    .val-box{
+        text-align:right;
+    }
+
+    .val{
+        font-size:14px;
+        font-weight:700;
+        color:#000;
+    }
+
+    .pct{
+        font-size:9px;
+        color:#9CA3AF;
+        margin-left:4px;
+    }
+
+    canvas{
+        animation:fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn{
+        from{opacity:0;transform:scale(0.95);}
+        to{opacity:1;transform:scale(1);}
+    }
+
+</style>
+
+<div class='wrap'>
+
+  <div class='card-lbl'>ESTADO GENERAL</div>
+
+  <div class='body'>
+
+    <div class='donut-wrap'>
+      <canvas id='donut' width='140' height='140'></canvas>
+
+      <div class='donut-center'>
+        <div class='dc-num'>" & _pct & "</div>
+        <div class='dc-lbl'>Cumplimiento</div>
+      </div>
+    </div>
+
+    <div class='legend'>
+
+      <div class='pill'>
+        <div class='left'>
+          <div class='dot' style='background:" & _Green & "'></div>
+          <span class='lbl'>Completadas</span>
+        </div>
+        <div class='val-box'>
+          <span class='val'>" & FORMAT(_comp,"#,0") & "</span>
+          <span class='pct'>" & _compPct & "%</span>
+        </div>
+      </div>
+
+      <div class='pill'>
+        <div class='left'>
+          <div class='dot' style='background:" & _Red & "'></div>
+          <span class='lbl'>Atrasadas</span>
+        </div>
+        <div class='val-box'>
+          <span class='val'>" & FORMAT(_atr,"#,0") & "</span>
+          <span class='pct'>" & _atrPct & "%</span>
+        </div>
+      </div>
+
+      <div class='pill'>
+        <div class='left'>
+          <div class='dot' style='background:" & _Gray & "'></div>
+          <span class='lbl'>Pendientes</span>
+        </div>
+        <div class='val-box'>
+          <span class='val'>" & FORMAT(_pend,"#,0") & "</span>
+          <span class='pct'>" & _pendPct & "%</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var canvas=document.getElementById('donut');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+
+  var cx=70,cy=70,r=68,cut=48;
+  var vals=[" & _comp & "," & _atr & "," & _pend & "];
+  var colors=['" & _Green & "','" & _Red & "','" & _Gray & "'];
+
+  var total=vals.reduce((a,b)=>a+b,0);
+  if(total === 0) {
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.fillStyle='#F3F4F6';
+      ctx.fill();
+      return;
+  }
+
+  var progress=0;
+
+  function draw(){
+    ctx.clearRect(0,0,140,140);
+    var current=-Math.PI/2;
+
+    vals.forEach(function(v,i){
+      if(v===0)return;
+      var sweep=(v/total)*Math.PI*2*progress;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,current,current+sweep);
+      ctx.closePath();
+      ctx.fillStyle=colors[i];
+      ctx.fill();
+      current+=sweep;
+    });
+
+    ctx.beginPath();
+    ctx.arc(cx,cy,cut,0,Math.PI*2);
+    ctx.fillStyle='#fff';
+    ctx.fill();
+
+    if(progress<1){
+      progress+=0.05;
+      requestAnimationFrame(draw);
+    }
+  }
+
+  draw();
+})();
+</script>"
+
+

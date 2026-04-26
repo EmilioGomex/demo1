@@ -1,0 +1,69 @@
+HTML Frecuencia = 
+VAR _dComp  = CALCULATE([Total Completadas], Tareas[frecuencia] = "Diario")
+VAR _dTot   = CALCULATE([Total Registros],   Tareas[frecuencia] = "Diario")
+VAR _dPct   = DIVIDE(_dComp, _dTot, 0)
+
+VAR _sComp  = CALCULATE([Total Completadas], Tareas[frecuencia] = "Semanal")
+VAR _sTot   = CALCULATE([Total Registros],   Tareas[frecuencia] = "Semanal")
+VAR _sPct   = DIVIDE(_sComp, _sTot, 0)
+
+VAR _qComp  = CALCULATE([Total Completadas], Tareas[frecuencia] = "Quincenal")
+VAR _qTot   = CALCULATE([Total Registros],   Tareas[frecuencia] = "Quincenal")
+VAR _qPct   = DIVIDE(_qComp, _qTot, 0)
+
+VAR _mComp  = CALCULATE([Total Completadas], Tareas[frecuencia] = "Mensual")
+VAR _mTot   = CALCULATE([Total Registros],   Tareas[frecuencia] = "Mensual")
+VAR _mPct   = DIVIDE(_mComp, _mTot, 0)
+
+VAR _tComp  = CALCULATE([Total Completadas], Tareas[frecuencia] = "Trimestral")
+VAR _tTot   = CALCULATE([Total Registros],   Tareas[frecuencia] = "Trimestral")
+VAR _tPct   = DIVIDE(_tComp, _tTot, 0)
+
+VAR _smComp = CALCULATE([Total Completadas], Tareas[frecuencia] = "Semestral")
+VAR _smTot  = CALCULATE([Total Registros],   Tareas[frecuencia] = "Semestral")
+VAR _smPct  = DIVIDE(_smComp, _smTot, 0)
+
+VAR _anComp = CALCULATE([Total Completadas], Tareas[frecuencia] = "Tres años")
+VAR _anTot  = CALCULATE([Total Registros],   Tareas[frecuencia] = "Tres años")
+VAR _anPct  = DIVIDE(_anComp, _anTot, 0)
+
+VAR _col_d  = IF(_dPct  >= 0.8, "#00A651", IF(_dPct  >= 0.6, "#F9A825", "#D32F2F"))
+VAR _col_s  = IF(_sPct  >= 0.8, "#00A651", IF(_sPct  >= 0.6, "#F9A825", "#D32F2F"))
+VAR _col_q  = IF(_qPct  >= 0.8, "#00A651", IF(_qPct  >= 0.6, "#F9A825", "#D32F2F"))
+VAR _col_m  = IF(_mPct  >= 0.8, "#00A651", IF(_mPct  >= 0.6, "#F9A825", "#D32F2F"))
+VAR _col_t  = IF(_tPct  >= 0.8, "#00A651", IF(_tPct  >= 0.6, "#F9A825", "#D32F2F"))
+VAR _col_sm = IF(_smPct >= 0.8, "#00A651", IF(_smPct >= 0.6, "#F9A825", "#D32F2F"))
+VAR _col_an = IF(_anPct >= 0.8, "#00A651", IF(_anPct >= 0.6, "#F9A825", "#D32F2F"))
+
+VAR _rowD  = IF(_dTot  > 0, "<div class=row><span class=lbl>Diario</span><div class=track><div class=fill style=width:"     & FORMAT(_dPct*100,"0")  & "%;background:" & _col_d  & "></div></div><span class=pct style=color:" & _col_d  & ">" & FORMAT(_dPct,"0.0%")  & "</span><span class=sub>" & FORMAT(_dTot,"0")  & " tareas</span></div>", "")
+VAR _rowS  = IF(_sTot  > 0, "<div class=row><span class=lbl>Semanal</span><div class=track><div class=fill style=width:"    & FORMAT(_sPct*100,"0")  & "%;background:" & _col_s  & "></div></div><span class=pct style=color:" & _col_s  & ">" & FORMAT(_sPct,"0.0%")  & "</span><span class=sub>" & FORMAT(_sTot,"0")  & " tareas</span></div>", "")
+VAR _rowQ  = IF(_qTot  > 0, "<div class=row><span class=lbl>Quincenal</span><div class=track><div class=fill style=width:"  & FORMAT(_qPct*100,"0")  & "%;background:" & _col_q  & "></div></div><span class=pct style=color:" & _col_q  & ">" & FORMAT(_qPct,"0.0%")  & "</span><span class=sub>" & FORMAT(_qTot,"0")  & " tareas</span></div>", "")
+VAR _rowM  = IF(_mTot  > 0, "<div class=row><span class=lbl>Mensual</span><div class=track><div class=fill style=width:"    & FORMAT(_mPct*100,"0")  & "%;background:" & _col_m  & "></div></div><span class=pct style=color:" & _col_m  & ">" & FORMAT(_mPct,"0.0%")  & "</span><span class=sub>" & FORMAT(_mTot,"0")  & " tareas</span></div>", "")
+VAR _rowT  = IF(_tTot  > 0, "<div class=row><span class=lbl>Trimestral</span><div class=track><div class=fill style=width:" & FORMAT(_tPct*100,"0")  & "%;background:" & _col_t  & "></div></div><span class=pct style=color:" & _col_t  & ">" & FORMAT(_tPct,"0.0%")  & "</span><span class=sub>" & FORMAT(_tTot,"0")  & " tareas</span></div>", "")
+VAR _rowSm = IF(_smTot > 0, "<div class=row><span class=lbl>Semestral</span><div class=track><div class=fill style=width:"  & FORMAT(_smPct*100,"0") & "%;background:" & _col_sm & "></div></div><span class=pct style=color:" & _col_sm & ">" & FORMAT(_smPct,"0.0%") & "</span><span class=sub>" & FORMAT(_smTot,"0") & " tareas</span></div>", "")
+VAR _rowAn = IF(_anTot > 0, "<div class=row><span class=lbl>Tres años</span><div class=track><div class=fill style=width:"  & FORMAT(_anPct*100,"0") & "%;background:" & _col_an & "></div></div><span class=pct style=color:" & _col_an & ">" & FORMAT(_anPct,"0.0%") & "</span><span class=sub>" & FORMAT(_anTot,"0") & " tareas</span></div>", "")
+
+RETURN
+"<style>"
+& "* {margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}"
+& "html,body{width:400px;height:210px;background:transparent;overflow:hidden;}"
+& ".wrap{background:#fff;border-radius:12px;border:1px solid #E3E3E3;border-top:3px solid #00A651;padding:12px 14px;width:400px;height:210px;display:flex;flex-direction:column;overflow:hidden;}"
+& ".hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0;}"
+& ".title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;}"
+& ".hint{font-size:9px;color:#9CA3AF;font-style:italic;}"
+& ".list{display:flex;flex-direction:column;flex:1;min-height:0;justify-content:space-between;gap:6px;}"
+& ".row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:10px;background:#F9FAFB;border:1px solid #E5E7EB;flex:1;min-height:0;transition:all 0.3s ease;}"
+& ".row:hover{background:#F3F4F6;border-color:#D1D5DB;}"
+& ".lbl{font-size:11px;font-weight:600;color:#374151;width:80px;flex-shrink:0;}"
+& ".track{flex:1;height:6px;background:#E5E7EB;border-radius:3px;overflow:hidden;}"
+& ".fill{height:100%;border-radius:3px;animation:growBar 0.8s ease-out;}"
+& "@keyframes growBar { from { width: 0; } }"
+& ".pct{font-size:14px;font-weight:700;width:42px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;}"
+& ".sub{font-size:9px;color:#9CA3AF;width:55px;text-align:right;flex-shrink:0;}"
+& "</style>"
+& "<div class=wrap>"
+& "<div class=hdr><span class=title>Cumplimiento por Frecuencia</span><span class=hint>¿Cuál falla más?</span></div>"
+& "<div class=list>"
+& _rowD & _rowS & _rowQ & _rowM & _rowT & _rowSm & _rowAn
+& "</div>"
+& "</div>"

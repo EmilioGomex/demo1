@@ -1,0 +1,100 @@
+HTML Tipo CILT = 
+VAR _lComp = CALCULATE([Total Completadas], Tareas[tipo] = "Limpieza")
+VAR _lTot  = CALCULATE([Total Registros],   Tareas[tipo] = "Limpieza")
+VAR _lAtr  = CALCULATE([Total Atrasadas],   Tareas[tipo] = "Limpieza")
+VAR _lPct  = DIVIDE(_lComp, _lTot, 0)
+
+VAR _iComp = CALCULATE([Total Completadas], Tareas[tipo] = "Inspección")
+VAR _iTot  = CALCULATE([Total Registros],   Tareas[tipo] = "Inspección")
+VAR _iAtr  = CALCULATE([Total Atrasadas],   Tareas[tipo] = "Inspección")
+VAR _iPct  = DIVIDE(_iComp, _iTot, 0)
+
+VAR _uComp = CALCULATE([Total Completadas], Tareas[tipo] = "Lubricación")
+VAR _uTot  = CALCULATE([Total Registros],   Tareas[tipo] = "Lubricación")
+VAR _uAtr  = CALCULATE([Total Atrasadas],   Tareas[tipo] = "Lubricación")
+VAR _uPct  = DIVIDE(_uComp, _uTot, 0)
+
+VAR _aComp = CALCULATE([Total Completadas], Tareas[tipo] = "Ajuste")
+VAR _aTot  = CALCULATE([Total Registros],   Tareas[tipo] = "Ajuste")
+VAR _aAtr  = CALCULATE([Total Atrasadas],   Tareas[tipo] = "Ajuste")
+VAR _aPct  = DIVIDE(_aComp, _aTot, 0)
+
+-- ✅ Ámbar para "en curso", no azul
+VAR _col_l = IF(_lAtr > 0, "#D32F2F", IF(_lComp = _lTot && _lTot > 0, "#00A651", "#F9A825"))
+VAR _col_i = IF(_iAtr > 0, "#D32F2F", IF(_iComp = _iTot && _iTot > 0, "#00A651", "#F9A825"))
+VAR _col_u = IF(_uAtr > 0, "#D32F2F", IF(_uComp = _uTot && _uTot > 0, "#00A651", "#F9A825"))
+VAR _col_a = IF(_aAtr > 0, "#D32F2F", IF(_aComp = _aTot && _aTot > 0, "#00A651", "#F9A825"))
+
+RETURN
+"<style>"
+& "* {margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}"
+& "html,body{width:400px;height:210px;background:transparent;overflow:hidden;}"
+& ".wrap{background:#fff;border-radius:12px;border:1px solid #E3E3E3;border-top:3px solid #00A651;padding:12px 14px;width:400px;height:210px;display:flex;flex-direction:column;overflow:hidden;}"
+& ".hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0;}"
+& ".title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;}"
+& ".hint{font-size:9px;color:#9CA3AF;font-style:italic;}"
+& ".list{display:flex;flex-direction:column;flex:1;min-height:0;justify-content:space-between;gap:6px;}"
+& ".row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:10px;background:#F9FAFB;border:1px solid #E5E7EB;flex:1;min-height:0;transition:all 0.3s ease;}"
+& ".row:hover{background:#F3F4F6;border-color:#D1D5DB;}"
+& ".dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}"
+& ".lbl{font-size:11px;font-weight:600;color:#374151;width:80px;flex-shrink:0;}"
+& ".track{flex:1;height:6px;background:#E5E7EB;border-radius:3px;overflow:hidden;}"
+& ".fill{height:100%;border-radius:3px;animation:growBar 0.8s ease-out;}"
+& "@keyframes growBar { from { width: 0; } }"
+& ".pct{font-size:14px;font-weight:700;width:42px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;}"
+& ".tot{font-size:8px;color:#9CA3AF;width:52px;text-align:right;flex-shrink:0;}"
+& ".atr{font-size:8px;font-weight:800;padding:2px 7px;border-radius:20px;flex-shrink:0;width:52px;text-align:center;}"
+& ".atr-0{background:rgba(0,166,81,.08);color:#00A651;}"
+& ".atr-a{background:rgba(249,168,37,.08);color:#F9A825;}"
+& ".atr-n{background:rgba(211,47,47,.08);color:#D32F2F;}"
+& "</style>"
+& "<div class=wrap>"
+& "<div class=hdr><span class=title>Tipo CILT</span><span class=hint>¿Qué tipo falla más?</span></div>"
+& "<div class=list>"
+
+& "<div class=row>"
+& "<div class=dot style=background:" & _col_l & "></div>"
+& "<span class=lbl>Limpieza</span>"
+& "<div class=track><div class=fill style=width:" & FORMAT(_lPct*100,"0") & "%;background:" & _col_l & "></div></div>"
+& "<span class=pct style=color:" & _col_l & ">" & FORMAT(_lPct,"0.0%") & "</span>"
+& "<span class=tot>" & FORMAT(_lTot,"0") & " tar.</span>"
+& "<span class='atr " & IF(_lAtr > 0, "atr-n", IF(_lComp = _lTot && _lTot > 0, "atr-0", "atr-a")) & "'>"
+& IF(_lAtr > 0, FORMAT(_lAtr,"0") & " atr.", IF(_lComp = _lTot && _lTot > 0, "OK", "En curso"))
+& "</span>"
+& "</div>"
+
+& "<div class=row>"
+& "<div class=dot style=background:" & _col_i & "></div>"
+& "<span class=lbl>Inspección</span>"
+& "<div class=track><div class=fill style=width:" & FORMAT(_iPct*100,"0") & "%;background:" & _col_i & "></div></div>"
+& "<span class=pct style=color:" & _col_i & ">" & FORMAT(_iPct,"0.0%") & "</span>"
+& "<span class=tot>" & FORMAT(_iTot,"0") & " tar.</span>"
+& "<span class='atr " & IF(_iAtr > 0, "atr-n", IF(_iComp = _iTot && _iTot > 0, "atr-0", "atr-a")) & "'>"
+& IF(_iAtr > 0, FORMAT(_iAtr,"0") & " atr.", IF(_iComp = _iTot && _iTot > 0, "OK", "En curso"))
+& "</span>"
+& "</div>"
+
+& "<div class=row>"
+& "<div class=dot style=background:" & _col_u & "></div>"
+& "<span class=lbl>Lubricación</span>"
+& "<div class=track><div class=fill style=width:" & FORMAT(_uPct*100,"0") & "%;background:" & _col_u & "></div></div>"
+& "<span class=pct style=color:" & _col_u & ">" & FORMAT(_uPct,"0.0%") & "</span>"
+& "<span class=tot>" & FORMAT(_uTot,"0") & " tar.</span>"
+& "<span class='atr " & IF(_uAtr > 0, "atr-n", IF(_uComp = _uTot && _uTot > 0, "atr-0", "atr-a")) & "'>"
+& IF(_uAtr > 0, FORMAT(_uAtr,"0") & " atr.", IF(_uComp = _uTot && _uTot > 0, "OK", "En curso"))
+& "</span>"
+& "</div>"
+
+& "<div class=row>"
+& "<div class=dot style=background:" & _col_a & "></div>"
+& "<span class=lbl>Ajuste</span>"
+& "<div class=track><div class=fill style=width:" & FORMAT(_aPct*100,"0") & "%;background:" & _col_a & "></div></div>"
+& "<span class=pct style=color:" & _col_a & ">" & FORMAT(_aPct,"0.0%") & "</span>"
+& "<span class=tot>" & FORMAT(_aTot,"0") & " tar.</span>"
+& "<span class='atr " & IF(_aAtr > 0, "atr-n", IF(_aComp = _aTot && _aTot > 0, "atr-0", "atr-a")) & "'>"
+& IF(_aAtr > 0, FORMAT(_aAtr,"0") & " atr.", IF(_aComp = _aTot && _aTot > 0, "OK", "En curso"))
+& "</span>"
+& "</div>"
+
+& "</div>"
+& "</div>"
