@@ -1,43 +1,88 @@
-# Historial de Cambios - Sesión de Optimización UI/UX Heineken eCILT
+# eCILT — Contexto del Proyecto y Base de Datos (Actualizado)
 
-Este documento resume las modificaciones realizadas al dashboard administrativo (`admin_web/index.html`) para estandarizar la interfaz, corregir errores de diseño y mejorar la experiencia de usuario con la identidad de marca Heineken.
+> Sistema de gestión de tareas CILT (Cleaning, Inspection, Lubrication, Tightening) para planta Heineken.
 
-## 🛠️ Correcciones Estructurales y de Layout
+## Arquitectura
 
-### 1. Estandarización de Cabeceras
-- Se unificaron todas las sub-cabeceras (filtros, migas de pan y pestañas) con una altura fija de `64px`, fondo `bg-gray-900/30` y alineación vertical centrada.
-- Se restauró la estructura flex del `<header>` principal, asegurando que el buscador, el título y el reloj mantengan una alineación perfecta.
-
-### 2. Resolución de Problemas de Scroll
-- **Causa Raíz**: Conflicto entre `display: grid` y `overflow-y: auto` en el contenedor de GTS.
-- **Solución**: Se separó el contenedor en dos capas: un wrapper de scroll (`#gts-container`) y un grid interno (`#gts-grid-inner`).
-- **Ajustes de Flexbox**: Se aplicó `min-h-0` a todos los hijos flex que requieren scroll para evitar el truncamiento de contenido en la parte inferior.
-- **Etiquetas de Cierre**: Se corrigió la falta de etiquetas de cierre (`</main>`, `</div>`, `</div>`) que rompían la jerarquía visual.
-
-### 3. Navegación y Sidebar
-- El sidebar ahora inicia colapsado por defecto para maximizar el espacio de trabajo.
-- Implementación de auto-cierre: al seleccionar una vista, el sidebar se oculta automáticamente.
-
-## 🎨 Mejoras de UI/UX (Brand Heineken)
-
-### 1. Identidad Visual y Tipografía
-- **Fuente Inter**: Implementación de la tipografía Inter (Google Fonts) en toda la aplicación para un look premium.
-- **Paleta Expandida**: Incorporación de colores de marca como `--hk-gold` y `--hk-silver`, con tonos de fondo más profundos.
-- **Estrella Heineken Animada**: Se añadió un efecto de pulso (glow rojo) y rotación al hover para la estrella del sidebar.
-
-### 2. Experiencia de Usuario (UX)
-- **Transiciones de Vista**: Animación de entrada (fade + slide) al navegar entre las diferentes secciones.
-- **Métricas Contextuales**: Las métricas superiores ahora muestran información específica según la vista activa:
-    - **Histórico**: Tareas completadas/pendientes/atrasadas.
-    - **Operadores**: Personal activo, supervisores, sin turno.
-    - **GTS**: Líneas, máquinas y tareas totales.
-- **Conexión Dinámica**: El indicador de conexión a Supabase ahora realiza un ping real cada 30 segundos y cambia de color (Verde = Conectado, Rojo = Error).
-
-## 📊 Estado Actual
-- **GTS**: Scroll funcional, distribución de tarjetas corregida y buscador integrado.
-- **Horarios**: Pestañas modernizadas y previsualización de Excel con scroll independiente.
-- **Operadores**: Cabecera estandarizada y métricas de personal integradas.
+| Componente | Stack | Ruta |
+|---|---|---|
+| Admin Web | HTML/CSS/JS + Supabase JS SDK | `apps/admin/` |
+| App Operador | Flutter + Supabase SDK | `apps/operator/` |
+| Backend | Supabase (PostgreSQL + Edge Functions) | `backend/supabase/` |
+| Scripts | Python (procesamiento CILT) / DAX (Power BI) | `scripts/` |
+| Docs & data | CSV snapshots de tablas | `docs/` |
 
 ---
-**Fecha de actualización:** 21 de Abril, 2026
-**Responsable:** Antigravity AI Assistant
+
+## Esquema de Base de Datos (Supabase/PostgreSQL)
+
+### `operadores`
+| Columna | Tipo | Nota |
+|---|---|---|
+| id | uuid PK | |
+| id_operador | text UK | Código único |
+| nombreoperador | text | |
+| linea | text | Latas, Botellas, Utilidades, Cocimiento, Filtracion, Fermentacion, Logistica, Ingenieria |
+| foto_operador | text | URL (nullable) |
+| tipo | text | operador / supervisor |
+| activo | bool | default true |
+| cedula | text UK | Documento de identidad |
+
+### `maquinas`
+| Columna | Tipo | Nota |
+|---|---|---|
+| id | uuid PK | |
+| id_maquina | text UK | Identificador único |
+| nombre | text | |
+| linea | text | |
+| area | text (GEN) | Brewing, Packaging, Utilidades, Logistica, Ingenieria (basado en linea) |
+| implementado | bool | |
+
+### `tareas`
+| Columna | Tipo | Nota |
+|---|---|---|
+| id | uuid PK | |
+| id_tarea | text UK | |
+| nombre_tarea | text | |
+| frecuencia | text | Diario, Semanal, Quincenal, Mensual, Trimestral, Semestral, Tres años |
+| tipo | text | Limpieza, Inspección, Lubricación, Ajuste |
+| id_maquina | text FK | -> maquinas.id_maquina |
+| es_compartida | bool | |
+
+### `pasos_tarea` (NUEVA)
+| Columna | Tipo | Nota |
+|---|---|---|
+| id | uuid PK | |
+| id_tarea | text FK | -> tareas.id_tarea |
+| numeropaso | int | |
+| descripcion | text | |
+| imagenurl | text | |
+
+### `registro_tareas`
+| Columna | Tipo | Nota |
+|---|---|---|
+| id | uuid PK | |
+| id_tarea | text FK | -> tareas.id_tarea |
+| id_operador | text FK | -> operadores.id_operador (nullable) |
+| fecha_periodo | date | |
+| fecha_completado | timestamptz | (nullable) |
+| fecha_limite | timestamptz | |
+| estado | text | Pendiente, Completado, Atrasado |
+| fue_autogenerado | bool | |
+| id_maquina | text FK | -> maquinas.id_maquina |
+| parsable_job_id | text | |
+| motivo_bloqueo | text | |
+| foto_evidencia | text | |
+| veces_aplazada | int | |
+| turno | text | Mañana, Tarde, Noche |
+
+---
+
+## Reglas de Negocio Clave
+
+- **Semáforo**: Trigger `trg_actualizar_semaforo_realtime` recalcula `semaforo_maquina` al INSERT/UPDATE/DELETE.
+- **Áreas**: 
+  - `Packaging`: Latas, Botellas
+  - `Brewing`: Cocimiento, Fermentacion, Filtracion
+  - `Utilidades`, `Logistica`, `Ingenieria`: Mismo nombre.
+- **Turnos**: Mañana, Tarde, Noche.
