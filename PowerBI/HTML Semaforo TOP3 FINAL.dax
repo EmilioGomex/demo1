@@ -6,9 +6,7 @@ VAR _base =
         'Registro Tareas',
         'Registro Tareas'[id_maquina],
         "tot",   CALCULATE(COUNTROWS('Registro Tareas')),
-        "comp",  CALCULATE(COUNTROWS('Registro Tareas'), 'Registro Tareas'[estado] = "Completado"),
-        "atras", CALCULATE(COUNTROWS('Registro Tareas'), 'Registro Tareas'[estado] = "Atrasado"),
-        "pend",  CALCULATE(COUNTROWS('Registro Tareas'), 'Registro Tareas'[estado] = "Pendiente")
+        "comp",  CALCULATE(COUNTROWS('Registro Tareas'), 'Registro Tareas'[estado] = "Completado")
     )
 
 -- 2. Metadatos
@@ -24,7 +22,7 @@ VAR _tabla =
 VAR _filtrado = FILTER(_tabla, [impl] = TRUE() && [tot] > 0)
 VAR _hasProblem = COUNTROWS(FILTER(_filtrado, [pctNum] < 0.80)) > 0
 
--- 3. Construcción de filas con Tooltip Integrado
+-- 3. Construcción de filas (Interacción por Clic)
 VAR _filas =
     CONCATENATEX(
         TOPN(3, _filtrado, [pctNum], ASC),
@@ -34,8 +32,6 @@ VAR _filas =
         VAR _p      = COALESCE([pctNum], 0)
         VAR _pctInt = INT(_p * 100)
         VAR _lbl    = _pctInt & "%"
-        VAR _a      = [atras]
-        VAR _pe     = [pend]
         
         VAR _col = IF(_p < 0.75,"#D32F2F", IF(_p < 0.80,"#F9A825","#00A651"))
         VAR _pill = IF(_p < 0.75,"pill-r", IF(_p < 0.80,"pill-a","pill-g"))
@@ -50,11 +46,6 @@ VAR _filas =
             & "  <span class='pv' style='color:" & _col & "'>" & _lbl & "</span>"
             & "  <span class='" & _pill & "'>" & IF(_p < 0.75,"CRITICO", IF(_p < 0.80,"ALERTA","OK")) & "</span>"
             & "</div>"
-            & "<div class='tip'>"
-            & "  <div class='tip-h'>" & IF(ISBLANK(_n), [id_maquina], _n) & "</div>"
-            & "  <div class='tip-r'><span>Atrasadas:</span> <b>" & _a & "</b></div>"
-            & "  <div class='tip-r'><span>Pendientes:</span> <b>" & _pe & "</b></div>"
-            & "</div>"
             & "</div>",
         ""
     )
@@ -62,12 +53,12 @@ VAR _filas =
 RETURN
 "<style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;font-family:'Segoe UI',sans-serif;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;}
 .wrap{width:100%;height:210px;background:#FFFFFF;border-radius:10px;border:1px solid #E3E3E3;border-top:3px solid " & IF(_hasProblem, "#D32F2F", "#00A651") & ";padding:12px;display:flex;flex-direction:column;}
 .lbl{font-size:10px;font-weight:600;text-transform:uppercase;color:#6b6b6b;margin-bottom:8px;}
 .rows{display:flex;flex-direction:column;gap:8px;flex:1;}
-.row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#FAFAFA;position:relative;transition:all 0.2s ease;cursor:pointer;}
-.row:hover{background:#F1F1F1; transform:translateX(4px);}
+.row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#FAFAFA;transition:all 0.2s ease;cursor:pointer;}
+.row:hover{background:#F1F1F1; transform:translateX(4px); border:1px solid #DDD;}
 .row.bad{background:rgba(211,47,47,0.05);border:1px solid rgba(211,47,47,0.15);}
 .ind{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .info{width:110px;flex-shrink:0;}
@@ -82,27 +73,6 @@ html,body{width:100%;height:100%;font-family:'Segoe UI',sans-serif;}
 .pill-g{background:rgba(0,166,81,.1);color:#00A651;}
 .pill-a{background:rgba(249,168,37,.1);color:#F9A825;}
 .pill-r{background:rgba(211,47,47,.1);color:#D32F2F;}
-
-/* Tooltip Integrado (Diseño de Dashboard - Blanco) */
-.tip{
-    position:absolute; bottom:110%; left:50%; transform:translateX(-50%) translateY(10px);
-    background:#FFFFFF; color:#111; padding:10px; border-radius:8px; width:160px;
-    box-shadow:0 10px 20px rgba(0,0,0,0.1); opacity:0; visibility:hidden;
-    transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index:100; pointer-events:none;
-    border: 1px solid #00A651;
-}
-.tip::after{content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#00A651;}
-
-/* Solución para que el primer tooltip no se corte (abre hacia abajo) */
-.row:first-child .tip { bottom:auto; top:110%; transform:translateX(-50%) translateY(-10px); }
-.row:first-child:hover .tip { transform:translateX(-50%) translateY(0); }
-.row:first-child .tip::after { top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:#00A651; }
-
-.row:hover .tip{opacity:1; visibility:visible; transform:translateX(-50%) translateY(0);}
-.tip-h{font-size:10px; font-weight:700; border-bottom:1px solid #EEE; margin-bottom:6px; padding-bottom:4px; color:#00A651; text-transform:uppercase;}
-.tip-r{font-size:9px; display:flex; justify-content:space-between; margin-bottom:2px;}
-.tip-r span{color:#666;}
-.tip-r b{color:#111;}
 </style>
 <div class='wrap'>
   <div class='lbl'>Máquinas Prioritarias</div>
