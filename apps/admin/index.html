@@ -1076,6 +1076,27 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 
+        // --- MOCK DE FECHA PARA DEMO ---
+        // Simula domingo 10/05/2026 10:00 AM en Ecuador (UTC-05:00).
+        const MOCK_NOW = '2026-05-10T10:00:00-05:00';
+        const RealDate = Date;
+        class MockDate extends RealDate {
+            constructor(...args) {
+                super(...(args.length ? args : [MOCK_NOW]));
+            }
+            static now() {
+                return new RealDate(MOCK_NOW).getTime();
+            }
+            static parse(value) {
+                return RealDate.parse(value);
+            }
+            static UTC(...args) {
+                return RealDate.UTC(...args);
+            }
+        }
+        window.RealDate = RealDate;
+        window.Date = MockDate;
+
         // --- CONFIGURACIÓN ---
         const SUPABASE_URL = 'https://czxyfzxjwzaykwoxyjah.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eHlmenhqd3pheWt3b3h5amFoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDQyODMwMCwiZXhwIjoyMDY2MDA0MzAwfQ.4An36Hs_o_aiTGfqpRC85L4jMfhfWgbAthypB0QL0yU';
